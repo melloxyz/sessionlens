@@ -2,26 +2,33 @@ import 'dotenv/config';
 import Fastify from 'fastify';
 import cors from '@fastify/cors';
 import { initDatabase, runMigrations, seedModels } from './db/index.js';
-import { createCodexAdapter, createClaudeAdapter, registry } from './adapters/index.js';
+import { createCodexAdapter, createClaudeAdapter, createOpencodeAdapter, registry } from './adapters/index.js';
 import { runIngestion, getLastStatus } from './ingestion/engine.js';
+import { registerOverviewRoutes } from './routes/overview.js';
+import { registerAnalyticsRoutes } from './routes/analytics.js';
+import { registerSessionRoutes } from './routes/sessions.js';
+import { registerProjectRoutes } from './routes/projects.js';
+import { registerModelRoutes } from './routes/models.js';
 
 const PORT = Number(process.env.AIMETER_PORT) || 3030;
 
 async function main() {
-  // Database
   await initDatabase();
   runMigrations();
   seedModels();
 
-  // Register adapters
   registry.register(createCodexAdapter());
   registry.register(createClaudeAdapter());
+  registry.register(createOpencodeAdapter());
 
-  // Server
   const app = Fastify({ logger: true });
   await app.register(cors, { origin: true });
 
-  app.get('/api/health', async () => ({ status: 'ok' }));
+  registerOverviewRoutes(app);
+  registerAnalyticsRoutes(app);
+  registerSessionRoutes(app);
+  registerProjectRoutes(app);
+  registerModelRoutes(app);
 
   app.get('/api/ingest/status', async () => {
     return getLastStatus() ?? { message: 'No ingestion run yet' };
@@ -32,7 +39,6 @@ async function main() {
     return status;
   });
 
-  // Auto-run ingestion on startup
   try {
     await runIngestion();
   } catch (err) {

@@ -8,6 +8,27 @@ function normalizePath(p: string | null): string | null {
   return p.replace(/^\\\\\?\\/, '');
 }
 
+const PROVIDER_MAP: Record<string, string> = {
+  openai: 'openai',
+  anthropic: 'anthropic',
+  google: 'google',
+  deepseek: 'deepseek',
+  minimax: 'minimax',
+  opencode: 'opencode',
+};
+
+function normalizeProvider(raw: string): string {
+  return PROVIDER_MAP[raw.toLowerCase()] ?? raw.toLowerCase();
+}
+
+function normalizeModel(raw: string | null): string | null {
+  if (!raw) return null;
+  if (raw.includes('/')) {
+    return raw.split('/').slice(1).join('/');
+  }
+  return raw;
+}
+
 export interface IngestionStatus {
   totalSessions: number;
   newSessions: number;
@@ -95,9 +116,12 @@ export async function runIngestion(): Promise<IngestionStatus> {
 function upsertSession(raw: RawSession): 'new' | 'updated' | 'skipped' {
   const db = getDatabase();
 
+  const normalizedProvider = normalizeProvider(raw.provider);
+  const normalizedModel = normalizeModel(raw.model);
+
   const existing = db.exec(
     `SELECT id FROM sessions WHERE session_id = ? AND cli = ? AND provider = ?`,
-    [raw.sessionId, raw.cli, raw.provider],
+    [raw.sessionId, raw.cli, normalizedProvider],
   );
 
   let sessionPk: number;
@@ -112,7 +136,7 @@ function upsertSession(raw: RawSession): 'new' | 'updated' | 'skipped' {
       WHERE id = ?`,
       [
         normalizePath(raw.projectPath),
-        raw.model,
+        normalizedModel,
         raw.startedAt,
         raw.endedAt,
         raw.durationMs,
@@ -133,11 +157,11 @@ function upsertSession(raw: RawSession): 'new' | 'updated' | 'skipped' {
     `INSERT INTO sessions (provider, cli, session_id, project_path, model, started_at, ended_at, duration_ms, total_cost_usd, source_confidence, message_count, tool_call_count)
      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
     [
-      raw.provider,
+      normalizedProvider,
       raw.cli,
       raw.sessionId,
       normalizePath(raw.projectPath),
-      raw.model,
+      normalizedModel,
       raw.startedAt,
       raw.endedAt,
       raw.durationMs,
