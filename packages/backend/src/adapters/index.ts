@@ -5,3 +5,6 @@ export { createClaudeAdapter } from './claude.js';
 export { createOpencodeAdapter } from './opencode.js';
 export { createGeminiAdapter } from './gemini.js';
 export { createKimiAdapter } from './kimi.js';
+export { createAiderAdapter } from './aider.js';
+export { createQwenAdapter } from './qwen.js';
+export { createAntigravityAdapter } from './antigravity.js';

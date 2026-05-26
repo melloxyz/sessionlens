@@ -5,7 +5,6 @@ import {
   Bot,
   BrainCircuit,
   CircleDot,
-  Database,
   FolderOpen,
   Gauge,
   LayoutDashboard,
@@ -16,7 +15,9 @@ import {
   type LucideIcon,
 } from 'lucide-react';
 import { useI18n } from '../i18n/LanguageProvider.js';
+import { useApi } from '../../hooks/useApi.js';
 import { cn } from '../../lib/utils.js';
+import type { IntegrationStatusItem } from './IntegrationStatus.js';
 
 const NAV_ITEMS: { to: string; labelKey: 'nav.dashboard' | 'nav.sessions' | 'nav.projects' | 'nav.models' | 'nav.analytics' | 'nav.settings'; icon: LucideIcon }[] = [
   { to: '/', labelKey: 'nav.dashboard', icon: LayoutDashboard },
@@ -27,14 +28,24 @@ const NAV_ITEMS: { to: string; labelKey: 'nav.dashboard' | 'nav.sessions' | 'nav
   { to: '/settings', labelKey: 'nav.settings', icon: Settings },
 ];
 
-const INTEGRATIONS = [
-  { label: 'Claude Code', icon: BrainCircuit },
-  { label: 'Codex CLI', icon: Bot },
-  { label: 'OpenCode', icon: Sparkles },
-];
+const INTEGRATION_META: Record<string, { label: string; icon: LucideIcon }> = {
+  claude: { label: 'Claude Code', icon: BrainCircuit },
+  codex: { label: 'Codex CLI', icon: Bot },
+  opencode: { label: 'OpenCode', icon: Sparkles },
+  gemini: { label: 'Gemini CLI', icon: CircleDot },
+  kimi: { label: 'Kimi CLI', icon: Gauge },
+  aider: { label: 'Aider', icon: Activity },
+  qwen: { label: 'Qwen CLI', icon: PackageOpen },
+  antigravity: { label: 'Antigravity', icon: BrainCircuit },
+};
 
 export function Sidebar() {
   const { t } = useI18n();
+  const { data } = useApi<{ integrations: IntegrationStatusItem[] }>('/api/integrations/status', { initialData: { integrations: [] } });
+
+  const integrations = (data?.integrations ?? [])
+    .map((item) => ({ ...item, ...INTEGRATION_META[item.cli] }))
+    .filter((item) => item.label);
 
   return (
     <aside className="hidden h-full w-[248px] shrink-0 flex-col border-r border-border bg-surface/72 backdrop-blur-xl lg:flex">
@@ -70,7 +81,21 @@ export function Sidebar() {
       <div className="mt-8 px-5">
         <div className="mb-3 text-[11px] font-semibold uppercase tracking-[0.16em] text-subtle-foreground">Integrations</div>
         <div className="space-y-2">
-          {INTEGRATIONS.map((item) => (
+          {integrations.length > 0 ? integrations.map((item) => (
+            <div key={item.label} className="flex items-center justify-between rounded-xl px-2 py-2 text-sm text-muted-foreground transition-colors hover:bg-surface-hover hover:text-foreground">
+              <div className="flex items-center gap-3">
+                <div className="grid h-7 w-7 place-items-center rounded-lg border border-border bg-surface-elevated">
+                  <item.icon className="h-3.5 w-3.5" />
+                </div>
+                <span>{item.label}</span>
+              </div>
+              <CircleDot className={cn('h-3.5 w-3.5', item.status === 'available' ? 'fill-success text-success' : 'fill-muted-foreground text-muted-foreground')} />
+            </div>
+          )) : [
+            { label: 'Claude Code', icon: BrainCircuit },
+            { label: 'Codex CLI', icon: Bot },
+            { label: 'OpenCode', icon: Sparkles },
+          ].map((item) => (
             <div key={item.label} className="flex items-center justify-between rounded-xl px-2 py-2 text-sm text-muted-foreground transition-colors hover:bg-surface-hover hover:text-foreground">
               <div className="flex items-center gap-3">
                 <div className="grid h-7 w-7 place-items-center rounded-lg border border-border bg-surface-elevated">
@@ -85,18 +110,6 @@ export function Sidebar() {
       </div>
 
       <div className="mt-auto space-y-4 p-4">
-        <div className="rounded-2xl border border-border bg-surface-elevated p-4 shadow-sm">
-          <div className="mb-3 flex items-center gap-2 text-sm font-medium text-foreground">
-            <Database className="h-4 w-4 text-accent" />
-            Local Database
-          </div>
-          <div className="space-y-2 text-xs text-muted-foreground">
-            <div className="flex justify-between"><span>SQLite</span><span>local</span></div>
-            <div className="flex justify-between"><span>Sessions</span><span>132</span></div>
-            <div className="flex justify-between"><span>Last sync</span><span>now</span></div>
-          </div>
-        </div>
-
         <div className="flex items-center justify-between rounded-2xl border border-border bg-surface-elevated p-3">
           <div className="flex items-center gap-3">
             <div className="grid h-8 w-8 place-items-center rounded-full bg-accent-soft text-xs font-semibold text-accent">RF</div>

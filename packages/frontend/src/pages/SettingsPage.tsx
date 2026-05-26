@@ -106,6 +106,18 @@ export function SettingsPage() {
         </Card>
 
         <Card>
+          <CardHeader><CardTitle>Local Database</CardTitle></CardHeader>
+          <CardContent className="space-y-4">
+            <div className="grid gap-3 rounded-2xl border border-border bg-surface-muted p-4 text-sm">
+              <div className="flex justify-between gap-4"><span className="text-muted-foreground">Engine</span><span className="font-medium text-foreground">SQLite</span></div>
+              <div className="flex justify-between gap-4"><span className="text-muted-foreground">Scope</span><span className="font-medium text-foreground">Local only</span></div>
+              <div className="flex justify-between gap-4"><span className="text-muted-foreground">Sessions indexed</span><span className="font-medium text-foreground">{String(overview?.sessionCount ?? 0)}</span></div>
+              <div className="flex justify-between gap-4"><span className="text-muted-foreground">Last sync</span><span className="font-medium text-foreground">Automatic</span></div>
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card>
           <CardHeader><CardTitle>{t('settings.integrations')}</CardTitle></CardHeader>
           <CardContent className="space-y-3">
             {['Codex CLI', 'OpenCode', 'Claude Code'].map((name) => (

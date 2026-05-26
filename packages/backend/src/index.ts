@@ -2,7 +2,7 @@ import 'dotenv/config';
 import Fastify from 'fastify';
 import cors from '@fastify/cors';
 import { initDatabase, runMigrations, seedModels } from './db/index.js';
-import { createCodexAdapter, createClaudeAdapter, createOpencodeAdapter, createGeminiAdapter, createKimiAdapter, registry } from './adapters/index.js';
+import { createCodexAdapter, createClaudeAdapter, createOpencodeAdapter, createGeminiAdapter, createKimiAdapter, createAiderAdapter, createQwenAdapter, createAntigravityAdapter, registry } from './adapters/index.js';
 import { runIngestion, getLastStatus } from './ingestion/engine.js';
 import { registerOverviewRoutes } from './routes/overview.js';
 import { registerAnalyticsRoutes } from './routes/analytics.js';
@@ -22,6 +22,9 @@ async function main() {
   registry.register(createOpencodeAdapter());
   registry.register(createGeminiAdapter());
   registry.register(createKimiAdapter());
+  registry.register(createAiderAdapter());
+  registry.register(createQwenAdapter());
+  registry.register(createAntigravityAdapter());
 
   const app = Fastify({ logger: true });
   await app.register(cors, { origin: true });
@@ -38,6 +41,17 @@ async function main() {
     return status.errors.length > 0
       ? { ...status, error: { code: 'INGESTION_WARNINGS', message: 'Ingestion completed with warnings' } }
       : status;
+  });
+
+  app.get('/api/integrations/status', async () => {
+    const adapters = registry.getAll();
+    const resolved = await Promise.all(adapters.map(async (adapter) => ({
+      cli: adapter.cli,
+      status: await adapter.detect() ? 'available' : 'missing',
+    })));
+    return {
+      integrations: resolved,
+    };
   });
 
   app.post('/api/ingest', async () => {

@@ -73,7 +73,7 @@ export function SessionsPage() {
             <Select
               value={cli}
               onChange={(event) => updateParam('cli', event.target.value)}
-              options={[{ label: 'All CLIs', value: '' }, { label: 'Codex', value: 'codex' }, { label: 'OpenCode', value: 'opencode' }, { label: 'Claude', value: 'claude' }, { label: 'Gemini', value: 'gemini' }, { label: 'Kimi', value: 'kimi' }]}
+              options={[{ label: 'All CLIs', value: '' }, { label: 'Codex', value: 'codex' }, { label: 'OpenCode', value: 'opencode' }, { label: 'Claude', value: 'claude' }, { label: 'Gemini', value: 'gemini' }, { label: 'Kimi', value: 'kimi' }, { label: 'Aider', value: 'aider' }, { label: 'Qwen', value: 'qwen' }]}
             />
             <Button variant="outline"><SlidersHorizontal className="h-4 w-4" /> More filters</Button>
           </div>
