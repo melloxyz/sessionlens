@@ -1,4 +1,5 @@
 import type { FastifyInstance } from 'fastify';
+import { existsSync } from 'node:fs';
 import { getDatabase } from '../db/connection.js';
 
 export function registerProjectRoutes(app: FastifyInstance): void {
@@ -25,6 +26,7 @@ export function registerProjectRoutes(app: FastifyInstance): void {
         for (let i = 0; i < cols.length; i++) {
           obj[cols[i]] = row[i];
         }
+        obj.exists = typeof obj.path === 'string' && obj.path !== 'unknown' ? existsSync(obj.path) : false;
         data.push(obj);
       }
     }
@@ -46,6 +48,7 @@ export function registerProjectRoutes(app: FastifyInstance): void {
     const cols = projResult[0].columns;
     const row = projResult[0].values[0];
     for (let i = 0; i < cols.length; i++) proj[cols[i]] = row[i];
+    proj.exists = typeof proj.path === 'string' && proj.path !== 'unknown' ? existsSync(proj.path) : false;
 
     const path = proj.path as string;
 

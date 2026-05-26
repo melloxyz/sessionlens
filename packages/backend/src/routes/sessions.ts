@@ -15,7 +15,7 @@ export function registerSessionRoutes(app: FastifyInstance): void {
     const confidence = q.confidence || null;
     const search = q.search || null;
     const page = Math.max(1, Number(q.page) || 1);
-    const limit = Math.min(100, Math.max(1, Number(q.limit) || 20));
+    const limit = Math.min(500, Math.max(1, Number(q.limit) || 20));
     const sortBy = q.sortBy || 'started_at';
     const sortOrder = q.sortOrder === 'asc' ? 'ASC' : 'DESC';
 

@@ -1,5 +1,5 @@
-import { cn } from '../../lib/utils.js';
 import type { SelectHTMLAttributes } from 'react';
+import { cn } from '../../lib/utils.js';
 
 interface SelectProps extends SelectHTMLAttributes<HTMLSelectElement> {
   options: { label: string; value: string }[];
@@ -9,15 +9,13 @@ export function Select({ className, options, ...props }: SelectProps) {
   return (
     <select
       className={cn(
-        'flex h-9 rounded-lg border border-border-primary bg-bg-tertiary px-3 py-1 text-sm text-text-primary focus:outline-none focus:ring-1 focus:ring-accent transition-colors appearance-none cursor-pointer',
+        'h-10 rounded-xl border border-border bg-surface px-3 pr-8 text-sm text-foreground shadow-sm outline-none transition-all duration-200 hover:bg-surface-hover focus:border-accent/60 focus:ring-4 focus:ring-accent/10',
         className,
       )}
       {...props}
     >
-      {options.map((opt) => (
-        <option key={opt.value} value={opt.value}>
-          {opt.label}
-        </option>
+      {options.map((option) => (
+        <option key={option.value} value={option.value}>{option.label}</option>
       ))}
     </select>
   );

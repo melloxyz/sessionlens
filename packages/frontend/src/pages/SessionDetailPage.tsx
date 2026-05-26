@@ -1,9 +1,12 @@
-import { useParams, Link } from 'react-router-dom';
-import { ArrowLeft, Clock, DollarSign, Zap, FolderOpen } from 'lucide-react';
-import { useApi } from '../hooks/useApi.js';
-import { formatCurrency, formatDateTime, formatDuration, formatTokens } from '../lib/format.js';
-import { Card, CardContent } from '../components/ui/Card.js';
+import { Link, useParams } from 'react-router-dom';
+import type { LucideIcon } from 'lucide-react';
+import { ArrowLeft, Bot, Clock, Database, DollarSign, MessageSquare, Terminal, Wrench, Zap } from 'lucide-react';
 import { Badge } from '../components/ui/Badge.js';
+import { Button } from '../components/ui/Button.js';
+import { Card, CardContent, CardHeader, CardTitle } from '../components/ui/Card.js';
+import { TokenUsageBar } from '../components/session/TokenUsageBar.js';
+import { useApi } from '../hooks/useApi.js';
+import { basename, compactPath, formatCurrency, formatDate, formatDateTime, formatDuration, formatRelativeTime, formatTokens } from '../lib/format.js';
 
 interface Message {
   id: number;
@@ -23,119 +26,210 @@ interface UsageEvent {
   tool_calls_count: number;
 }
 
+interface SessionDetail {
+  id: number;
+  cli: string;
+  provider: string;
+  model: string | null;
+  project_path: string | null;
+  started_at: string;
+  ended_at: string | null;
+  duration_ms: number | null;
+  total_cost_usd: number | null;
+  source_confidence: string;
+  message_count: number;
+  tool_call_count: number;
+  session_id: string;
+  messages: Message[];
+  usageEvents: UsageEvent[];
+}
+
 export function SessionDetailPage() {
   const { id } = useParams<{ id: string }>();
-  const { data: session, loading } = useApi<Record<string, unknown>>(`/api/sessions/${id}`);
+  const { data: session, loading } = useApi<SessionDetail>(id ? `/api/sessions/${id}` : null, { immediate: Boolean(id) });
 
   if (loading) {
     return (
-      <div className="p-6 space-y-4">
-        <div className="h-6 w-32 animate-pulse rounded bg-bg-elevated" />
-        <div className="h-40 animate-pulse rounded-xl bg-bg-secondary" />
+      <div className="space-y-5 p-6">
+        <div className="h-9 w-36 animate-pulse rounded-xl bg-surface-muted" />
+        <div className="h-44 animate-pulse rounded-2xl bg-surface" />
+        <div className="grid grid-cols-1 gap-4 lg:grid-cols-[minmax(0,1fr)_360px]">
+          <div className="h-96 animate-pulse rounded-2xl bg-surface" />
+          <div className="h-96 animate-pulse rounded-2xl bg-surface" />
+        </div>
       </div>
     );
   }
 
-  if (!session) return <div className="p-6 text-text-tertiary">Session not found</div>;
+  if (!session) return <div className="p-6 text-sm text-subtle-foreground">Session not found</div>;
 
-  const messages = (session.messages ?? []) as Message[];
-  const usageEvents = (session.usageEvents ?? []) as UsageEvent[];
-  const totalInput = usageEvents.reduce((sum, e) => sum + (e.input_tokens ?? 0), 0);
-  const totalOutput = usageEvents.reduce((sum, e) => sum + (e.output_tokens ?? 0), 0);
+  const messages = session.messages ?? [];
+  const usageEvents = session.usageEvents ?? [];
+  const totalInput = usageEvents.reduce((sum, event) => sum + (event.input_tokens ?? 0), 0);
+  const totalOutput = usageEvents.reduce((sum, event) => sum + (event.output_tokens ?? 0), 0);
+  const cacheRead = usageEvents.reduce((sum, event) => sum + (event.cache_read_tokens ?? 0), 0);
+  const cacheWrite = usageEvents.reduce((sum, event) => sum + (event.cache_write_tokens ?? 0), 0);
+  const reasoning = usageEvents.reduce((sum, event) => sum + (event.reasoning_tokens ?? 0), 0);
+  const totalTokens = totalInput + totalOutput + cacheRead + cacheWrite + reasoning;
 
   return (
     <div className="space-y-6 p-6">
-      <Link to="/sessions" className="inline-flex items-center gap-1 text-sm text-text-tertiary hover:text-text-primary transition-colors">
-        <ArrowLeft className="h-4 w-4" /> Back to sessions
-      </Link>
-
-      <div className="flex flex-wrap items-start justify-between gap-4">
-        <div>
-          <h1 className="text-lg font-semibold text-text-primary">Session {(session.session_id as string)?.substring(0, 8)}...</h1>
-          <p className="text-sm text-text-tertiary">{session.project_path as string ?? 'Unknown project'}</p>
-        </div>
+      <div className="flex flex-wrap items-center justify-between gap-3">
+        <Link to="/sessions" className="inline-flex items-center gap-2 text-sm font-medium text-muted-foreground transition-colors hover:text-foreground">
+          <ArrowLeft className="h-4 w-4" /> Back to sessions
+        </Link>
         <Badge variant={session.source_confidence === 'HIGH' ? 'success' : session.source_confidence === 'MEDIUM' ? 'default' : 'warning'}>
-          {session.source_confidence as string}
+          {session.source_confidence} confidence
         </Badge>
       </div>
 
-      <div className="grid grid-cols-2 gap-3 sm:grid-cols-4 lg:grid-cols-6">
-        <MetricBadge icon={DollarSign} label="Cost" value={formatCurrency(session.total_cost_usd as number)} />
-        <MetricBadge icon={Zap} label="Model" value={session.model as string ?? '—'} />
-        <MetricBadge icon={Clock} label="Duration" value={formatDuration(session.duration_ms as number)} />
-        <MetricBadge icon={FolderOpen} label="Messages" value={String(session.message_count ?? 0)} />
-        <MetricBadge label="Input" value={formatTokens(totalInput)} />
-        <MetricBadge label="Output" value={formatTokens(totalOutput)} />
+      <Card>
+        <CardContent className="flex flex-col gap-5 lg:flex-row lg:items-center lg:justify-between">
+          <div className="flex min-w-0 items-start gap-4">
+            <div className="grid h-12 w-12 shrink-0 place-items-center rounded-2xl bg-slate-950 text-sm font-semibold text-white dark:bg-white dark:text-slate-950">
+              {session.cli.slice(0, 2).toUpperCase()}
+            </div>
+            <div className="min-w-0">
+              <div className="mb-2 flex flex-wrap items-center gap-2">
+                <Badge variant="neutral">{session.cli}</Badge>
+                <Badge variant="info">{session.provider}</Badge>
+                <span className="text-xs text-subtle-foreground">{formatRelativeTime(session.started_at)}</span>
+              </div>
+              <h1 className="truncate text-2xl font-semibold tracking-[-0.04em] text-foreground">Session {session.session_id.slice(0, 12)}</h1>
+              <p className="mt-1 truncate text-sm text-muted-foreground">{compactPath(session.project_path)}</p>
+            </div>
+          </div>
+          <Link to="/sessions">
+            <Button variant="outline">Open explorer</Button>
+          </Link>
+        </CardContent>
+      </Card>
+
+      <div className="grid grid-cols-2 gap-3 md:grid-cols-3 xl:grid-cols-6">
+        <MetricBadge icon={DollarSign} label="Cost" value={formatCurrency(session.total_cost_usd)} tone="success" />
+        <MetricBadge icon={Database} label="Tokens" value={formatTokens(totalTokens)} tone="info" />
+        <MetricBadge icon={MessageSquare} label="Messages" value={String(session.message_count ?? messages.length)} tone="info" />
+        <MetricBadge icon={Wrench} label="Tools" value={String(session.tool_call_count ?? 0)} tone="warning" />
+        <MetricBadge icon={Clock} label="Duration" value={formatDuration(session.duration_ms)} tone="success" />
+        <MetricBadge icon={Zap} label="Model" value={session.model ?? 'unknown'} tone="warning" />
       </div>
 
-      <div className="grid grid-cols-1 gap-4 lg:grid-cols-3">
-        <div className="lg:col-span-2 space-y-4">
-          <h2 className="text-sm font-medium text-text-primary">Conversation</h2>
-          <div className="space-y-3 max-h-[60vh] overflow-y-auto pr-2">
-            {messages.map((msg) => (
-              <div
-                key={msg.id}
-                className={`flex ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}
-              >
-                <div
-                  className={`max-w-[85%] rounded-xl px-4 py-3 text-sm ${
-                    msg.role === 'user'
-                      ? 'bg-accent text-white'
-                      : msg.role === 'assistant'
-                        ? 'bg-bg-elevated text-text-primary border border-border-secondary'
-                        : 'bg-bg-tertiary text-text-secondary'
-                  }`}
-                >
-                  <pre className="whitespace-pre-wrap break-words font-sans">{msg.content}</pre>
-                  <span className="mt-1 block text-right text-[10px] opacity-50">
-                    {formatDateTime(msg.timestamp)}
-                  </span>
-                </div>
-              </div>
-            ))}
-            {messages.length === 0 && (
-              <p className="text-sm text-text-tertiary py-8 text-center">No messages in this session</p>
-            )}
-          </div>
-        </div>
-
-        <div className="space-y-4">
-          <h2 className="text-sm font-medium text-text-primary">Usage</h2>
-          <Card>
-            <CardContent className="space-y-3 text-sm">
-              {usageEvents.length === 0 ? (
-                <p className="text-text-tertiary">No usage data</p>
-              ) : (
-                <>
-                  <div className="flex justify-between"><span className="text-text-secondary">Input tokens</span><span className="text-text-primary tabular-nums">{formatTokens(totalInput)}</span></div>
-                  <div className="flex justify-between"><span className="text-text-secondary">Output tokens</span><span className="text-text-primary tabular-nums">{formatTokens(totalOutput)}</span></div>
-                  <div className="flex justify-between"><span className="text-text-secondary">Cache read</span><span className="text-text-primary tabular-nums">{formatTokens(usageEvents.reduce((s, e) => s + (e.cache_read_tokens ?? 0), 0))}</span></div>
-                  <div className="flex justify-between"><span className="text-text-secondary">Tool calls</span><span className="text-text-primary tabular-nums">{session.tool_call_count as number ?? 0}</span></div>
-                  <div className="flex justify-between"><span className="text-text-secondary">Session ID</span><span className="text-xs text-text-tertiary font-mono">{(session.session_id as string)?.substring(0, 12)}...</span></div>
-                </>
+      <div className="grid grid-cols-1 gap-6 lg:grid-cols-[minmax(0,1fr)_380px]">
+        <Card className="min-w-0">
+          <CardHeader className="border-b border-border pb-5">
+            <div>
+              <CardTitle>Conversation</CardTitle>
+              <p className="mt-1 text-xs text-subtle-foreground">{messages.length} normalized messages from this local session</p>
+            </div>
+          </CardHeader>
+          <CardContent className="p-0">
+            <div className="max-h-[68vh] space-y-4 overflow-y-auto p-5">
+              {messages.map((message) => <MessageBubble key={message.id} message={message} />)}
+              {messages.length === 0 && (
+                <div className="rounded-2xl border border-dashed border-border p-10 text-center text-sm text-subtle-foreground">No messages in this session</div>
               )}
+            </div>
+          </CardContent>
+        </Card>
+
+        <aside className="space-y-4 lg:sticky lg:top-24 lg:self-start">
+          <Card>
+            <CardHeader className="pb-2">
+              <CardTitle>Token Usage</CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-5 pt-3">
+              <TokenUsageBar input={totalInput} output={totalOutput} cacheRead={cacheRead} cacheWrite={cacheWrite} />
+              {reasoning > 0 && <DetailRow label="Reasoning" value={formatTokens(reasoning)} />}
             </CardContent>
           </Card>
-        </div>
+
+          <Card>
+            <CardHeader className="pb-2">
+              <CardTitle>Metadata</CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-3 pt-3 text-sm">
+              <DetailRow label="Project" value={basename(session.project_path)} />
+              <DetailRow label="Path" value={compactPath(session.project_path)} />
+              <DetailRow label="CLI" value={session.cli} />
+              <DetailRow label="Provider" value={session.provider} />
+              <DetailRow label="Model" value={session.model ?? 'unknown'} />
+              <DetailRow label="Started" value={formatDateTime(session.started_at)} />
+              <DetailRow label="Ended" value={session.ended_at ? formatDateTime(session.ended_at) : '—'} />
+              <DetailRow label="Date" value={formatDate(session.started_at)} />
+              <DetailRow label="Session ID" value={session.session_id} mono />
+            </CardContent>
+          </Card>
+        </aside>
       </div>
     </div>
   );
 }
 
-function MetricBadge({ icon: Icon, label, value }: { icon?: typeof DollarSign; label: string; value: string }) {
+function MetricBadge({ icon: Icon, label, value, tone }: { icon: LucideIcon; label: string; value: string; tone: 'success' | 'warning' | 'info' }) {
+  const toneClass = {
+    success: 'bg-success-soft text-success',
+    warning: 'bg-warning-soft text-warning',
+    info: 'bg-info-soft text-info',
+  }[tone];
+
   return (
-    <Card className="border-border-secondary">
-      <CardContent className="flex items-center gap-3 py-3">
-        {Icon && (
-          <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-accent-subtle">
-            <Icon className="h-4 w-4 text-accent-hover" />
-          </div>
-        )}
+    <Card className="overflow-hidden">
+      <CardContent className="flex min-h-[92px] items-center gap-3 p-4">
+        <div className={`grid h-10 w-10 shrink-0 place-items-center rounded-2xl ${toneClass}`}>
+          <Icon className="h-[18px] w-[18px]" />
+        </div>
         <div className="min-w-0">
-          <p className="text-[11px] text-text-tertiary uppercase tracking-wider">{label}</p>
-          <p className="text-sm font-medium text-text-primary truncate">{value}</p>
+          <p className="text-[11px] font-medium uppercase tracking-[0.14em] text-subtle-foreground">{label}</p>
+          <p className="mt-1 truncate text-sm font-semibold text-foreground">{value}</p>
         </div>
       </CardContent>
     </Card>
+  );
+}
+
+function MessageBubble({ message }: { message: Message }) {
+  const isUser = message.role === 'user';
+  const isAssistant = message.role === 'assistant';
+  const Icon = isUser ? Terminal : Bot;
+
+  return (
+    <div className={`flex gap-3 ${isUser ? 'justify-end' : 'justify-start'}`}>
+      {!isUser && (
+        <div className="mt-1 grid h-8 w-8 shrink-0 place-items-center rounded-xl border border-border bg-surface-elevated text-muted-foreground">
+          <Icon className="h-4 w-4" />
+        </div>
+      )}
+      <div className={`max-w-[min(780px,92%)] ${isUser ? 'order-first' : ''}`}>
+        <div
+          className={
+            isUser
+              ? 'rounded-2xl bg-accent px-4 py-3 text-sm text-accent-foreground shadow-sm'
+              : isAssistant
+                ? 'rounded-2xl border border-border bg-surface-elevated px-4 py-3 text-sm text-foreground'
+                : 'rounded-2xl border border-border bg-surface-muted px-4 py-3 text-sm text-muted-foreground'
+          }
+        >
+          <div className="mb-2 flex items-center justify-between gap-4 text-[11px] uppercase tracking-[0.14em] opacity-60">
+            <span>{message.role}</span>
+            <span className="normal-case tracking-normal">{formatDateTime(message.timestamp)}</span>
+          </div>
+          <pre className="whitespace-pre-wrap break-words font-sans leading-6 [overflow-wrap:anywhere]">{message.content}</pre>
+        </div>
+      </div>
+      {isUser && (
+        <div className="mt-1 grid h-8 w-8 shrink-0 place-items-center rounded-xl bg-accent-soft text-accent">
+          <Icon className="h-4 w-4" />
+        </div>
+      )}
+    </div>
+  );
+}
+
+function DetailRow({ label, value, mono }: { label: string; value: string; mono?: boolean }) {
+  return (
+    <div className="flex items-start justify-between gap-4 border-b border-border pb-3 last:border-0 last:pb-0">
+      <span className="shrink-0 text-muted-foreground">{label}</span>
+      <span className={`min-w-0 text-right font-medium text-foreground ${mono ? 'break-all font-mono text-xs' : 'truncate'}`}>{value}</span>
+    </div>
   );
 }

@@ -1,5 +1,6 @@
-import { useApi } from '../hooks/useApi.js';
+import { Badge } from '../components/ui/Badge.js';
 import { Card, CardContent } from '../components/ui/Card.js';
+import { useApi } from '../hooks/useApi.js';
 
 interface ModelRow {
   id: number;
@@ -14,43 +15,32 @@ export function ModelsPage() {
   const { data, loading } = useApi<{ data: ModelRow[] }>('/api/models');
 
   return (
-    <div className="space-y-4 p-6">
-      <div>
-        <h1 className="text-lg font-semibold text-text-primary">Model Pricing</h1>
-        <p className="text-sm text-text-tertiary">Reference pricing table for cost estimation</p>
-      </div>
-
+    <div className="p-6">
       <Card>
         <CardContent className="p-0">
           <div className="overflow-x-auto">
             <table className="w-full text-sm">
               <thead>
-                <tr className="border-b border-border-secondary text-text-tertiary">
-                  <th className="px-4 py-3 text-left font-medium">Provider</th>
-                  <th className="px-4 py-3 text-left font-medium">Model</th>
-                  <th className="px-4 py-3 text-right font-medium">Input $/1M</th>
-                  <th className="px-4 py-3 text-right font-medium">Output $/1M</th>
-                  <th className="px-4 py-3 text-right font-medium">Cache $/1M</th>
+                <tr className="border-b border-border text-xs text-subtle-foreground">
+                  <th className="px-5 py-3 text-left font-medium">Provider</th>
+                  <th className="px-5 py-3 text-left font-medium">Model</th>
+                  <th className="px-5 py-3 text-right font-medium">Input $/1M</th>
+                  <th className="px-5 py-3 text-right font-medium">Output $/1M</th>
+                  <th className="px-5 py-3 text-right font-medium">Cache $/1M</th>
                 </tr>
               </thead>
               <tbody>
-                {loading
-                  ? Array.from({ length: 5 }).map((_, i) => (
-                      <tr key={i} className="border-b border-border-secondary">
-                        {Array.from({ length: 5 }).map((_, j) => (
-                          <td key={j} className="px-4 py-3"><div className="h-4 w-20 animate-pulse rounded bg-bg-elevated" /></td>
-                        ))}
-                      </tr>
-                    ))
-                  : data?.data.map((m) => (
-                      <tr key={m.id} className="border-b border-border-secondary hover:bg-bg-hover transition-colors">
-                        <td className="px-4 py-3"><span className="text-xs font-medium uppercase text-text-secondary">{m.provider}</span></td>
-                        <td className="px-4 py-3 text-text-primary font-mono text-xs">{m.model_name}</td>
-                        <td className="px-4 py-3 text-right tabular-nums text-text-primary">${m.input_cost_per_million.toFixed(2)}</td>
-                        <td className="px-4 py-3 text-right tabular-nums text-text-primary">${m.output_cost_per_million.toFixed(2)}</td>
-                        <td className="px-4 py-3 text-right tabular-nums text-text-tertiary">{m.cached_input_cost != null ? `$${m.cached_input_cost.toFixed(2)}` : '—'}</td>
-                      </tr>
-                    ))}
+                {loading ? Array.from({ length: 8 }).map((_, row) => (
+                  <tr key={row} className="border-b border-border">{Array.from({ length: 5 }).map((_, col) => <td key={col} className="px-5 py-4"><div className="h-4 w-24 animate-pulse rounded bg-surface-muted" /></td>)}</tr>
+                )) : data?.data.map((model) => (
+                  <tr key={model.id} className="border-b border-border transition-colors hover:bg-surface-hover">
+                    <td className="px-5 py-4"><Badge variant="neutral">{model.provider}</Badge></td>
+                    <td className="px-5 py-4 font-mono text-xs text-foreground">{model.model_name}</td>
+                    <td className="px-5 py-4 text-right tabular-nums text-muted-foreground">${model.input_cost_per_million.toFixed(2)}</td>
+                    <td className="px-5 py-4 text-right tabular-nums font-medium text-foreground">${model.output_cost_per_million.toFixed(2)}</td>
+                    <td className="px-5 py-4 text-right tabular-nums text-muted-foreground">{model.cached_input_cost == null ? '—' : `$${model.cached_input_cost.toFixed(2)}`}</td>
+                  </tr>
+                ))}
               </tbody>
             </table>
           </div>
