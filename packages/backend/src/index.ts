@@ -2,7 +2,7 @@ import 'dotenv/config';
 import Fastify from 'fastify';
 import cors from '@fastify/cors';
 import { initDatabase, runMigrations, seedModels } from './db/index.js';
-import { createCodexAdapter, createClaudeAdapter, createOpencodeAdapter, registry } from './adapters/index.js';
+import { createCodexAdapter, createClaudeAdapter, createOpencodeAdapter, createGeminiAdapter, createKimiAdapter, registry } from './adapters/index.js';
 import { runIngestion, getLastStatus } from './ingestion/engine.js';
 import { registerOverviewRoutes } from './routes/overview.js';
 import { registerAnalyticsRoutes } from './routes/analytics.js';
@@ -20,6 +20,8 @@ async function main() {
   registry.register(createCodexAdapter());
   registry.register(createClaudeAdapter());
   registry.register(createOpencodeAdapter());
+  registry.register(createGeminiAdapter());
+  registry.register(createKimiAdapter());
 
   const app = Fastify({ logger: true });
   await app.register(cors, { origin: true });

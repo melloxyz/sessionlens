@@ -5,6 +5,7 @@ export interface RawSession {
   provider: string;
   cli: CliProvider;
   projectPath: string | null;
+  sourcePath?: string;
   model: string | null;
   startedAt: string;
   endedAt: string | null;
