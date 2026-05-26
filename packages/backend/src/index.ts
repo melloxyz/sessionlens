@@ -60,13 +60,10 @@ async function main() {
   });
 
   try {
-    await runIngestion();
-  } catch (err) {
-    app.log.error(err, 'Initial ingestion failed');
-  }
-
-  try {
     await app.listen({ port: PORT, host: '127.0.0.1' });
+    void runIngestion().catch((err) => {
+      app.log.error(err, 'Initial ingestion failed');
+    });
   } catch (err) {
     app.log.error(err);
     process.exit(1);

@@ -1,13 +1,16 @@
 import { getDatabase } from '../db/connection.js';
 
-const VALID_SESSION_SQL = `NOT (
-  session_id = 'unknown'
-  AND (project_path IS NULL OR project_path = 'unknown')
-  AND (model IS NULL OR model = 'unknown')
-  AND COALESCE(message_count, 0) = 0
-  AND COALESCE(tool_call_count, 0) = 0
-  AND COALESCE(total_cost_usd, 0) = 0
-)`;
+function validSessionSql(alias?: string): string {
+  const prefix = alias ? `${alias}.` : '';
+  return `NOT (
+    ${prefix}session_id = 'unknown'
+    AND (${prefix}project_path IS NULL OR ${prefix}project_path = 'unknown')
+    AND (${prefix}model IS NULL OR ${prefix}model = 'unknown')
+    AND COALESCE(${prefix}message_count, 0) = 0
+    AND COALESCE(${prefix}tool_call_count, 0) = 0
+    AND COALESCE(${prefix}total_cost_usd, 0) = 0
+  )`;
+}
 
 export interface AnalyticsInsight {
   id: string;
@@ -399,10 +402,11 @@ export function buildAnalyticsReport(filters: AnalyticsFilters = {}): AnalyticsR
 
 function querySessions(db: ReturnType<typeof getDatabase>, filters: AnalyticsFilters): SessionRow[] {
   const range = buildDateWhere(filters);
+  const validSession = validSessionSql();
   const result = db.exec(
     `SELECT id, session_id, cli, provider, model, project_path, started_at, duration_ms, total_cost_usd, message_count, tool_call_count
       FROM sessions
-      WHERE ${VALID_SESSION_SQL}${range.sql}
+      WHERE ${validSession}${range.sql}
       ORDER BY started_at ASC`,
     range.params,
   );
@@ -412,6 +416,7 @@ function querySessions(db: ReturnType<typeof getDatabase>, filters: AnalyticsFil
 
 function queryUsageAggregates(db: ReturnType<typeof getDatabase>, filters: AnalyticsFilters): UsageAggregate[] {
   const range = buildDateWhere(filters, 's.started_at');
+  const validSession = validSessionSql('s');
   const result = db.exec(
     `SELECT
        s.id AS session_id,
@@ -427,7 +432,7 @@ function queryUsageAggregates(db: ReturnType<typeof getDatabase>, filters: Analy
        COALESCE(SUM(ue.tool_calls_count), 0) AS tool_calls_count
      FROM usage_events ue
      JOIN sessions s ON s.id = ue.session_fk
-      WHERE ${VALID_SESSION_SQL}${range.sql}
+      WHERE ${validSession}${range.sql}
       GROUP BY s.id
       ORDER BY s.started_at ASC`,
     range.params,
@@ -438,10 +443,11 @@ function queryUsageAggregates(db: ReturnType<typeof getDatabase>, filters: Analy
 
 function queryProjectSummaries(db: ReturnType<typeof getDatabase>, filters: AnalyticsFilters): ProjectSummary[] {
   const range = buildDateWhere(filters);
+  const validSession = validSessionSql();
   const result = db.exec(
     `SELECT COALESCE(project_path, 'unknown') AS project, COALESCE(SUM(total_cost_usd), 0) AS spend, COUNT(*) AS sessions
      FROM sessions
-     WHERE ${VALID_SESSION_SQL}${range.sql}
+     WHERE ${validSession}${range.sql}
      GROUP BY COALESCE(project_path, 'unknown')
      ORDER BY spend DESC`,
     range.params,
@@ -452,6 +458,7 @@ function queryProjectSummaries(db: ReturnType<typeof getDatabase>, filters: Anal
 
 function queryModelSummaries(db: ReturnType<typeof getDatabase>, filters: AnalyticsFilters): ModelSummary[] {
   const range = buildDateWhere(filters);
+  const validSession = validSessionSql();
   const result = db.exec(
     `SELECT
        COALESCE(provider, 'unknown') AS provider,
@@ -463,7 +470,7 @@ function queryModelSummaries(db: ReturnType<typeof getDatabase>, filters: Analyt
        COALESCE(AVG(duration_ms), 0) AS avgDuration,
        COALESCE(SUM(message_count), 0) AS totalMessages
      FROM sessions
-     WHERE ${VALID_SESSION_SQL}${range.sql}
+     WHERE ${validSession}${range.sql}
      GROUP BY COALESCE(provider, 'unknown'), COALESCE(model, 'unknown')
      ORDER BY spend DESC`,
     range.params,
@@ -474,6 +481,7 @@ function queryModelSummaries(db: ReturnType<typeof getDatabase>, filters: Analyt
 
 function queryModelUsageBreakdown(db: ReturnType<typeof getDatabase>, filters: AnalyticsFilters): ModelUsageSummary[] {
   const range = buildDateWhere(filters, 's.started_at');
+  const validSession = validSessionSql('s');
   const result = db.exec(
     `SELECT smu.provider, smu.model,
             COALESCE(SUM(smu.message_count), 0) AS messageCount,
@@ -486,7 +494,7 @@ function queryModelUsageBreakdown(db: ReturnType<typeof getDatabase>, filters: A
             COALESCE(SUM(smu.total_cost_usd), 0) AS totalCostUsd
      FROM session_model_usage smu
      JOIN sessions s ON s.id = smu.session_fk
-     WHERE ${VALID_SESSION_SQL}${range.sql}
+     WHERE ${validSession}${range.sql}
      GROUP BY smu.provider, smu.model
      ORDER BY totalCostUsd DESC, messageCount DESC`,
     range.params,
@@ -497,7 +505,8 @@ function queryModelUsageBreakdown(db: ReturnType<typeof getDatabase>, filters: A
 
 function queryDailyTrend(db: ReturnType<typeof getDatabase>, filters: AnalyticsFilters): { date: string; spend: number }[] {
   const range = buildDateWhere(filters);
-  const anchorResult = db.exec(`SELECT date(MAX(started_at)) AS anchor FROM sessions WHERE ${VALID_SESSION_SQL}${range.sql}`, range.params);
+  const validSession = validSessionSql();
+  const anchorResult = db.exec(`SELECT date(MAX(started_at)) AS anchor FROM sessions WHERE ${validSession}${range.sql}`, range.params);
   const anchor = anchorResult[0]?.values?.[0]?.[0] as string | undefined;
   if (!anchor) return [];
 
@@ -509,7 +518,7 @@ function queryDailyTrend(db: ReturnType<typeof getDatabase>, filters: AnalyticsF
   const spendResult = db.exec(
     `SELECT date(started_at) AS day, COALESCE(SUM(total_cost_usd), 0) AS spend
      FROM sessions
-     WHERE ${VALID_SESSION_SQL} AND started_at >= ?${dateToSql}
+     WHERE ${validSession} AND started_at >= ?${dateToSql}
      GROUP BY day`,
     params,
   );

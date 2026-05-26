@@ -15,10 +15,10 @@ export function createAntigravityAdapter(): Adapter {
   const gemini = createGeminiAdapter();
 
   return {
-    cli: 'gemini' as CliProvider,
+    cli: 'antigravity' as CliProvider,
 
     async detect(): Promise<boolean> {
-      return ANTIGRAVITY_ROOTS.some((root) => existsSync(root)) || existsSync(join(homedir(), '.gemini', 'tmp'));
+      return ANTIGRAVITY_ROOTS.some((root) => existsSync(root));
     },
 
     async discover(): Promise<string[]> {
@@ -34,7 +34,7 @@ export function createAntigravityAdapter(): Adapter {
     },
 
     normalize(raw: RawSession): RawSession {
-      return raw;
+      return { ...raw, cli: 'antigravity' as CliProvider };
     },
   };
 }

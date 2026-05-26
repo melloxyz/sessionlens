@@ -1,14 +1,17 @@
+import type { SVGProps } from 'react';
 import { Badge } from '../ui/Badge.js';
 import { useTheme } from '../theme/ThemeProvider.js';
 import { cn } from '../../lib/utils.js';
 
 type LogoRoute = string | { light: string; dark: string };
+type CustomLogo = 'opencode';
 
 interface BrandMeta {
   label: string;
   initials: string;
   color: string;
   logo?: LogoRoute;
+  customLogo?: CustomLogo;
 }
 
 const OPENAI = { light: 'https://svgl.app/library/openai.svg', dark: 'https://svgl.app/library/openai_dark.svg' };
@@ -18,7 +21,7 @@ const GOOGLE = 'https://svgl.app/library/google.svg';
 const CLI_BRANDS: Record<string, BrandMeta> = {
   codex: { label: 'Codex CLI', initials: 'CX', color: '#8b5cf6', logo: OPENAI },
   claude: { label: 'Claude Code', initials: 'CL', color: '#d97706', logo: 'https://svgl.app/library/claude-ai-icon.svg' },
-  opencode: { label: 'OpenCode', initials: 'OC', color: '#22c55e' },
+  opencode: { label: 'OpenCode', initials: 'OC', color: '#131010', customLogo: 'opencode' },
   gemini: { label: 'Gemini CLI', initials: 'GE', color: '#4285f4', logo: GOOGLE },
   kimi: { label: 'Kimi CLI', initials: 'KI', color: '#06b6d4', logo: 'https://svgl.app/library/kimi-icon.svg' },
   aider: { label: 'Aider', initials: 'AI', color: '#14b8a6' },
@@ -33,7 +36,7 @@ const PROVIDER_BRANDS: Record<string, BrandMeta> = {
   deepseek: { label: 'DeepSeek', initials: 'DS', color: '#2563eb', logo: 'https://svgl.app/library/deepseek.svg' },
   minimax: { label: 'MiniMax', initials: 'MM', color: '#7c3aed' },
   nvidia: { label: 'NVIDIA', initials: 'NV', color: '#76b900', logo: { light: 'https://svgl.app/library/nvidia-icon-light.svg', dark: 'https://svgl.app/library/nvidia-icon-dark.svg' } },
-  opencode: { label: 'OpenCode', initials: 'OC', color: '#22c55e' },
+  opencode: { label: 'OpenCode', initials: 'OC', color: '#131010', customLogo: 'opencode' },
   'github-copilot': { label: 'GitHub Copilot', initials: 'CP', color: '#6366f1', logo: { light: 'https://svgl.app/library/copilot.svg', dark: 'https://svgl.app/library/copilot_dark.svg' } },
 };
 
@@ -51,16 +54,27 @@ export function BrandMark({ value, kind = 'cli', size = 'md', className }: { val
   const { theme } = useTheme();
   const meta = getBrandMeta(value, kind);
   const logo = typeof meta.logo === 'string' ? meta.logo : meta.logo?.[theme];
+  const CustomLogo = meta.customLogo === 'opencode' ? OpenCodeLogo : null;
   const sizeClass = size === 'sm' ? 'h-7 w-7 rounded-lg text-[10px]' : size === 'lg' ? 'h-12 w-12 rounded-2xl text-sm' : 'h-9 w-9 rounded-xl text-xs';
 
   return (
     <div
       className={cn('grid shrink-0 place-items-center border border-border bg-surface-elevated font-semibold text-white shadow-sm', sizeClass, className)}
-      style={{ color: logo ? undefined : '#fff', backgroundColor: logo ? undefined : meta.color }}
+      style={{ color: logo || CustomLogo ? undefined : '#fff', backgroundColor: logo || CustomLogo ? undefined : meta.color }}
       title={meta.label}
     >
-      {logo ? <img src={logo} alt={`${meta.label} logo`} className="h-4/5 w-4/5 object-contain" loading="lazy" /> : meta.initials}
+      {CustomLogo ? <CustomLogo className="h-full w-full" /> : logo ? <img src={logo} alt={`${meta.label} logo`} className="h-4/5 w-4/5 object-contain" loading="lazy" /> : meta.initials}
     </div>
+  );
+}
+
+function OpenCodeLogo(props: SVGProps<SVGSVGElement>) {
+  return (
+    <svg viewBox="0 0 512 512" fill="none" aria-hidden="true" {...props}>
+      <rect width="512" height="512" fill="#131010" />
+      <path d="M320 224V352H192V224H320Z" fill="#5A5858" />
+      <path fillRule="evenodd" clipRule="evenodd" d="M384 416H128V96H384V416ZM320 160H192V352H320V160Z" fill="white" />
+    </svg>
   );
 }
 

@@ -30,6 +30,7 @@ export function Sidebar() {
   const { data } = useApi<{ integrations: IntegrationStatusItem[] }>('/api/integrations/status', { initialData: { integrations: [] } });
 
   const integrations = (data?.integrations ?? [])
+    .filter((item) => item.status === 'available')
     .map((item) => ({ ...item, label: getBrandMeta(item.cli, 'cli').label }));
 
   return (
@@ -66,21 +67,13 @@ export function Sidebar() {
       <div className="mt-8 px-5">
         <div className="mb-3 text-[11px] font-semibold uppercase tracking-[0.16em] text-subtle-foreground">Integrations</div>
         <div className="space-y-2">
-          {integrations.length > 0 ? integrations.map((item) => (
+          {integrations.map((item) => (
             <div key={item.label} className="flex items-center justify-between rounded-xl px-2 py-2 text-sm text-muted-foreground transition-colors hover:bg-surface-hover hover:text-foreground">
               <div className="flex items-center gap-3">
                 <BrandMark value={item.cli} size="sm" />
                 <span>{item.label}</span>
               </div>
               <CircleDot className={cn('h-3.5 w-3.5', item.status === 'available' ? 'fill-success text-success' : 'fill-muted-foreground text-muted-foreground')} />
-            </div>
-          )) : ['claude', 'codex', 'opencode'].map((cli) => (
-            <div key={cli} className="flex items-center justify-between rounded-xl px-2 py-2 text-sm text-muted-foreground transition-colors hover:bg-surface-hover hover:text-foreground">
-              <div className="flex items-center gap-3">
-                <BrandMark value={cli} size="sm" />
-                <span>{getBrandMeta(cli, 'cli').label}</span>
-              </div>
-              <CircleDot className="h-3.5 w-3.5 fill-success text-success" />
             </div>
           ))}
         </div>
