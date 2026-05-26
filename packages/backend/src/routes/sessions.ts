@@ -1,6 +1,15 @@
 import type { FastifyInstance } from 'fastify';
 import { getDatabase } from '../db/connection.js';
 
+const VALID_SESSION_SQL = `NOT (
+  session_id = 'unknown'
+  AND (project_path IS NULL OR project_path = 'unknown')
+  AND (model IS NULL OR model = 'unknown')
+  AND COALESCE(message_count, 0) = 0
+  AND COALESCE(tool_call_count, 0) = 0
+  AND COALESCE(total_cost_usd, 0) = 0
+)`;
+
 export function registerSessionRoutes(app: FastifyInstance): void {
   app.get('/api/sessions', async (req) => {
     const q = req.query as Record<string, string>;
@@ -23,7 +32,7 @@ export function registerSessionRoutes(app: FastifyInstance): void {
     const sortCol = allowedSort.includes(sortBy) ? sortBy : 'started_at';
 
     // Count query
-    let countSql = `SELECT COUNT(*) FROM sessions WHERE 1=1`;
+    let countSql = `SELECT COUNT(*) FROM sessions WHERE ${VALID_SESSION_SQL}`;
     const countParams: (string | number | null)[] = [];
     if (cli) { countSql += ` AND cli = ?`; countParams.push(cli); }
     if (provider) { countSql += ` AND provider = ?`; countParams.push(provider); }
@@ -41,7 +50,7 @@ export function registerSessionRoutes(app: FastifyInstance): void {
     let dataSql = `
       SELECT id, provider, cli, session_id, project_path, model, started_at, ended_at,
              duration_ms, total_cost_usd, source_confidence, message_count, tool_call_count, created_at
-      FROM sessions WHERE 1=1
+      FROM sessions WHERE ${VALID_SESSION_SQL}
     `;
     const dataParams: (string | number | null)[] = [];
     if (cli) { dataSql += ` AND cli = ?`; dataParams.push(cli); }

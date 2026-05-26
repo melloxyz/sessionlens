@@ -1,6 +1,15 @@
 import type { FastifyInstance } from 'fastify';
 import { getDatabase } from '../db/connection.js';
 
+const VALID_SESSION_SQL = `NOT (
+  session_id = 'unknown'
+  AND (project_path IS NULL OR project_path = 'unknown')
+  AND (model IS NULL OR model = 'unknown')
+  AND COALESCE(message_count, 0) = 0
+  AND COALESCE(tool_call_count, 0) = 0
+  AND COALESCE(total_cost_usd, 0) = 0
+)`;
+
 export function registerAnalyticsRoutes(app: FastifyInstance): void {
   app.get('/api/analytics/spend-over-time', async (req) => {
     const q = req.query as Record<string, string>;
@@ -22,7 +31,7 @@ export function registerAnalyticsRoutes(app: FastifyInstance): void {
         COALESCE(SUM((SELECT SUM(input_tokens + output_tokens) FROM usage_events WHERE session_fk = sessions.id)), 0) AS total_tokens,
         COUNT(*) AS session_count
       FROM sessions
-      WHERE total_cost_usd IS NOT NULL
+      WHERE ${VALID_SESSION_SQL} AND total_cost_usd IS NOT NULL
     `;
     const params: (string | number | null)[] = [];
 
@@ -66,7 +75,7 @@ export function registerAnalyticsRoutes(app: FastifyInstance): void {
         SUM(ue.cache_write_tokens) AS cache_write_tokens
       FROM usage_events ue
       JOIN sessions s ON s.id = ue.session_fk
-      WHERE 1=1
+      WHERE ${VALID_SESSION_SQL}
     `;
     const params: (string | number | null)[] = [];
 
@@ -112,7 +121,7 @@ export function registerAnalyticsRoutes(app: FastifyInstance): void {
                       metric === 'tokens' ? 'COALESCE(SUM((SELECT SUM(input_tokens+output_tokens) FROM usage_events WHERE session_fk=sessions.id)), 0)' :
                       'COALESCE(SUM(total_cost_usd), 0)';
 
-    const sql = `SELECT ${dim} AS label, ${metricCol} AS value FROM sessions GROUP BY ${dim} ORDER BY value DESC`;
+    const sql = `SELECT ${dim} AS label, ${metricCol} AS value FROM sessions WHERE ${VALID_SESSION_SQL} GROUP BY ${dim} ORDER BY value DESC`;
 
     const results = db.exec(sql);
     const breakdown: { label: string; value: number; percentage: number }[] = [];

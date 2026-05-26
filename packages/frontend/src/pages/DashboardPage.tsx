@@ -76,7 +76,7 @@ export function DashboardPage() {
   const { data: tokenData } = useApi<{ points: { date: string; inputTokens: number; outputTokens: number; cacheReadTokens?: number; cacheWriteTokens?: number }[] }>('/api/analytics/tokens-over-time');
   const { data: cliBreakdown } = useApi<{ breakdown: { label: string; value: number; percentage: number }[] }>('/api/analytics/breakdown?dimension=cli&metric=cost');
   const { data: modelBreakdown } = useApi<{ breakdown: { label: string; value: number; percentage: number }[] }>('/api/analytics/breakdown?dimension=model&metric=cost');
-  const { data: recentSessions } = useApi<{ data: SessionRow[]; total: number }>('/api/sessions?limit=8&sortBy=started_at&sortOrder=desc');
+  const { data: recentSessions } = useApi<{ data: SessionRow[]; total: number }>('/api/sessions?limit=9&sortBy=started_at&sortOrder=desc');
   const { data: allSessions } = useApi<{ data: SessionRow[]; total: number }>('/api/sessions?limit=500&sortBy=started_at&sortOrder=desc');
   const { data: selectedSession } = useApi<SessionDetail>(selectedId ? `/api/sessions/${selectedId}` : null, { immediate: Boolean(selectedId) });
 
@@ -150,7 +150,7 @@ export function DashboardPage() {
           <DonutCard title="Spend by Model" data={modelData} center={`${modelData.length}`} centerLabel="models" colorFor={(_, index) => chartColor(index)} />
         </div>
 
-        <Card>
+        <Card className="overflow-hidden">
           <CardHeader>
             <div>
               <CardTitle>Recent Sessions</CardTitle>
@@ -161,9 +161,9 @@ export function DashboardPage() {
             </Link>
           </CardHeader>
           <CardContent className="p-0">
-            <div className="overflow-x-auto">
+            <div className="max-h-[560px] overflow-auto">
               <table className="w-full text-sm">
-                <thead>
+                <thead className="sticky top-0 z-10 bg-surface">
                   <tr className="border-b border-border text-xs text-subtle-foreground">
                     <th className="px-5 py-3 text-left font-medium">Session</th>
                     <th className="px-5 py-3 text-left font-medium">CLI</th>
@@ -203,8 +203,8 @@ export function DashboardPage() {
         </Card>
       </section>
 
-      <aside className="space-y-4 xl:sticky xl:top-24 xl:h-[calc(100vh-7.5rem)] xl:overflow-auto">
-        <Card>
+      <aside className="space-y-4">
+        <Card className="h-full">
           <CardContent className="space-y-5">
             <div className="flex items-start gap-3">
               <div className="grid h-11 w-11 place-items-center rounded-2xl bg-slate-950 text-sm font-semibold text-white dark:bg-white dark:text-slate-950">AI</div>

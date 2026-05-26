@@ -91,8 +91,10 @@ function buildClaudeSessions(
 
   for (const evt of events) {
     const type = evt.type as string;
-    const sessionId = (evt.sessionId as string) ?? 'unknown';
+    const sessionId = evt.sessionId as string | undefined;
     const ts = (evt.timestamp as string) ?? '';
+
+    if (!sessionId) continue;
 
     if (!sessionMap.has(sessionId)) {
       sessionMap.set(sessionId, {
@@ -180,6 +182,10 @@ function buildClaudeSessions(
     let totalCostUsd: number | null = data.totalCost;
     if (!totalCostUsd && hasTokenData) {
       totalCostUsd = estimateCost(data.totalInputTokens, data.totalOutputTokens);
+    }
+
+    if (data.messages.length === 0 && !hasTokenData && data.toolCallCount === 0 && !totalCostUsd) {
+      continue;
     }
 
     sessions.push({

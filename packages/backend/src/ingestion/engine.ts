@@ -99,6 +99,7 @@ export async function runIngestion(): Promise<IngestionStatus> {
   }
 
   try {
+    deleteInvalidSessions();
     refreshProjects();
   } catch (err) {
     errors.push(`refresh-projects: ${String(err)}`);
@@ -111,6 +112,19 @@ export async function runIngestion(): Promise<IngestionStatus> {
   saveDatabase();
 
   return status;
+}
+
+function deleteInvalidSessions(): void {
+  const db = getDatabase();
+  db.run(`
+    DELETE FROM sessions
+    WHERE session_id = 'unknown'
+      AND (project_path IS NULL OR project_path = 'unknown')
+      AND (model IS NULL OR model = 'unknown')
+      AND COALESCE(message_count, 0) = 0
+      AND COALESCE(tool_call_count, 0) = 0
+      AND COALESCE(total_cost_usd, 0) = 0
+  `);
 }
 
 function upsertSession(raw: RawSession): 'new' | 'updated' | 'skipped' {
