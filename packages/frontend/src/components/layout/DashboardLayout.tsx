@@ -22,12 +22,13 @@ export function DashboardLayout() {
   const { pathname } = useLocation();
   const { t } = useI18n();
   const page = getPageKeys(pathname);
+  const showDateRange = pathname === '/' || pathname === '/sessions' || pathname === '/analytics';
 
   return (
     <div className="flex h-screen overflow-hidden bg-background text-foreground">
       <Sidebar />
       <main className="flex min-w-0 flex-1 flex-col overflow-hidden">
-        <Topbar title={t(page.title)} subtitle={t(page.subtitle)} onRefresh={() => window.location.reload()} />
+        <Topbar title={t(page.title)} subtitle={t(page.subtitle)} showDateRange={showDateRange} onRefresh={() => window.location.reload()} />
         <div className="min-h-0 flex-1 overflow-auto">
           <Outlet />
         </div>

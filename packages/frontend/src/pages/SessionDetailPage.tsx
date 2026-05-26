@@ -1,11 +1,14 @@
 import { Link, useParams } from 'react-router-dom';
 import type { LucideIcon } from 'lucide-react';
 import { ArrowLeft, Bot, Clock, Database, DollarSign, MessageSquare, Terminal, Wrench, Zap } from 'lucide-react';
+import { BrandBadge, BrandMark } from '../components/brand/BrandMark.js';
 import { Badge } from '../components/ui/Badge.js';
 import { Button } from '../components/ui/Button.js';
 import { Card, CardContent, CardHeader, CardTitle } from '../components/ui/Card.js';
 import { TokenUsageBar } from '../components/session/TokenUsageBar.js';
+import { EmptyState } from '../components/ui/EmptyState.js';
 import { ErrorState } from '../components/ui/ErrorState.js';
+import { LoadingState } from '../components/ui/LoadingState.js';
 import { useApi } from '../hooks/useApi.js';
 import { basename, compactPath, formatCurrency, formatDate, formatDateTime, formatDuration, formatRelativeTime, formatTokens } from '../lib/format.js';
 
@@ -63,18 +66,7 @@ export function SessionDetailPage() {
   const { id } = useParams<{ id: string }>();
   const { data: session, loading, error, refetch } = useApi<SessionDetail>(id ? `/api/sessions/${id}` : null, { immediate: Boolean(id) });
 
-  if (loading) {
-    return (
-      <div className="space-y-5 p-6">
-        <div className="h-9 w-36 animate-pulse rounded-xl bg-surface-muted" />
-        <div className="h-44 animate-pulse rounded-2xl bg-surface" />
-        <div className="grid grid-cols-1 gap-4 lg:grid-cols-[minmax(0,1fr)_360px]">
-          <div className="h-96 animate-pulse rounded-2xl bg-surface" />
-          <div className="h-96 animate-pulse rounded-2xl bg-surface" />
-        </div>
-      </div>
-    );
-  }
+  if (loading) return <LoadingState />;
 
   if (error) {
     return (
@@ -90,7 +82,7 @@ export function SessionDetailPage() {
     );
   }
 
-  if (!session) return <div className="p-6 text-sm text-subtle-foreground">Session not found</div>;
+  if (!session) return <div className="p-6"><EmptyState title="Session not found" description="This session may have been removed or not indexed yet." icon={MessageSquare} /></div>;
 
   const messages = session.messages ?? [];
   const usageEvents = session.usageEvents ?? [];
@@ -116,13 +108,11 @@ export function SessionDetailPage() {
       <Card>
         <CardContent className="flex flex-col gap-5 lg:flex-row lg:items-center lg:justify-between">
           <div className="flex min-w-0 items-start gap-4">
-            <div className="grid h-12 w-12 shrink-0 place-items-center rounded-2xl bg-slate-950 text-sm font-semibold text-white dark:bg-white dark:text-slate-950">
-              {session.cli.slice(0, 2).toUpperCase()}
-            </div>
+            <BrandMark value={session.cli} size="lg" />
             <div className="min-w-0">
               <div className="mb-2 flex flex-wrap items-center gap-2">
-                <Badge variant="neutral">{session.cli}</Badge>
-                <Badge variant="info">{session.provider}</Badge>
+                <BrandBadge value={session.cli} />
+                <BrandBadge value={session.provider} kind="provider" />
                 <span className="text-xs text-subtle-foreground">{formatRelativeTime(session.started_at)}</span>
               </div>
               <h1 className="truncate text-2xl font-semibold tracking-[-0.04em] text-foreground">Session {session.session_id.slice(0, 12)}</h1>
@@ -155,9 +145,7 @@ export function SessionDetailPage() {
           <CardContent className="p-0">
             <div className="max-h-[68vh] space-y-4 overflow-y-auto p-5">
               {messages.map((message) => <MessageBubble key={message.id} message={message} />)}
-              {messages.length === 0 && (
-                <div className="rounded-2xl border border-dashed border-border p-10 text-center text-sm text-subtle-foreground">No messages in this session</div>
-              )}
+              {messages.length === 0 && <EmptyState title="No messages in this session" description="The adapter found session metadata, but no normalized messages were available." icon={MessageSquare} />}
             </div>
           </CardContent>
         </Card>

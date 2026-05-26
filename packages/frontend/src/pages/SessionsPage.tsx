@@ -1,11 +1,16 @@
 import { useState } from 'react';
 import { Link, useSearchParams } from 'react-router-dom';
-import { ArrowUpDown, Search, SlidersHorizontal } from 'lucide-react';
+import { ArrowUpDown, Search } from 'lucide-react';
+import { BrandBadge, BrandMark } from '../components/brand/BrandMark.js';
 import { Badge } from '../components/ui/Badge.js';
 import { Button } from '../components/ui/Button.js';
 import { Card, CardContent } from '../components/ui/Card.js';
+import { EmptyState } from '../components/ui/EmptyState.js';
+import { ErrorState } from '../components/ui/ErrorState.js';
 import { Input } from '../components/ui/Input.js';
+import { TableSkeletonRows } from '../components/ui/LoadingState.js';
 import { Select } from '../components/ui/Select.js';
+import { useDateRange } from '../components/filters/DateRangeProvider.js';
 import { useApi } from '../hooks/useApi.js';
 import { basename, compactPath, formatCurrency, formatDuration, formatRelativeTime } from '../lib/format.js';
 
@@ -25,6 +30,7 @@ interface SessionRow {
 }
 
 export function SessionsPage() {
+  const { queryString } = useDateRange();
   const [searchParams, setSearchParams] = useSearchParams();
   const page = Number(searchParams.get('page')) || 1;
   const search = searchParams.get('search') || '';
@@ -33,8 +39,8 @@ export function SessionsPage() {
   const sortOrder = searchParams.get('sortOrder') || 'desc';
   const [searchInput, setSearchInput] = useState(search);
 
-  const apiUrl = `/api/sessions?page=${page}&limit=20&sortBy=${sortBy}&sortOrder=${sortOrder}${search ? `&search=${search}` : ''}${cli ? `&cli=${cli}` : ''}`;
-  const { data, loading } = useApi<{ data: SessionRow[]; total: number; page: number; limit: number }>(apiUrl);
+  const apiUrl = `/api/sessions?page=${page}&limit=20&sortBy=${sortBy}&sortOrder=${sortOrder}${search ? `&search=${search}` : ''}${cli ? `&cli=${cli}` : ''}${queryString ? `&${queryString}` : ''}`;
+  const { data, loading, error, refetch } = useApi<{ data: SessionRow[]; total: number; page: number; limit: number }>(apiUrl);
   const totalPages = Math.max(1, Math.ceil((data?.total ?? 0) / 20));
 
   function updateParam(key: string, value: string, resetPage = true) {
@@ -54,6 +60,10 @@ export function SessionsPage() {
 
   return (
     <div className="space-y-5 p-6">
+      {error && (
+        <ErrorState title="Sessions failed to load" message={error.message} code={error.code} details={error.details} onRetry={refetch} />
+      )}
+
       <Card>
         <CardContent className="flex flex-col gap-3 p-4 lg:flex-row lg:items-center lg:justify-between">
           <div className="flex flex-1 items-center gap-2">
@@ -75,7 +85,6 @@ export function SessionsPage() {
               onChange={(event) => updateParam('cli', event.target.value)}
               options={[{ label: 'All CLIs', value: '' }, { label: 'Codex', value: 'codex' }, { label: 'OpenCode', value: 'opencode' }, { label: 'Claude', value: 'claude' }, { label: 'Gemini', value: 'gemini' }, { label: 'Kimi', value: 'kimi' }, { label: 'Aider', value: 'aider' }, { label: 'Qwen', value: 'qwen' }]}
             />
-            <Button variant="outline"><SlidersHorizontal className="h-4 w-4" /> More filters</Button>
           </div>
         </CardContent>
       </Card>
@@ -96,18 +105,18 @@ export function SessionsPage() {
                 </tr>
               </thead>
               <tbody>
-                {loading ? Array.from({ length: 8 }).map((_, index) => <SkeletonRow key={index} />) : data?.data.map((session) => (
+                {loading ? <TableSkeletonRows rows={8} columns={7} /> : data?.data.map((session) => (
                   <tr key={session.id} className="border-b border-border transition-colors hover:bg-surface-hover">
                     <td className="px-5 py-4">
                       <Link to={`/sessions/${session.id}`} className="group flex items-center gap-3">
-                        <div className="grid h-9 w-9 place-items-center rounded-xl border border-border bg-surface-elevated text-xs font-semibold text-muted-foreground group-hover:border-accent/30 group-hover:text-accent">{session.cli.slice(0, 2).toUpperCase()}</div>
+                        <BrandMark value={session.cli} size="md" className="group-hover:border-accent/30" />
                         <div>
                           <div className="font-medium text-foreground group-hover:text-accent">{session.session_id.slice(0, 10)}</div>
                           <div className="text-xs text-subtle-foreground">{formatRelativeTime(session.started_at)}</div>
                         </div>
                       </Link>
                     </td>
-                    <td className="px-5 py-4"><Badge variant="neutral">{session.cli}</Badge></td>
+                    <td className="px-5 py-4"><BrandBadge value={session.cli} /></td>
                     <td className="px-5 py-4 font-mono text-xs text-muted-foreground">{session.model ?? 'unknown'}</td>
                     <td className="px-5 py-4">
                       <div className="font-medium text-foreground">{basename(session.project_path)}</div>
@@ -124,6 +133,12 @@ export function SessionsPage() {
               </tbody>
             </table>
           </div>
+
+          {!loading && !error && (data?.data.length ?? 0) === 0 && (
+            <div className="p-5">
+              <EmptyState title="No sessions found" description="Try changing the search term, CLI filter, or ingestion status." icon={Search} />
+            </div>
+          )}
 
           <div className="flex items-center justify-between border-t border-border px-5 py-4">
             <div className="text-xs text-subtle-foreground">Showing page {page} of {totalPages} · {data?.total ?? 0} sessions</div>
@@ -146,8 +161,4 @@ function HeaderCell({ children, align = 'left', onClick }: { children: string; a
       </button>
     </th>
   );
-}
-
-function SkeletonRow() {
-  return <tr className="border-b border-border">{Array.from({ length: 7 }).map((_, index) => <td key={index} className="px-5 py-4"><div className="h-4 w-24 animate-pulse rounded bg-surface-muted" /></td>)}</tr>;
 }

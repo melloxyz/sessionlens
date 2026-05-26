@@ -16,8 +16,11 @@ import {
 } from 'recharts';
 import { useApi } from '../hooks/useApi.js';
 import { formatCurrency, formatTokens } from '../lib/format.js';
+import { useDateRange } from '../components/filters/DateRangeProvider.js';
+import { BrandBadge } from '../components/brand/BrandMark.js';
 import { Badge } from '../components/ui/Badge.js';
 import { Card, CardContent, CardHeader, CardTitle } from '../components/ui/Card.js';
+import { EmptyState } from '../components/ui/EmptyState.js';
 import { ErrorState } from '../components/ui/ErrorState.js';
 import { Select } from '../components/ui/Select.js';
 
@@ -95,13 +98,16 @@ interface AnalyticsReport {
 }
 
 export function AnalyticsPage() {
+  const { queryString } = useDateRange();
   const [dimension, setDimension] = useState('model');
   const [metric, setMetric] = useState('cost');
+  const queryPrefix = queryString ? `?${queryString}` : '';
+  const querySuffix = queryString ? `&${queryString}` : '';
 
-  const { data: report, error: reportError } = useApi<AnalyticsReport>('/api/analytics/report');
-  const { data: spendData, error: spendError } = useApi<{ points: { date: string; spend: number; tokens: number }[] }>('/api/analytics/spend-over-time?granularity=week');
-  const { data: tokenData, error: tokenError } = useApi<{ points: { date: string; inputTokens: number; outputTokens: number }[] }>('/api/analytics/tokens-over-time');
-  const { data: breakdownData, error: breakdownError } = useApi<{ breakdown: { label: string; value: number; percentage: number }[] }>(`/api/analytics/breakdown?dimension=${dimension}&metric=${metric}`);
+  const { data: report, error: reportError } = useApi<AnalyticsReport>(`/api/analytics/report${queryPrefix}`);
+  const { data: spendData, error: spendError } = useApi<{ points: { date: string; spend: number; tokens: number }[] }>(`/api/analytics/spend-over-time?granularity=week${querySuffix}`);
+  const { data: tokenData, error: tokenError } = useApi<{ points: { date: string; inputTokens: number; outputTokens: number }[] }>(`/api/analytics/tokens-over-time${queryPrefix}`);
+  const { data: breakdownData, error: breakdownError } = useApi<{ breakdown: { label: string; value: number; percentage: number }[] }>(`/api/analytics/breakdown?dimension=${dimension}&metric=${metric}${querySuffix}`);
 
   const breakdown = useMemo(() => (breakdownData?.breakdown ?? []).filter((d) => d.value > 0), [breakdownData]);
   const insights = report?.insights ?? [];
@@ -322,7 +328,11 @@ export function AnalyticsPage() {
                 <div className="flex items-start justify-between gap-3">
                   <div className="min-w-0">
                     <div className="font-medium text-foreground">{session.sessionId.slice(0, 12)}</div>
-                    <div className="text-xs text-subtle-foreground">{session.cli} · {session.model ?? 'unknown'} · {session.provider}</div>
+                    <div className="mt-1 flex flex-wrap items-center gap-1.5">
+                      <BrandBadge value={session.cli} />
+                      <BrandBadge value={session.provider} kind="provider" />
+                    </div>
+                    <div className="mt-2 text-xs text-subtle-foreground">{session.model ?? 'unknown'}</div>
                   </div>
                   <Badge variant="neutral">{session.toolCalls} tools</Badge>
                 </div>
@@ -351,7 +361,10 @@ export function AnalyticsPage() {
               <div key={`${item.provider}/${item.model}`} className="rounded-2xl border border-border bg-surface-elevated p-4 text-sm">
                 <div className="flex items-start justify-between gap-3">
                   <div className="min-w-0">
-                    <div className="font-medium text-foreground">{item.provider}/{item.model}</div>
+                    <div className="flex flex-wrap items-center gap-2">
+                      <BrandBadge value={item.provider} kind="provider" />
+                      <span className="font-medium text-foreground">{item.model}</span>
+                    </div>
                     <div className="text-xs text-subtle-foreground">{item.messageCount} messages · {item.toolCallsCount} tool calls</div>
                   </div>
                   <Badge variant="neutral">{formatCurrency(item.totalCostUsd)}</Badge>
@@ -390,7 +403,7 @@ function SummaryCard({ icon: Icon, label, value, sub, tone }: { icon: LucideIcon
     success: 'bg-success-soft text-success',
     info: 'bg-info-soft text-info',
     warning: 'bg-warning-soft text-warning',
-    danger: 'bg-destructive-soft text-destructive',
+    danger: 'bg-danger-soft text-danger',
   }[tone];
 
   return (
@@ -447,18 +460,6 @@ function AnomalyRow({ item }: { item: Anomaly }) {
           <CircleAlert className="h-4 w-4" />
         </div>
       </div>
-    </div>
-  );
-}
-
-function EmptyState({ title, description, icon: Icon }: { title: string; description: string; icon: LucideIcon }) {
-  return (
-    <div className="rounded-2xl border border-dashed border-border p-6 text-center">
-      <div className="mx-auto mb-3 grid h-10 w-10 place-items-center rounded-2xl bg-surface-muted text-subtle-foreground">
-        <Icon className="h-4 w-4" />
-      </div>
-      <div className="font-medium text-foreground">{title}</div>
-      <p className="mt-1 text-sm text-subtle-foreground">{description}</p>
     </div>
   );
 }

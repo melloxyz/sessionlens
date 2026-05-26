@@ -4,6 +4,11 @@ export const CLI_COLORS: Record<string, string> = {
   codex: '#8b5cf6',
   opencode: '#22c55e',
   claude: '#f97316',
+  gemini: '#4285f4',
+  kimi: '#06b6d4',
+  aider: '#14b8a6',
+  qwen: '#615ced',
+  antigravity: '#f59e0b',
 };
 
 export function chartColor(index: number) {

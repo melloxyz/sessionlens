@@ -1,6 +1,8 @@
-import { Badge } from '../components/ui/Badge.js';
+import { BrandBadge } from '../components/brand/BrandMark.js';
 import { Card, CardContent } from '../components/ui/Card.js';
+import { EmptyState } from '../components/ui/EmptyState.js';
 import { ErrorState } from '../components/ui/ErrorState.js';
+import { TableSkeletonRows } from '../components/ui/LoadingState.js';
 import { useApi } from '../hooks/useApi.js';
 
 interface ModelRow {
@@ -39,11 +41,9 @@ export function ModelsPage() {
                 </tr>
               </thead>
               <tbody>
-                {loading ? Array.from({ length: 8 }).map((_, row) => (
-                  <tr key={row} className="border-b border-border">{Array.from({ length: 5 }).map((_, col) => <td key={col} className="px-5 py-4"><div className="h-4 w-24 animate-pulse rounded bg-surface-muted" /></td>)}</tr>
-                )) : data?.data.map((model) => (
+                {loading ? <TableSkeletonRows rows={8} columns={5} /> : data?.data.map((model) => (
                   <tr key={model.id} className="border-b border-border transition-colors hover:bg-surface-hover">
-                    <td className="px-5 py-4"><Badge variant="neutral">{model.provider}</Badge></td>
+                    <td className="px-5 py-4"><BrandBadge value={model.provider} kind="provider" /></td>
                     <td className="px-5 py-4 font-mono text-xs text-foreground">{model.model_name}</td>
                     <td className="px-5 py-4 text-right tabular-nums text-muted-foreground">${model.input_cost_per_million.toFixed(2)}</td>
                     <td className="px-5 py-4 text-right tabular-nums font-medium text-foreground">${model.output_cost_per_million.toFixed(2)}</td>
@@ -53,6 +53,11 @@ export function ModelsPage() {
               </tbody>
             </table>
           </div>
+          {!loading && (data?.data.length ?? 0) === 0 && (
+            <div className="p-5">
+              <EmptyState title="No model pricing found" description="Pricing rows will appear after seeds or configured models are available." />
+            </div>
+          )}
         </CardContent>
       </Card>
     </div>

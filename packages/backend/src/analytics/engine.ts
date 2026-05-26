@@ -43,6 +43,11 @@ export interface AnalyticsReport {
   modelUsageBreakdown: ModelUsageSummary[];
 }
 
+export interface AnalyticsFilters {
+  dateFrom?: string | null;
+  dateTo?: string | null;
+}
+
 export interface ModelUsageSummary {
   provider: string;
   model: string;
@@ -144,16 +149,16 @@ interface SessionAggregate {
   cacheMissRate: number | null;
 }
 
-export function buildAnalyticsReport(): AnalyticsReport {
+export function buildAnalyticsReport(filters: AnalyticsFilters = {}): AnalyticsReport {
   const db = getDatabase();
   const generatedAt = new Date().toISOString();
 
-  const sessions = querySessions(db);
-  const usageAggregates = queryUsageAggregates(db);
-  const projectSummaries = queryProjectSummaries(db);
-  const modelSummaries = queryModelSummaries(db);
-  const modelUsageBreakdown = queryModelUsageBreakdown(db);
-  const dailyTrend = queryDailyTrend(db);
+  const sessions = querySessions(db, filters);
+  const usageAggregates = queryUsageAggregates(db, filters);
+  const projectSummaries = queryProjectSummaries(db, filters);
+  const modelSummaries = queryModelSummaries(db, filters);
+  const modelUsageBreakdown = queryModelUsageBreakdown(db, filters);
+  const dailyTrend = queryDailyTrend(db, filters);
 
   const sessionById = new Map<number, SessionRow>(sessions.map((session) => [session.id, session]));
   const aggregatedSessions = usageAggregates
@@ -392,18 +397,21 @@ export function buildAnalyticsReport(): AnalyticsReport {
   };
 }
 
-function querySessions(db: ReturnType<typeof getDatabase>): SessionRow[] {
+function querySessions(db: ReturnType<typeof getDatabase>, filters: AnalyticsFilters): SessionRow[] {
+  const range = buildDateWhere(filters);
   const result = db.exec(
     `SELECT id, session_id, cli, provider, model, project_path, started_at, duration_ms, total_cost_usd, message_count, tool_call_count
       FROM sessions
-      WHERE ${VALID_SESSION_SQL}
+      WHERE ${VALID_SESSION_SQL}${range.sql}
       ORDER BY started_at ASC`,
+    range.params,
   );
 
   return mapRows<SessionRow>(result);
 }
 
-function queryUsageAggregates(db: ReturnType<typeof getDatabase>): UsageAggregate[] {
+function queryUsageAggregates(db: ReturnType<typeof getDatabase>, filters: AnalyticsFilters): UsageAggregate[] {
+  const range = buildDateWhere(filters, 's.started_at');
   const result = db.exec(
     `SELECT
        s.id AS session_id,
@@ -419,27 +427,31 @@ function queryUsageAggregates(db: ReturnType<typeof getDatabase>): UsageAggregat
        COALESCE(SUM(ue.tool_calls_count), 0) AS tool_calls_count
      FROM usage_events ue
      JOIN sessions s ON s.id = ue.session_fk
-     WHERE ${VALID_SESSION_SQL}
-     GROUP BY s.id
-     ORDER BY s.started_at ASC`,
+      WHERE ${VALID_SESSION_SQL}${range.sql}
+      GROUP BY s.id
+      ORDER BY s.started_at ASC`,
+    range.params,
   );
 
   return mapRows<UsageAggregate>(result);
 }
 
-function queryProjectSummaries(db: ReturnType<typeof getDatabase>): ProjectSummary[] {
+function queryProjectSummaries(db: ReturnType<typeof getDatabase>, filters: AnalyticsFilters): ProjectSummary[] {
+  const range = buildDateWhere(filters);
   const result = db.exec(
     `SELECT COALESCE(project_path, 'unknown') AS project, COALESCE(SUM(total_cost_usd), 0) AS spend, COUNT(*) AS sessions
      FROM sessions
-     WHERE ${VALID_SESSION_SQL}
+     WHERE ${VALID_SESSION_SQL}${range.sql}
      GROUP BY COALESCE(project_path, 'unknown')
      ORDER BY spend DESC`,
+    range.params,
   );
 
   return mapRows<ProjectSummary>(result);
 }
 
-function queryModelSummaries(db: ReturnType<typeof getDatabase>): ModelSummary[] {
+function queryModelSummaries(db: ReturnType<typeof getDatabase>, filters: AnalyticsFilters): ModelSummary[] {
+  const range = buildDateWhere(filters);
   const result = db.exec(
     `SELECT
        COALESCE(provider, 'unknown') AS provider,
@@ -451,46 +463,55 @@ function queryModelSummaries(db: ReturnType<typeof getDatabase>): ModelSummary[]
        COALESCE(AVG(duration_ms), 0) AS avgDuration,
        COALESCE(SUM(message_count), 0) AS totalMessages
      FROM sessions
-     WHERE ${VALID_SESSION_SQL}
+     WHERE ${VALID_SESSION_SQL}${range.sql}
      GROUP BY COALESCE(provider, 'unknown'), COALESCE(model, 'unknown')
      ORDER BY spend DESC`,
+    range.params,
   );
 
   return mapRows<ModelSummary>(result);
 }
 
-function queryModelUsageBreakdown(db: ReturnType<typeof getDatabase>): ModelUsageSummary[] {
+function queryModelUsageBreakdown(db: ReturnType<typeof getDatabase>, filters: AnalyticsFilters): ModelUsageSummary[] {
+  const range = buildDateWhere(filters, 's.started_at');
   const result = db.exec(
-    `SELECT provider, model,
-            COALESCE(SUM(message_count), 0) AS messageCount,
-            COALESCE(SUM(input_tokens), 0) AS inputTokens,
-            COALESCE(SUM(output_tokens), 0) AS outputTokens,
-            COALESCE(SUM(reasoning_tokens), 0) AS reasoningTokens,
-            COALESCE(SUM(cache_read_tokens), 0) AS cacheReadTokens,
-            COALESCE(SUM(cache_write_tokens), 0) AS cacheWriteTokens,
-            COALESCE(SUM(tool_calls_count), 0) AS toolCallsCount,
-            COALESCE(SUM(total_cost_usd), 0) AS totalCostUsd
-     FROM session_model_usage
-     GROUP BY provider, model
+    `SELECT smu.provider, smu.model,
+            COALESCE(SUM(smu.message_count), 0) AS messageCount,
+            COALESCE(SUM(smu.input_tokens), 0) AS inputTokens,
+            COALESCE(SUM(smu.output_tokens), 0) AS outputTokens,
+            COALESCE(SUM(smu.reasoning_tokens), 0) AS reasoningTokens,
+            COALESCE(SUM(smu.cache_read_tokens), 0) AS cacheReadTokens,
+            COALESCE(SUM(smu.cache_write_tokens), 0) AS cacheWriteTokens,
+            COALESCE(SUM(smu.tool_calls_count), 0) AS toolCallsCount,
+            COALESCE(SUM(smu.total_cost_usd), 0) AS totalCostUsd
+     FROM session_model_usage smu
+     JOIN sessions s ON s.id = smu.session_fk
+     WHERE ${VALID_SESSION_SQL}${range.sql}
+     GROUP BY smu.provider, smu.model
      ORDER BY totalCostUsd DESC, messageCount DESC`,
+    range.params,
   );
 
   return mapRows<ModelUsageSummary>(result);
 }
 
-function queryDailyTrend(db: ReturnType<typeof getDatabase>): { date: string; spend: number }[] {
-  const anchorResult = db.exec(`SELECT date(MAX(started_at)) AS anchor FROM sessions WHERE ${VALID_SESSION_SQL}`);
+function queryDailyTrend(db: ReturnType<typeof getDatabase>, filters: AnalyticsFilters): { date: string; spend: number }[] {
+  const range = buildDateWhere(filters);
+  const anchorResult = db.exec(`SELECT date(MAX(started_at)) AS anchor FROM sessions WHERE ${VALID_SESSION_SQL}${range.sql}`, range.params);
   const anchor = anchorResult[0]?.values?.[0]?.[0] as string | undefined;
   if (!anchor) return [];
 
   const anchorDate = toUtcDay(anchor);
-  const startDate = addUtcDays(anchorDate, -13);
+  const startDate = filters.dateFrom ? toUtcDay(filters.dateFrom) : addUtcDays(anchorDate, -13);
+  const params: string[] = [filters.dateFrom ?? toIsoDate(startDate)];
+  let dateToSql = '';
+  if (filters.dateTo) { dateToSql = ' AND started_at <= ?'; params.push(filters.dateTo); }
   const spendResult = db.exec(
     `SELECT date(started_at) AS day, COALESCE(SUM(total_cost_usd), 0) AS spend
      FROM sessions
-     WHERE ${VALID_SESSION_SQL} AND started_at >= ?
+     WHERE ${VALID_SESSION_SQL} AND started_at >= ?${dateToSql}
      GROUP BY day`,
-    [toIsoDate(startDate)],
+    params,
   );
 
   const spendByDay = new Map<string, number>();
@@ -499,13 +520,22 @@ function queryDailyTrend(db: ReturnType<typeof getDatabase>): { date: string; sp
   }
 
   const points: { date: string; spend: number }[] = [];
-  for (let i = 0; i < 14; i++) {
+  const days = Math.max(1, Math.ceil((anchorDate.getTime() - startDate.getTime()) / 86400000) + 1);
+  for (let i = 0; i < days; i++) {
     const day = addUtcDays(startDate, i);
     const key = toIsoDate(day);
     points.push({ date: key, spend: spendByDay.get(key) ?? 0 });
   }
 
   return points;
+}
+
+function buildDateWhere(filters: AnalyticsFilters, column = 'started_at'): { sql: string; params: string[] } {
+  let sql = '';
+  const params: string[] = [];
+  if (filters.dateFrom) { sql += ` AND ${column} >= ?`; params.push(filters.dateFrom); }
+  if (filters.dateTo) { sql += ` AND ${column} <= ?`; params.push(filters.dateTo); }
+  return { sql, params };
 }
 
 function computeSpendTrend(points: { date: string; spend: number }[]): {

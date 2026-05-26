@@ -14,11 +14,14 @@ import {
   YAxis,
 } from 'recharts';
 import { StatCard } from '../components/StatCard.js';
+import { BrandBadge, BrandMark, getBrandMeta } from '../components/brand/BrandMark.js';
 import { Badge } from '../components/ui/Badge.js';
 import { Button } from '../components/ui/Button.js';
 import { Card, CardContent, CardHeader, CardTitle } from '../components/ui/Card.js';
 import { TokenUsageBar } from '../components/session/TokenUsageBar.js';
+import { EmptyState } from '../components/ui/EmptyState.js';
 import { ErrorState } from '../components/ui/ErrorState.js';
+import { useDateRange } from '../components/filters/DateRangeProvider.js';
 import { useApi } from '../hooks/useApi.js';
 import { CLI_COLORS, chartColor } from '../lib/chart-colors.js';
 import { basename, compactPath, formatCurrency, formatDate, formatDuration, formatRelativeTime, formatTokens } from '../lib/format.js';
@@ -71,14 +74,17 @@ const tooltipStyle = {
 };
 
 export function DashboardPage() {
+  const { queryString } = useDateRange();
   const [selectedId, setSelectedId] = useState<number | null>(null);
-  const { data: overview, loading: overviewLoading, error: overviewError } = useApi<Overview>('/api/overview');
-  const { data: spendData, error: spendError } = useApi<{ points: { date: string; spend: number; tokens: number; sessions: number }[] }>('/api/analytics/spend-over-time');
-  const { data: tokenData, error: tokenError } = useApi<{ points: { date: string; inputTokens: number; outputTokens: number; cacheReadTokens?: number; cacheWriteTokens?: number }[] }>('/api/analytics/tokens-over-time');
-  const { data: cliBreakdown, error: cliError } = useApi<{ breakdown: { label: string; value: number; percentage: number }[] }>('/api/analytics/breakdown?dimension=cli&metric=cost');
-  const { data: modelBreakdown, error: modelError } = useApi<{ breakdown: { label: string; value: number; percentage: number }[] }>('/api/analytics/breakdown?dimension=model&metric=cost');
-  const { data: recentSessions, error: recentSessionsError } = useApi<{ data: SessionRow[]; total: number }>('/api/sessions?limit=9&sortBy=started_at&sortOrder=desc');
-  const { data: allSessions, error: allSessionsError } = useApi<{ data: SessionRow[]; total: number }>('/api/sessions?limit=500&sortBy=started_at&sortOrder=desc');
+  const queryPrefix = queryString ? `?${queryString}` : '';
+  const querySuffix = queryString ? `&${queryString}` : '';
+  const { data: overview, loading: overviewLoading, error: overviewError } = useApi<Overview>(`/api/overview${queryPrefix}`);
+  const { data: spendData, error: spendError } = useApi<{ points: { date: string; spend: number; tokens: number; sessions: number }[] }>(`/api/analytics/spend-over-time${queryPrefix}`);
+  const { data: tokenData, error: tokenError } = useApi<{ points: { date: string; inputTokens: number; outputTokens: number; cacheReadTokens?: number; cacheWriteTokens?: number }[] }>(`/api/analytics/tokens-over-time${queryPrefix}`);
+  const { data: cliBreakdown, error: cliError } = useApi<{ breakdown: { label: string; value: number; percentage: number }[] }>(`/api/analytics/breakdown?dimension=cli&metric=cost${querySuffix}`);
+  const { data: modelBreakdown, error: modelError } = useApi<{ breakdown: { label: string; value: number; percentage: number }[] }>(`/api/analytics/breakdown?dimension=model&metric=cost${querySuffix}`);
+  const { data: recentSessions, error: recentSessionsError } = useApi<{ data: SessionRow[]; total: number }>(`/api/sessions?limit=9&sortBy=started_at&sortOrder=desc${querySuffix}`);
+  const { data: allSessions, error: allSessionsError } = useApi<{ data: SessionRow[]; total: number }>(`/api/sessions?limit=500&sortBy=started_at&sortOrder=desc${querySuffix}`);
   const { data: selectedSession, error: selectedSessionError } = useApi<SessionDetail>(selectedId ? `/api/sessions/${selectedId}` : null, { immediate: Boolean(selectedId) });
 
   useEffect(() => {
@@ -194,14 +200,14 @@ export function DashboardPage() {
                     <tr key={session.id} onClick={() => setSelectedId(session.id)} className="cursor-pointer border-b border-border transition-colors hover:bg-surface-hover">
                       <td className="px-5 py-3">
                         <div className="flex items-center gap-3">
-                          <div className="grid h-8 w-8 place-items-center rounded-xl border border-border bg-surface-elevated text-xs font-semibold text-muted-foreground">{session.cli.slice(0, 2).toUpperCase()}</div>
+                          <BrandMark value={session.cli} size="sm" />
                           <div>
                             <div className="font-medium text-foreground">{session.session_id.slice(0, 8)}</div>
                             <div className="text-xs text-subtle-foreground">{session.provider}</div>
                           </div>
                         </div>
                       </td>
-                      <td className="px-5 py-3"><Badge variant="neutral">{session.cli}</Badge></td>
+                      <td className="px-5 py-3"><BrandBadge value={session.cli} /></td>
                       <td className="px-5 py-3 font-mono text-xs text-muted-foreground">{session.model ?? 'unknown'}</td>
                       <td className="max-w-[220px] truncate px-5 py-3 text-muted-foreground">{compactPath(session.project_path)}</td>
                       <td className="px-5 py-3 text-right tabular-nums text-muted-foreground">{formatDuration(session.duration_ms)}</td>
@@ -221,7 +227,7 @@ export function DashboardPage() {
         <Card className="h-full">
           <CardContent className="space-y-5">
             <div className="flex items-start gap-3">
-              <div className="grid h-11 w-11 place-items-center rounded-2xl bg-slate-950 text-sm font-semibold text-white dark:bg-white dark:text-slate-950">AI</div>
+              <BrandMark value={selectedSession?.cli} size="lg" />
               <div className="min-w-0 flex-1">
                 <div className="flex items-center justify-between gap-2">
                   <h2 className="truncate text-base font-semibold text-foreground">{selectedSession?.session_id?.slice(0, 8) ?? 'Session'}</h2>
@@ -229,7 +235,7 @@ export function DashboardPage() {
                     {selectedSession?.source_confidence ?? '—'}
                   </Badge>
                 </div>
-                <p className="mt-1 truncate text-sm text-muted-foreground">{selectedSession?.cli ?? '—'} · {selectedSession?.model ?? 'unknown'}</p>
+                <p className="mt-1 truncate text-sm text-muted-foreground">{getBrandMeta(selectedSession?.cli).label} · {selectedSession?.model ?? 'unknown'}</p>
               </div>
             </div>
 
@@ -322,7 +328,7 @@ function DonutCard({ title, data, center, centerLabel, colorFor }: { title: stri
               </div>
             </div>
           ))}
-          {data.length === 0 && <div className="rounded-xl border border-dashed border-border p-4 text-center text-xs text-subtle-foreground">No spend data yet</div>}
+          {data.length === 0 && <EmptyState title="No spend data yet" description="Cost distribution will appear after sessions with spend are indexed." className="p-4" />}
         </div>
       </CardContent>
     </Card>

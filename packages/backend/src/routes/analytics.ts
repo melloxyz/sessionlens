@@ -12,9 +12,10 @@ const VALID_SESSION_SQL = `NOT (
 )`;
 
 export function registerAnalyticsRoutes(app: FastifyInstance): void {
-  app.get('/api/analytics/report', async (_req, reply) => {
+  app.get('/api/analytics/report', async (req, reply) => {
     try {
-      return buildAnalyticsReport();
+      const q = req.query as Record<string, string>;
+      return buildAnalyticsReport({ dateFrom: q.dateFrom || null, dateTo: q.dateTo || null });
     } catch (error) {
       reply.code(500);
       return { error: { code: 'ANALYTICS_REPORT_FAILED', message: 'Failed to build analytics report', details: String(error) } };
@@ -127,6 +128,8 @@ export function registerAnalyticsRoutes(app: FastifyInstance): void {
     const q = req.query as Record<string, string>;
     const dimension = q.dimension || 'cli';
     const metric = q.metric || 'cost';
+    const dateFrom = q.dateFrom || null;
+    const dateTo = q.dateTo || null;
 
     const db = getDatabase();
     const dimMap: Record<string, string> = {
@@ -141,9 +144,13 @@ export function registerAnalyticsRoutes(app: FastifyInstance): void {
                       metric === 'tokens' ? 'COALESCE(SUM((SELECT SUM(input_tokens+output_tokens) FROM usage_events WHERE session_fk=sessions.id)), 0)' :
                       'COALESCE(SUM(total_cost_usd), 0)';
 
-    const sql = `SELECT ${dim} AS label, ${metricCol} AS value FROM sessions WHERE ${VALID_SESSION_SQL} GROUP BY ${dim} ORDER BY value DESC`;
+    let sql = `SELECT ${dim} AS label, ${metricCol} AS value FROM sessions WHERE ${VALID_SESSION_SQL}`;
+    const params: string[] = [];
+    if (dateFrom) { sql += ` AND started_at >= ?`; params.push(dateFrom); }
+    if (dateTo) { sql += ` AND started_at <= ?`; params.push(dateTo); }
+    sql += ` GROUP BY ${dim} ORDER BY value DESC`;
 
-    const results = db.exec(sql);
+    const results = db.exec(sql, params);
     const breakdown: { label: string; value: number; percentage: number }[] = [];
     let total = 0;
 

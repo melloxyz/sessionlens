@@ -11,8 +11,11 @@ const VALID_SESSION_SQL = `NOT (
 )`;
 
 export function registerOverviewRoutes(app: FastifyInstance): void {
-  app.get('/api/overview', async (_req, reply) => {
+  app.get('/api/overview', async (req, reply) => {
     try {
+      const q = req.query as Record<string, string>;
+      const dateFrom = q.dateFrom || null;
+      const dateTo = q.dateTo || null;
       const db = getDatabase();
       const todayStart = new Date();
       todayStart.setHours(0, 0, 0, 0);
@@ -26,16 +29,30 @@ export function registerOverviewRoutes(app: FastifyInstance): void {
       monthStart.setDate(monthStart.getDate() - 30);
       const monthStr = monthStart.toISOString();
 
+      let rangeClause = '';
+      const rangeParams: string[] = [];
+      if (dateFrom) { rangeClause += ' AND started_at >= ?'; rangeParams.push(dateFrom); }
+      if (dateTo) { rangeClause += ' AND started_at <= ?'; rangeParams.push(dateTo); }
+      const params = [
+        todayStr, ...rangeParams,
+        weekStr, ...rangeParams,
+        monthStr, ...rangeParams,
+        ...rangeParams,
+        ...rangeParams,
+        ...rangeParams,
+        ...rangeParams,
+      ];
+
       const results = db.exec(`
         SELECT
-          (SELECT COALESCE(SUM(total_cost_usd), 0) FROM sessions WHERE ${VALID_SESSION_SQL} AND started_at >= ?) AS today_spend,
-          (SELECT COALESCE(SUM(total_cost_usd), 0) FROM sessions WHERE ${VALID_SESSION_SQL} AND started_at >= ?) AS weekly_spend,
-          (SELECT COALESCE(SUM(total_cost_usd), 0) FROM sessions WHERE ${VALID_SESSION_SQL} AND started_at >= ?) AS monthly_spend,
-          (SELECT COALESCE(SUM(total_cost_usd), 0) FROM sessions WHERE ${VALID_SESSION_SQL}) AS total_spend,
-          (SELECT COUNT(*) FROM sessions WHERE ${VALID_SESSION_SQL}) AS session_count,
-          (SELECT COALESCE(AVG(total_cost_usd), 0) FROM sessions WHERE ${VALID_SESSION_SQL} AND total_cost_usd IS NOT NULL) AS avg_cost,
-          (SELECT cli FROM sessions WHERE ${VALID_SESSION_SQL} GROUP BY cli ORDER BY COUNT(*) DESC LIMIT 1) AS most_used_cli
-      `, [todayStr, weekStr, monthStr]);
+          (SELECT COALESCE(SUM(total_cost_usd), 0) FROM sessions WHERE ${VALID_SESSION_SQL} AND started_at >= ?${rangeClause}) AS today_spend,
+          (SELECT COALESCE(SUM(total_cost_usd), 0) FROM sessions WHERE ${VALID_SESSION_SQL} AND started_at >= ?${rangeClause}) AS weekly_spend,
+          (SELECT COALESCE(SUM(total_cost_usd), 0) FROM sessions WHERE ${VALID_SESSION_SQL} AND started_at >= ?${rangeClause}) AS monthly_spend,
+          (SELECT COALESCE(SUM(total_cost_usd), 0) FROM sessions WHERE ${VALID_SESSION_SQL}${rangeClause}) AS total_spend,
+          (SELECT COUNT(*) FROM sessions WHERE ${VALID_SESSION_SQL}${rangeClause}) AS session_count,
+          (SELECT COALESCE(AVG(total_cost_usd), 0) FROM sessions WHERE ${VALID_SESSION_SQL} AND total_cost_usd IS NOT NULL${rangeClause}) AS avg_cost,
+          (SELECT cli FROM sessions WHERE ${VALID_SESSION_SQL}${rangeClause} GROUP BY cli ORDER BY COUNT(*) DESC LIMIT 1) AS most_used_cli
+      `, params);
 
       if (results.length === 0 || !results[0].values) {
         return {

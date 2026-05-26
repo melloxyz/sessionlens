@@ -6,6 +6,7 @@ import { Card, CardContent } from '../components/ui/Card.js';
 import { Input } from '../components/ui/Input.js';
 import { Select } from '../components/ui/Select.js';
 import { ErrorState } from '../components/ui/ErrorState.js';
+import { EmptyState } from '../components/ui/EmptyState.js';
 import { useApi } from '../hooks/useApi.js';
 import { basename, compactPath, formatCurrency } from '../lib/format.js';
 
@@ -126,13 +127,7 @@ export function ProjectsPage() {
       </div>
 
       {!loading && projects.length === 0 && (
-        <Card>
-          <CardContent className="py-16 text-center">
-            <FolderOpen className="mx-auto mb-3 h-10 w-10 text-subtle-foreground" />
-            <div className="font-medium text-foreground">No projects found</div>
-            <div className="mt-1 text-sm text-muted-foreground">Try adjusting search or filters.</div>
-          </CardContent>
-        </Card>
+        <EmptyState title="No projects found" description="Try adjusting search, availability, or sorting filters." icon={FolderOpen} />
       )}
     </div>
   );
