@@ -6,3 +6,5 @@ dist
 .turbo
 .opencode/
 AGENTS.md
+.DS_Store
+*.log
