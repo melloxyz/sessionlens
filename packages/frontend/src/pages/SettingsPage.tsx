@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import type { LucideIcon } from 'lucide-react';
-import { CheckCircle2, Database, Languages, LockKeyhole, Moon, RefreshCw, ShieldCheck, Sun } from 'lucide-react';
+import { CheckCircle2, Database, Languages, LockKeyhole, Moon, RadioTower, RefreshCw, ShieldCheck, Sun } from 'lucide-react';
 import { BrandMark, getBrandMeta } from '../components/brand/BrandMark.js';
 import { useI18n } from '../components/i18n/LanguageProvider.js';
 import { useTheme } from '../components/theme/ThemeProvider.js';
@@ -29,21 +29,55 @@ interface IngestionStatus {
   message?: string;
 }
 
+interface AutoIngestionStatus {
+  enabled: boolean;
+  running: boolean;
+  scheduled: boolean;
+  watchedPathCount: number;
+  debounceMs: number;
+  periodicScanMs: number;
+  lastTriggeredAt: string | null;
+  lastTriggerReason: string | null;
+  lastRunCompletedAt: string | null;
+  lastError: string | null;
+}
+
 export function SettingsPage() {
   const { theme, setTheme } = useTheme();
   const { locale, setLocale, t } = useI18n();
   const [ingestionRunning, setIngestionRunning] = useState(false);
+  const [autoUpdating, setAutoUpdating] = useState(false);
+  const [autoMutationError, setAutoMutationError] = useState<string | null>(null);
   const { data: overview, error: overviewError, refetch: refetchOverview } = useApi<Overview>('/api/overview');
   const { data: ingestStatus, error: ingestError, refetch: refetchIngest } = useApi<IngestionStatus>('/api/ingest/status');
+  const { data: autoIngestion, error: autoError, refetch: refetchAuto } = useApi<AutoIngestionStatus>('/api/ingest/auto');
   const { data: integrations } = useApi<{ integrations: IntegrationStatusItem[] }>('/api/integrations/status', { initialData: { integrations: [] } });
 
   async function runIngestion() {
     setIngestionRunning(true);
     try {
       await fetch('/api/ingest', { method: 'POST' });
-      await Promise.all([refetchIngest(), refetchOverview()]);
+      await Promise.all([refetchIngest(), refetchOverview(), refetchAuto()]);
     } finally {
       setIngestionRunning(false);
+    }
+  }
+
+  async function setAutoIngestion(enabled: boolean) {
+    setAutoUpdating(true);
+    setAutoMutationError(null);
+    try {
+      const res = await fetch('/api/ingest/auto', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ enabled }),
+      });
+      if (!res.ok) throw new Error(await res.text());
+      await refetchAuto();
+    } catch (err) {
+      setAutoMutationError(err instanceof Error ? err.message : String(err));
+    } finally {
+      setAutoUpdating(false);
     }
   }
 
@@ -113,6 +147,36 @@ export function SettingsPage() {
                   <StatusTile label={t('settings.totalSessions')} value={String(ingestStatus?.totalSessions ?? overview?.sessionCount ?? 0)} />
                   <StatusTile label={t('settings.new')} value={String(ingestStatus?.newSessions ?? 0)} />
                   <StatusTile label={t('settings.updated')} value={String(ingestStatus?.updatedSessions ?? 0)} />
+                </div>
+                <div className="rounded-2xl border border-border bg-surface-elevated p-4">
+                  <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
+                    <div className="flex gap-3">
+                      <div className="grid h-10 w-10 shrink-0 place-items-center rounded-2xl bg-accent-soft text-accent">
+                        <RadioTower className="h-5 w-5" />
+                      </div>
+                      <div>
+                        <div className="flex flex-wrap items-center gap-2">
+                          <div className="font-medium text-foreground">{t('settings.autoIngestion')}</div>
+                          <Badge variant={autoIngestion?.enabled ? 'success' : 'neutral'}>{autoIngestion?.enabled ? t('settings.enabled') : t('settings.disabled')}</Badge>
+                          {autoIngestion?.running && <Badge variant="default">{t('settings.running')}</Badge>}
+                          {autoIngestion?.scheduled && <Badge variant="warning">{t('settings.scheduled')}</Badge>}
+                        </div>
+                        <p className="mt-1 text-sm text-muted-foreground">{t('settings.autoIngestion.description')}</p>
+                      </div>
+                    </div>
+                    <Button variant={autoIngestion?.enabled ? 'outline' : 'default'} onClick={() => setAutoIngestion(!autoIngestion?.enabled)} disabled={autoUpdating || !autoIngestion}>
+                      {autoUpdating ? t('settings.updating') : autoIngestion?.enabled ? t('settings.disableAutoIngestion') : t('settings.enableAutoIngestion')}
+                    </Button>
+                  </div>
+                  <div className="mt-4 grid gap-3 rounded-2xl border border-border bg-surface-muted p-4 text-sm md:grid-cols-2">
+                    <SummaryRow label={t('settings.watchedPaths')} value={String(autoIngestion?.watchedPathCount ?? 0)} />
+                    <SummaryRow label={t('settings.periodicScan')} value={`${Math.round((autoIngestion?.periodicScanMs ?? 0) / 60000)} min`} />
+                    <SummaryRow label={t('settings.lastTrigger')} value={autoIngestion?.lastTriggeredAt ? formatDateTime(autoIngestion.lastTriggeredAt) : '—'} />
+                    <SummaryRow label={t('settings.lastRun')} value={autoIngestion?.lastRunCompletedAt ? formatDateTime(autoIngestion.lastRunCompletedAt) : '—'} />
+                  </div>
+                  {(autoError || autoMutationError || autoIngestion?.lastError) && (
+                    <div className="mt-3 text-sm text-danger">{autoError?.message ?? autoMutationError ?? autoIngestion?.lastError}</div>
+                  )}
                 </div>
                 <div className="rounded-2xl border border-border bg-surface-muted p-4 text-sm">
                   <SummaryRow label={t('common.started')} value={ingestStatus?.startedAt ? formatDateTime(ingestStatus.startedAt) : t('settings.notRun')} />

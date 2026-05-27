@@ -5,6 +5,7 @@ import type { Adapter, Checkpoint, RawSession } from './types.js';
 import type { CliProvider } from '@sessionless/shared';
 
 const KIMI_HOME = join(homedir(), '.kimi');
+const KIMI_LOGS_DIR = join(KIMI_HOME, 'logs');
 const KIMI_LOG = join(KIMI_HOME, 'logs', 'kimi.log');
 
 export function createKimiAdapter(): Adapter {
@@ -17,6 +18,10 @@ export function createKimiAdapter(): Adapter {
 
     async discover(): Promise<string[]> {
       return existsSync(KIMI_LOG) ? [KIMI_LOG] : [];
+    },
+
+    async watchPaths(): Promise<string[]> {
+      return [KIMI_LOGS_DIR];
     },
 
     async computeCheckpoint(sessionPath: string): Promise<Checkpoint | null> {

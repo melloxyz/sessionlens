@@ -41,12 +41,25 @@ export interface IngestionStatus {
 }
 
 let lastStatus: IngestionStatus | null = null;
+let activeIngestion: Promise<IngestionStatus> | null = null;
 
 export function getLastStatus(): IngestionStatus | null {
   return lastStatus;
 }
 
+export function isIngestionRunning(): boolean {
+  return activeIngestion !== null;
+}
+
 export async function runIngestion(): Promise<IngestionStatus> {
+  if (activeIngestion) return activeIngestion;
+  activeIngestion = runIngestionInternal().finally(() => {
+    activeIngestion = null;
+  });
+  return activeIngestion;
+}
+
+async function runIngestionInternal(): Promise<IngestionStatus> {
   const db = getDatabase();
   const errors: string[] = [];
   let newSessions = 0;

@@ -25,6 +25,10 @@ export function createAntigravityAdapter(): Adapter {
       return gemini.discover();
     },
 
+    async watchPaths(): Promise<string[]> {
+      return gemini.watchPaths?.() ?? [];
+    },
+
     async computeCheckpoint(sessionPath: string): Promise<Checkpoint | null> {
       return gemini.computeCheckpoint(sessionPath);
     },

@@ -18,6 +18,11 @@ export function createAiderAdapter(): Adapter {
       return historyFile ? [historyFile] : [];
     },
 
+    async watchPaths(): Promise<string[]> {
+      const historyFile = findHistoryFile();
+      return historyFile ? [historyFile] : [];
+    },
+
     async computeCheckpoint(sessionPath: string): Promise<Checkpoint | null> {
       if (!existsSync(sessionPath)) return null;
       const stat = await import('node:fs').then((fs) => fs.statSync(sessionPath));

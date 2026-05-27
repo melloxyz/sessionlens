@@ -59,6 +59,8 @@ export interface Adapter {
 
   discover(): Promise<string[]>;
 
+  watchPaths?(): Promise<string[]>;
+
   computeCheckpoint(sessionPath: string): Promise<Checkpoint | null>;
 
   parse(

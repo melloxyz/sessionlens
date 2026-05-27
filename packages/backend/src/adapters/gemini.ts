@@ -40,6 +40,10 @@ export function createGeminiAdapter(): Adapter {
       return sessions;
     },
 
+    async watchPaths(): Promise<string[]> {
+      return [join(GEMINI_HOME, 'tmp')];
+    },
+
     async computeCheckpoint(sessionPath: string): Promise<Checkpoint | null> {
       if (!existsSync(sessionPath)) return null;
       const stat = statSync(sessionPath);

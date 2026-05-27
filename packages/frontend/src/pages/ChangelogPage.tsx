@@ -4,12 +4,13 @@ import { Card, CardContent, CardHeader, CardTitle } from '../components/ui/Card.
 import { useI18n } from '../components/i18n/LanguageProvider.js';
 
 const latest = [
-  ['changelog.ui', 'Sessionless v0.7.0 official foundation release'],
+  ['changelog.core', 'Background auto-ingestion with local filesystem watcher'],
   ['changelog.analytics', 'Real analytics filters across report, charts and breakdowns'],
   ['changelog.pricing', 'OpenRouter pricing sync with estimated cost backfill'],
 ];
 
 const released = [
+  { version: 'v0.7.1', title: 'Background ingestion', tags: ['changelog.core', 'changelog.localFirst'], items: ['Filesystem watcher for supported local CLI data sources', 'Auto-ingestion toggle in Settings', 'Ingestion concurrency guard for sql.js'] },
   { version: 'v0.7.0', title: 'Sessionless foundation', tags: ['changelog.core', 'changelog.ui'], items: ['Sessionless branding and package rename', 'Changelog and project status page', 'Windows-safe dev orchestration'] },
   { version: 'v0.6.4', title: 'Models and analytics filters', tags: ['changelog.analytics', 'changelog.pricing'], items: ['Model catalog search and used-model ranking', 'Provider/model/project analytics filters', 'OpenRouter model pricing sync'] },
   { version: 'v0.6.3', title: 'Cost accuracy', tags: ['changelog.pricing', 'changelog.localFirst'], items: ['actual / estimated / unknown cost sources', 'Token-based fallback cost estimation', 'Backfill for sessions previously showing $0.00'] },
@@ -21,8 +22,8 @@ const released = [
   { version: 'v0.1.0', title: 'Local-first bootstrap', tags: ['changelog.core', 'changelog.localFirst'], items: ['pnpm monorepo', 'Fastify + Vite app shell', 'sql.js local SQLite database'] },
 ];
 
-const inProgress = ['More usable Projects and Project Detail pages', 'Clearer Analytics information architecture', 'More complete visible changelog history'];
-const planned = ['Filesystem watcher for background ingestion', 'Local budget limits and alerts', 'Restore hidden projects controls'];
+const inProgress = ['More robust adapter validation across local AI coding CLIs', 'Better explainability for estimated cost calculations', 'Restore hidden projects controls'];
+const planned = ['Local budget limits and alerts', 'System tray integration', 'Optional Electron runtime'];
 
 export function ChangelogPage() {
   const { t } = useI18n();

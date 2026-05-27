@@ -34,6 +34,10 @@ export function createClaudeAdapter(): Adapter {
       return paths;
     },
 
+    async watchPaths(): Promise<string[]> {
+      return [PROJECTS_DIR];
+    },
+
     async computeCheckpoint(sessionPath: string): Promise<Checkpoint | null> {
       if (!existsSync(sessionPath)) return null;
       const stat = statSync(sessionPath);

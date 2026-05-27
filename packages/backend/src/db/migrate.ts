@@ -6,7 +6,17 @@ import { getDatabase, saveDatabase } from './connection.js';
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
 
-const MIGRATIONS_DIR = join(__dirname, 'migrations');
+const MIGRATIONS_DIR = resolveMigrationsDir();
+
+function resolveMigrationsDir(): string {
+  const compiledDir = join(__dirname, 'migrations');
+  if (existsSync(compiledDir)) return compiledDir;
+
+  const sourceDir = join(__dirname, '..', '..', 'src', 'db', 'migrations');
+  if (existsSync(sourceDir)) return sourceDir;
+
+  return compiledDir;
+}
 
 export function runMigrations(): void {
   const db = getDatabase();
@@ -18,7 +28,7 @@ export function runMigrations(): void {
     )
   `);
 
-  const migrations = ['0000_init', '0001_session_model_usage', '0002_expand_cli_check', '0003_cost_source_hidden_projects', '0004_pricing_aliases'];
+  const migrations = ['0000_init', '0001_session_model_usage', '0002_expand_cli_check', '0003_cost_source_hidden_projects', '0004_pricing_aliases', '0005_app_settings'];
 
   for (const name of migrations) {
     const result = db.exec(`SELECT name FROM __migrations WHERE name = ?`, [name]);

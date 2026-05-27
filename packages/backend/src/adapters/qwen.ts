@@ -31,6 +31,10 @@ export function createQwenAdapter(): Adapter {
       return [...paths];
     },
 
+    async watchPaths(): Promise<string[]> {
+      return QWEN_ROOTS;
+    },
+
     async computeCheckpoint(sessionPath: string): Promise<Checkpoint | null> {
       if (!existsSync(sessionPath)) return null;
       const stat = statSync(sessionPath);

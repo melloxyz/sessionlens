@@ -1,5 +1,5 @@
 import { existsSync, readFileSync } from 'node:fs';
-import { join } from 'node:path';
+import { dirname, join } from 'node:path';
 import { homedir } from 'node:os';
 import type { Adapter, Checkpoint, RawSession, RawMessage, RawUsageEvent, RawModelUsage } from './types.js';
 import type { CliProvider, SourceConfidence } from '@sessionless/shared';
@@ -50,6 +50,10 @@ export function createOpencodeAdapter(): Adapter {
         }
       } finally { db.close(); }
       return ids;
+    },
+
+    async watchPaths(): Promise<string[]> {
+      return [dirname(OPENCODE_DB)];
     },
 
     async computeCheckpoint(sessionId: string): Promise<Checkpoint | null> {
