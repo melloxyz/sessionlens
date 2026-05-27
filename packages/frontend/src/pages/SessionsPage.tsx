@@ -4,9 +4,19 @@ import { ArrowUpDown, Search } from 'lucide-react';
 import { BrandBadge, BrandMark } from '../components/brand/BrandMark.js';
 import { Badge } from '../components/ui/Badge.js';
 import { Button } from '../components/ui/Button.js';
-import { Card, CardContent } from '../components/ui/Card.js';
+import { DataPanel } from '../components/ui/DataPanel.js';
+import {
+  DataTable,
+  DataTableBody,
+  DataTableCell,
+  DataTableContainer,
+  DataTableHead,
+  DataTableHeaderCell,
+  DataTableRow,
+} from '../components/ui/DataTable.js';
 import { EmptyState } from '../components/ui/EmptyState.js';
 import { ErrorState } from '../components/ui/ErrorState.js';
+import { FilterBar } from '../components/ui/FilterBar.js';
 import { Input } from '../components/ui/Input.js';
 import { TableSkeletonRows } from '../components/ui/LoadingState.js';
 import { Select } from '../components/ui/Select.js';
@@ -73,7 +83,7 @@ export function SessionsPage() {
   }
 
   return (
-    <div className="space-y-5 p-6">
+    <div className="space-y-5 p-4 lg:p-6">
       {error && (
         <ErrorState
           title={t('sessions.failed')}
@@ -84,173 +94,167 @@ export function SessionsPage() {
         />
       )}
 
-      <Card>
-        <CardContent className="flex flex-col gap-3 p-4 lg:flex-row lg:items-center lg:justify-between">
-          <div className="flex flex-1 items-center gap-2">
-            <div className="relative max-w-md flex-1">
-              <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-subtle-foreground" />
-              <Input
-                value={searchInput}
-                onChange={(event) => setSearchInput(event.target.value)}
-                onKeyDown={(event) => event.key === 'Enter' && updateParam('search', searchInput)}
-                placeholder={t('sessions.search.placeholder')}
-                className="pl-9"
-              />
-            </div>
-            <Button variant="secondary" onClick={() => updateParam('search', searchInput)}>
-              {t('common.search')}
-            </Button>
-          </div>
-          <div className="flex items-center gap-2">
-            <Select
-              value={cli}
-              onChange={(event) => updateParam('cli', event.target.value)}
-              options={[
-                { label: t('sessions.allClis'), value: '' },
-                { label: 'Codex', value: 'codex' },
-                { label: 'OpenCode', value: 'opencode' },
-                { label: 'Claude', value: 'claude' },
-                { label: 'Gemini', value: 'gemini' },
-                { label: 'Kimi', value: 'kimi' },
-                { label: 'Aider', value: 'aider' },
-                { label: 'Qwen', value: 'qwen' },
-              ]}
+      <FilterBar
+        actions={
+          <Select
+            value={cli}
+            onChange={(event) => updateParam('cli', event.target.value)}
+            options={[
+              { label: t('sessions.allClis'), value: '' },
+              { label: 'Codex', value: 'codex' },
+              { label: 'OpenCode', value: 'opencode' },
+              { label: 'Claude', value: 'claude' },
+              { label: 'Gemini', value: 'gemini' },
+              { label: 'Kimi', value: 'kimi' },
+              { label: 'Aider', value: 'aider' },
+              { label: 'Qwen', value: 'qwen' },
+            ]}
+          />
+        }
+      >
+        <div className="relative max-w-md flex-1">
+          <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-subtle-foreground" />
+          <Input
+            value={searchInput}
+            onChange={(event) => setSearchInput(event.target.value)}
+            onKeyDown={(event) => event.key === 'Enter' && updateParam('search', searchInput)}
+            placeholder={t('sessions.search.placeholder')}
+            className="pl-9"
+          />
+        </div>
+        <Button variant="secondary" onClick={() => updateParam('search', searchInput)}>
+          {t('common.search')}
+        </Button>
+      </FilterBar>
+
+      <DataPanel contentClassName="p-0">
+        <DataTableContainer>
+          <DataTable>
+            <DataTableHead>
+              <DataTableRow className="hover:bg-transparent">
+                <HeaderCell onClick={() => handleSort('started_at')}>
+                  {t('common.session')}
+                </HeaderCell>
+                <DataTableHeaderCell>CLI</DataTableHeaderCell>
+                <HeaderCell onClick={() => handleSort('model')}>{t('common.model')}</HeaderCell>
+                <DataTableHeaderCell>{t('common.project')}</DataTableHeaderCell>
+                <DataTableHeaderCell className="text-right">Activity</DataTableHeaderCell>
+                <HeaderCell align="right" onClick={() => handleSort('total_cost_usd')}>
+                  {t('common.cost')}
+                </HeaderCell>
+                <DataTableHeaderCell className="text-right">
+                  {t('common.confidence')}
+                </DataTableHeaderCell>
+              </DataTableRow>
+            </DataTableHead>
+            <DataTableBody>
+              {loading ? (
+                <TableSkeletonRows rows={8} columns={7} />
+              ) : (
+                data?.data.map((session) => (
+                  <DataTableRow key={session.id}>
+                    <DataTableCell>
+                      <Link
+                        to={`/sessions/${session.id}`}
+                        className="group flex items-center gap-3"
+                      >
+                        <BrandMark
+                          value={session.cli}
+                          size="md"
+                          className="group-hover:border-accent/30"
+                        />
+                        <div>
+                          <div className="font-mono text-sm font-medium text-foreground group-hover:text-accent">
+                            {session.session_id.slice(0, 10)}
+                          </div>
+                          <div className="text-xs text-subtle-foreground">
+                            {formatRelativeTime(session.started_at)}
+                          </div>
+                        </div>
+                      </Link>
+                    </DataTableCell>
+                    <DataTableCell>
+                      <BrandBadge value={session.cli} />
+                    </DataTableCell>
+                    <DataTableCell className="font-mono text-xs text-muted-foreground">
+                      {session.model ?? 'unknown'}
+                    </DataTableCell>
+                    <DataTableCell>
+                      <div className="font-mono text-sm font-medium text-foreground">
+                        {basename(session.project_path)}
+                      </div>
+                      <div className="text-xs text-subtle-foreground">
+                        {compactPath(session.project_path)}
+                      </div>
+                    </DataTableCell>
+                    <DataTableCell className="text-right font-mono text-xs text-muted-foreground">
+                      <div>{formatDuration(session.duration_ms)}</div>
+                      <div>
+                        {session.message_count} msgs · {session.tool_call_count} tools
+                      </div>
+                    </DataTableCell>
+                    <DataTableCell className="text-right font-mono font-medium tabular-nums text-foreground">
+                      <div>{formatCurrency(session.total_cost_usd)}</div>
+                      {session.cost_source === 'estimated' && (
+                        <div className="mt-1 text-[10px] uppercase tracking-[0.12em] text-warning">
+                          {t('common.estimated')}
+                        </div>
+                      )}
+                    </DataTableCell>
+                    <DataTableCell className="text-right">
+                      <Badge
+                        variant={
+                          session.source_confidence === 'HIGH'
+                            ? 'success'
+                            : session.source_confidence === 'MEDIUM'
+                              ? 'default'
+                              : 'warning'
+                        }
+                      >
+                        {session.source_confidence}
+                      </Badge>
+                    </DataTableCell>
+                  </DataTableRow>
+                ))
+              )}
+            </DataTableBody>
+          </DataTable>
+        </DataTableContainer>
+
+        {!loading && !error && (data?.data.length ?? 0) === 0 && (
+          <div className="p-5">
+            <EmptyState
+              title={t('sessions.empty.title')}
+              description={t('sessions.empty.description')}
+              icon={Search}
             />
           </div>
-        </CardContent>
-      </Card>
+        )}
 
-      <Card>
-        <CardContent className="p-0">
-          <div className="overflow-x-auto">
-            <table className="w-full text-sm">
-              <thead>
-                <tr className="border-b border-border text-xs text-subtle-foreground">
-                  <HeaderCell onClick={() => handleSort('started_at')}>
-                    {t('common.session')}
-                  </HeaderCell>
-                  <th className="px-5 py-3 text-left font-medium">CLI</th>
-                  <HeaderCell onClick={() => handleSort('model')}>{t('common.model')}</HeaderCell>
-                  <th className="px-5 py-3 text-left font-medium">{t('common.project')}</th>
-                  <th className="px-5 py-3 text-right font-medium">Activity</th>
-                  <HeaderCell align="right" onClick={() => handleSort('total_cost_usd')}>
-                    {t('common.cost')}
-                  </HeaderCell>
-                  <th className="px-5 py-3 text-right font-medium">{t('common.confidence')}</th>
-                </tr>
-              </thead>
-              <tbody>
-                {loading ? (
-                  <TableSkeletonRows rows={8} columns={7} />
-                ) : (
-                  data?.data.map((session) => (
-                    <tr
-                      key={session.id}
-                      className="border-b border-border transition-colors hover:bg-surface-hover"
-                    >
-                      <td className="px-5 py-4">
-                        <Link
-                          to={`/sessions/${session.id}`}
-                          className="group flex items-center gap-3"
-                        >
-                          <BrandMark
-                            value={session.cli}
-                            size="md"
-                            className="group-hover:border-accent/30"
-                          />
-                          <div>
-                            <div className="font-medium text-foreground group-hover:text-accent">
-                              {session.session_id.slice(0, 10)}
-                            </div>
-                            <div className="text-xs text-subtle-foreground">
-                              {formatRelativeTime(session.started_at)}
-                            </div>
-                          </div>
-                        </Link>
-                      </td>
-                      <td className="px-5 py-4">
-                        <BrandBadge value={session.cli} />
-                      </td>
-                      <td className="px-5 py-4 font-mono text-xs text-muted-foreground">
-                        {session.model ?? 'unknown'}
-                      </td>
-                      <td className="px-5 py-4">
-                        <div className="font-medium text-foreground">
-                          {basename(session.project_path)}
-                        </div>
-                        <div className="text-xs text-subtle-foreground">
-                          {compactPath(session.project_path)}
-                        </div>
-                      </td>
-                      <td className="px-5 py-4 text-right text-xs text-muted-foreground">
-                        <div>{formatDuration(session.duration_ms)}</div>
-                        <div>
-                          {session.message_count} msgs · {session.tool_call_count} tools
-                        </div>
-                      </td>
-                      <td className="px-5 py-4 text-right font-medium tabular-nums text-foreground">
-                        <div>{formatCurrency(session.total_cost_usd)}</div>
-                        {session.cost_source === 'estimated' && (
-                          <div className="mt-1 text-[10px] uppercase tracking-[0.12em] text-warning">
-                            {t('common.estimated')}
-                          </div>
-                        )}
-                      </td>
-                      <td className="px-5 py-4 text-right">
-                        <Badge
-                          variant={
-                            session.source_confidence === 'HIGH'
-                              ? 'success'
-                              : session.source_confidence === 'MEDIUM'
-                                ? 'default'
-                                : 'warning'
-                          }
-                        >
-                          {session.source_confidence}
-                        </Badge>
-                      </td>
-                    </tr>
-                  ))
-                )}
-              </tbody>
-            </table>
+        <div className="flex items-center justify-between border-t border-border px-5 py-4">
+          <div className="text-xs text-subtle-foreground">
+            Showing page {page} of {totalPages} · {data?.total ?? 0} sessions
           </div>
-
-          {!loading && !error && (data?.data.length ?? 0) === 0 && (
-            <div className="p-5">
-              <EmptyState
-                title={t('sessions.empty.title')}
-                description={t('sessions.empty.description')}
-                icon={Search}
-              />
-            </div>
-          )}
-
-          <div className="flex items-center justify-between border-t border-border px-5 py-4">
-            <div className="text-xs text-subtle-foreground">
-              Showing page {page} of {totalPages} · {data?.total ?? 0} sessions
-            </div>
-            <div className="flex gap-2">
-              <Button
-                variant="outline"
-                size="sm"
-                disabled={page <= 1}
-                onClick={() => updateParam('page', String(page - 1), false)}
-              >
-                {t('common.previous')}
-              </Button>
-              <Button
-                variant="outline"
-                size="sm"
-                disabled={page >= totalPages}
-                onClick={() => updateParam('page', String(page + 1), false)}
-              >
-                {t('common.next')}
-              </Button>
-            </div>
+          <div className="flex gap-2">
+            <Button
+              variant="outline"
+              size="sm"
+              disabled={page <= 1}
+              onClick={() => updateParam('page', String(page - 1), false)}
+            >
+              {t('common.previous')}
+            </Button>
+            <Button
+              variant="outline"
+              size="sm"
+              disabled={page >= totalPages}
+              onClick={() => updateParam('page', String(page + 1), false)}
+            >
+              {t('common.next')}
+            </Button>
           </div>
-        </CardContent>
-      </Card>
+        </div>
+      </DataPanel>
     </div>
   );
 }
@@ -265,14 +269,14 @@ function HeaderCell({
   onClick: () => void;
 }) {
   return (
-    <th className={`px-5 py-3 ${align === 'right' ? 'text-right' : 'text-left'} font-medium`}>
+    <DataTableHeaderCell className={align === 'right' ? 'text-right' : 'text-left'}>
       <button
-        className="inline-flex items-center gap-1 text-subtle-foreground transition-colors hover:text-foreground"
+        className="inline-flex items-center gap-1 transition-colors hover:text-foreground"
         onClick={onClick}
       >
         {children}
         <ArrowUpDown className="h-3 w-3" />
       </button>
-    </th>
+    </DataTableHeaderCell>
   );
 }
