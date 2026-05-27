@@ -1,5 +1,5 @@
 {
-  "name": "aimeter",
+  "name": "sessionless",
   "private": true,
   "scripts": {
     "dev": "node scripts/dev.mjs",

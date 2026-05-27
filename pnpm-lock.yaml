@@ -29,15 +29,15 @@ importers:
 
   packages/backend:
     dependencies:
-      '@aimeter/shared':
-        specifier: workspace:*
-        version: link:../shared
       '@fastify/cors':
         specifier: ^10.0.0
         version: 10.1.0
       '@fastify/static':
         specifier: ^8.0.0
         version: 8.3.0
+      '@sessionless/shared':
+        specifier: workspace:*
+        version: link:../shared
       dotenv:
         specifier: ^16.4.0
         version: 16.6.1
@@ -66,7 +66,7 @@ importers:
 
   packages/frontend:
     dependencies:
-      '@aimeter/shared':
+      '@sessionless/shared':
         specifier: workspace:*
         version: link:../shared
       class-variance-authority:
