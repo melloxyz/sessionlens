@@ -3,24 +3,26 @@ import { type ButtonHTMLAttributes, forwardRef } from 'react';
 import { cn } from '../../lib/utils.js';
 
 const buttonVariants = cva(
-  'inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-xl text-sm font-medium transition-all duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/35 disabled:pointer-events-none disabled:opacity-50',
+  'inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-md border text-sm font-medium transition-colors duration-150 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/40 disabled:pointer-events-none disabled:opacity-50',
   {
     variants: {
       variant: {
-        default: 'bg-accent text-accent-foreground shadow-sm hover:bg-accent-hover',
-        secondary: 'border border-border bg-surface text-foreground hover:bg-surface-hover',
+        default: 'border-accent bg-accent text-accent-foreground hover:bg-accent-hover',
+        secondary:
+          'border-border bg-surface text-foreground hover:border-border-strong hover:bg-surface-hover',
         outline:
-          'border border-border bg-transparent text-foreground hover:bg-surface-hover hover:border-border-strong',
-        ghost: 'text-muted-foreground hover:bg-surface-hover hover:text-foreground',
-        subtle: 'bg-accent-soft text-accent hover:bg-accent-soft/80',
-        danger: 'bg-danger text-white hover:opacity-90',
+          'border-border bg-transparent text-foreground hover:border-border-strong hover:bg-surface-hover',
+        ghost:
+          'border-transparent text-muted-foreground hover:bg-surface-hover hover:text-foreground',
+        subtle: 'border-accent/20 bg-accent-soft text-accent hover:border-accent/40',
+        danger: 'border-danger bg-danger text-white hover:bg-danger/90',
       },
       size: {
         sm: 'h-8 px-3 text-xs',
-        md: 'h-10 px-4',
-        lg: 'h-11 px-5',
-        icon: 'h-10 w-10',
-        'icon-sm': 'h-8 w-8 rounded-lg',
+        md: 'h-9 px-4',
+        lg: 'h-10 px-5',
+        icon: 'h-9 w-9',
+        'icon-sm': 'h-8 w-8',
       },
     },
     defaultVariants: {

@@ -11,7 +11,7 @@ export function Select({ className, options, ...props }: SelectProps) {
     <div className="relative inline-flex min-w-[10rem]">
       <select
         className={cn(
-          'h-10 w-full appearance-none rounded-xl border border-border bg-surface py-0 pl-3 pr-10 text-sm text-foreground shadow-sm outline-none transition-all duration-200 hover:bg-surface-hover focus:border-accent/60 focus:ring-4 focus:ring-accent/10 disabled:cursor-not-allowed disabled:opacity-50',
+          'h-9 w-full appearance-none rounded-md border border-border bg-surface py-0 pl-3 pr-9 font-mono text-sm text-foreground outline-none transition-colors duration-150 hover:border-border-strong hover:bg-surface-hover focus:border-accent focus:ring-2 focus:ring-accent/20 disabled:cursor-not-allowed disabled:opacity-50',
           className,
         )}
         {...props}
@@ -22,7 +22,7 @@ export function Select({ className, options, ...props }: SelectProps) {
           </option>
         ))}
       </select>
-      <ChevronDown className="pointer-events-none absolute right-3 top-1/2 h-4 w-4 -translate-y-1/2 text-subtle-foreground" />
+      <ChevronDown className="pointer-events-none absolute right-3 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-subtle-foreground" />
     </div>
   );
 }

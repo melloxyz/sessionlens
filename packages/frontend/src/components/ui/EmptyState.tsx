@@ -19,15 +19,17 @@ export function EmptyState({
   return (
     <div
       className={cn(
-        'rounded-2xl border border-dashed border-border bg-surface-muted/45 p-8 text-center',
+        'rounded-lg border border-dashed border-border bg-surface-muted/45 p-8 text-center',
         className,
       )}
     >
-      <div className="mx-auto mb-3 grid h-11 w-11 place-items-center rounded-2xl border border-border bg-surface-elevated text-subtle-foreground shadow-sm">
+      <div className="mx-auto mb-3 grid h-10 w-10 place-items-center rounded-md border border-border bg-surface-elevated text-subtle-foreground">
         <Icon className="h-5 w-5" />
       </div>
-      <div className="font-medium text-foreground">{title}</div>
-      <p className="mx-auto mt-1 max-w-sm text-sm text-subtle-foreground">{description}</p>
+      <div className="font-mono text-sm font-semibold text-foreground">{title}</div>
+      <p className="mx-auto mt-2 max-w-sm text-sm leading-6 text-subtle-foreground">
+        {description}
+      </p>
       {action && <div className="mt-4 flex justify-center">{action}</div>}
     </div>
   );

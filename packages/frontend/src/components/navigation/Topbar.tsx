@@ -16,12 +16,12 @@ export function Topbar({ title, subtitle, onRefresh, showDateRange }: TopbarProp
   const { range, setRange } = useDateRange();
 
   return (
-    <header className="sticky top-0 z-20 flex min-h-20 items-center justify-between gap-4 border-b border-border bg-background/88 px-6 backdrop-blur-xl">
+    <header className="sticky top-0 z-20 flex min-h-16 items-center justify-between gap-4 border-b border-border bg-background px-4 lg:px-6">
       <div className="min-w-0">
-        <h1 className="truncate text-xl font-semibold tracking-[-0.03em] text-foreground">
+        <h1 className="truncate font-mono text-lg font-semibold tracking-[-0.03em] text-foreground">
           {title}
         </h1>
-        {subtitle && <p className="mt-1 text-sm text-muted-foreground">{subtitle}</p>}
+        {subtitle && <p className="mt-1 truncate text-xs text-muted-foreground">{subtitle}</p>}
       </div>
 
       <div className="hidden items-center gap-2 md:flex">

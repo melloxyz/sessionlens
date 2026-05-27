@@ -1,5 +1,5 @@
 import { Outlet, useLocation } from 'react-router-dom';
-import { Sidebar } from './Sidebar.js';
+import { MobileNavigation, Sidebar } from './Sidebar.js';
 import { Topbar } from '../navigation/Topbar.js';
 import { useI18n } from '../i18n/LanguageProvider.js';
 
@@ -49,10 +49,11 @@ export function DashboardLayout() {
           showDateRange={showDateRange}
           onRefresh={() => window.location.reload()}
         />
-        <div className="min-h-0 flex-1 overflow-auto">
+        <div className="min-h-0 flex-1 overflow-auto pb-16 lg:pb-0">
           <Outlet />
         </div>
       </main>
+      <MobileNavigation />
     </div>
   );
 }
