@@ -25,7 +25,16 @@ import { StatCard } from '../components/StatCard.js';
 import { BrandBadge, BrandMark, getBrandMeta } from '../components/brand/BrandMark.js';
 import { Badge } from '../components/ui/Badge.js';
 import { Button } from '../components/ui/Button.js';
-import { Card, CardContent, CardHeader, CardTitle } from '../components/ui/Card.js';
+import { DataPanel } from '../components/ui/DataPanel.js';
+import {
+  DataTable,
+  DataTableBody,
+  DataTableCell,
+  DataTableContainer,
+  DataTableHead,
+  DataTableHeaderCell,
+  DataTableRow,
+} from '../components/ui/DataTable.js';
 import { TokenUsageBar } from '../components/session/TokenUsageBar.js';
 import { EmptyState } from '../components/ui/EmptyState.js';
 import { ErrorState } from '../components/ui/ErrorState.js';
@@ -179,7 +188,7 @@ export function DashboardPage() {
     selectedSessionError;
 
   return (
-    <div className="grid min-h-full grid-cols-1 gap-6 p-6 xl:grid-cols-[minmax(0,1fr)_380px]">
+    <div className="grid min-h-full grid-cols-1 gap-5 p-4 lg:p-6 xl:grid-cols-[minmax(0,1fr)_380px]">
       {anyError && (
         <section className="xl:col-span-2">
           <ErrorState
@@ -241,58 +250,55 @@ export function DashboardPage() {
         </div>
       </section>
 
-      <section className="space-y-6">
+      <section className="space-y-5">
         <div className="grid grid-cols-1 items-stretch gap-4 lg:grid-cols-2 2xl:grid-cols-[1.35fr_1fr_1fr]">
-          <Card className="lg:col-span-2 2xl:col-span-1">
-            <CardHeader>
-              <div>
-                <CardTitle>{t('project.spendOverTime')}</CardTitle>
-                <p className="mt-1 text-xs text-subtle-foreground">
-                  Daily cost across all AI coding CLIs
-                </p>
-              </div>
+          <DataPanel
+            className="lg:col-span-2 2xl:col-span-1"
+            title={t('project.spendOverTime')}
+            description="Daily cost across all AI coding CLIs"
+            action={
               <Button variant="outline" size="sm">
                 Daily
               </Button>
-            </CardHeader>
-            <CardContent className="pt-4">
-              <ResponsiveContainer width="100%" height={280}>
-                <AreaChart data={spendPoints}>
-                  <defs>
-                    <linearGradient id="spendGradient" x1="0" y1="0" x2="0" y2="1">
-                      <stop offset="5%" stopColor="#22c55e" stopOpacity={0.35} />
-                      <stop offset="95%" stopColor="#22c55e" stopOpacity={0.02} />
-                    </linearGradient>
-                  </defs>
-                  <CartesianGrid stroke="var(--border)" vertical={false} />
-                  <XAxis
-                    dataKey="date"
-                    tick={{ fontSize: 11, fill: 'var(--subtle-foreground)' }}
-                    tickLine={false}
-                    axisLine={false}
-                  />
-                  <YAxis
-                    tick={{ fontSize: 11, fill: 'var(--subtle-foreground)' }}
-                    tickLine={false}
-                    axisLine={false}
-                    tickFormatter={(value: number) => `$${value.toFixed(0)}`}
-                  />
-                  <Tooltip
-                    contentStyle={tooltipStyle}
-                    formatter={(value: number) => [formatCurrency(value), 'Spend']}
-                  />
-                  <Area
-                    type="monotone"
-                    dataKey="spend"
-                    stroke="#22c55e"
-                    fill="url(#spendGradient)"
-                    strokeWidth={2.4}
-                    dot={{ r: 3, fill: '#22c55e' }}
-                  />
-                </AreaChart>
-              </ResponsiveContainer>
-            </CardContent>
-          </Card>
+            }
+            contentClassName="pt-4"
+          >
+            <ResponsiveContainer width="100%" height={280}>
+              <AreaChart data={spendPoints}>
+                <defs>
+                  <linearGradient id="spendGradient" x1="0" y1="0" x2="0" y2="1">
+                    <stop offset="5%" stopColor="var(--success)" stopOpacity={0.35} />
+                    <stop offset="95%" stopColor="var(--success)" stopOpacity={0.02} />
+                  </linearGradient>
+                </defs>
+                <CartesianGrid stroke="var(--border)" vertical={false} />
+                <XAxis
+                  dataKey="date"
+                  tick={{ fontSize: 11, fill: 'var(--subtle-foreground)' }}
+                  tickLine={false}
+                  axisLine={false}
+                />
+                <YAxis
+                  tick={{ fontSize: 11, fill: 'var(--subtle-foreground)' }}
+                  tickLine={false}
+                  axisLine={false}
+                  tickFormatter={(value: number) => `$${value.toFixed(0)}`}
+                />
+                <Tooltip
+                  contentStyle={tooltipStyle}
+                  formatter={(value: number) => [formatCurrency(value), 'Spend']}
+                />
+                <Area
+                  type="monotone"
+                  dataKey="spend"
+                  stroke="var(--success)"
+                  fill="url(#spendGradient)"
+                  strokeWidth={2.4}
+                  dot={{ r: 3, fill: 'var(--success)' }}
+                />
+              </AreaChart>
+            </ResponsiveContainer>
+          </DataPanel>
 
           <DonutCard
             title={t('dashboard.spendByCli')}
@@ -314,193 +320,181 @@ export function DashboardPage() {
           />
         </div>
 
-        <Card className="overflow-hidden">
-          <CardHeader>
-            <div>
-              <CardTitle>{t('dashboard.recentSessions')}</CardTitle>
-              <p className="mt-1 text-xs text-subtle-foreground">
-                Latest indexed conversations across Codex, OpenCode and Claude
-              </p>
-            </div>
+        <DataPanel
+          className="overflow-hidden"
+          title={t('dashboard.recentSessions')}
+          description="Latest indexed conversations across Codex, OpenCode and Claude"
+          action={
             <Link
               to="/sessions"
-              className="inline-flex items-center gap-2 text-sm font-medium text-accent hover:text-accent-hover"
+              className="inline-flex items-center gap-2 font-mono text-xs font-medium text-accent transition-colors hover:text-accent-hover"
             >
               View all sessions <ArrowUpRight className="h-4 w-4" />
             </Link>
-          </CardHeader>
-          <CardContent className="p-0">
-            <div className="max-h-[560px] overflow-auto">
-              <table className="w-full text-sm">
-                <thead className="sticky top-0 z-10 bg-surface">
-                  <tr className="border-b border-border text-xs text-subtle-foreground">
-                    <th className="px-5 py-3 text-left font-medium">{t('common.session')}</th>
-                    <th className="px-5 py-3 text-left font-medium">CLI</th>
-                    <th className="px-5 py-3 text-left font-medium">{t('common.model')}</th>
-                    <th className="px-5 py-3 text-left font-medium">{t('common.project')}</th>
-                    <th className="px-5 py-3 text-right font-medium">{t('common.duration')}</th>
-                    <th className="px-5 py-3 text-right font-medium">{t('common.cost')}</th>
-                    <th className="px-5 py-3 text-right font-medium">Time</th>
-                    <th className="w-10 px-5 py-3" />
-                  </tr>
-                </thead>
-                <tbody>
-                  {(recentSessions?.data ?? []).map((session) => (
-                    <tr
-                      key={session.id}
-                      onClick={() => navigate(`/sessions/${session.id}`)}
-                      className="cursor-pointer border-b border-border transition-colors hover:bg-surface-hover"
-                    >
-                      <td className="px-5 py-3">
-                        <div className="flex items-center gap-3">
-                          <BrandMark value={session.cli} size="sm" />
-                          <div>
-                            <div className="font-medium text-foreground">
-                              {session.session_id.slice(0, 8)}
-                            </div>
-                            <div className="text-xs text-subtle-foreground">{session.provider}</div>
+          }
+          contentClassName="p-0"
+        >
+          <DataTableContainer className="max-h-[560px] overflow-auto">
+            <DataTable>
+              <DataTableHead className="sticky top-0 z-10 bg-surface">
+                <DataTableRow className="hover:bg-transparent">
+                  <DataTableHeaderCell>{t('common.session')}</DataTableHeaderCell>
+                  <DataTableHeaderCell>CLI</DataTableHeaderCell>
+                  <DataTableHeaderCell>{t('common.model')}</DataTableHeaderCell>
+                  <DataTableHeaderCell>{t('common.project')}</DataTableHeaderCell>
+                  <DataTableHeaderCell className="text-right">
+                    {t('common.duration')}
+                  </DataTableHeaderCell>
+                  <DataTableHeaderCell className="text-right">
+                    {t('common.cost')}
+                  </DataTableHeaderCell>
+                  <DataTableHeaderCell className="text-right">Time</DataTableHeaderCell>
+                  <DataTableHeaderCell className="w-10" />
+                </DataTableRow>
+              </DataTableHead>
+              <DataTableBody>
+                {(recentSessions?.data ?? []).map((session) => (
+                  <DataTableRow
+                    key={session.id}
+                    onClick={() => navigate(`/sessions/${session.id}`)}
+                    className="cursor-pointer"
+                  >
+                    <DataTableCell>
+                      <div className="flex items-center gap-3">
+                        <BrandMark value={session.cli} size="sm" />
+                        <div>
+                          <div className="font-mono text-sm font-medium text-foreground">
+                            {session.session_id.slice(0, 8)}
                           </div>
+                          <div className="text-xs text-subtle-foreground">{session.provider}</div>
                         </div>
-                      </td>
-                      <td className="px-5 py-3">
-                        <BrandBadge value={session.cli} />
-                      </td>
-                      <td className="px-5 py-3 font-mono text-xs text-muted-foreground">
-                        {session.model ?? 'unknown'}
-                      </td>
-                      <td className="max-w-[220px] truncate px-5 py-3 text-muted-foreground">
-                        {compactPath(session.project_path)}
-                      </td>
-                      <td className="px-5 py-3 text-right tabular-nums text-muted-foreground">
-                        {formatDuration(session.duration_ms)}
-                      </td>
-                      <td className="px-5 py-3 text-right tabular-nums font-medium text-foreground">
-                        <div>{formatCurrency(session.total_cost_usd)}</div>
-                        {session.cost_source === 'estimated' && (
-                          <div className="mt-1 text-[10px] uppercase tracking-[0.12em] text-warning">
-                            {t('common.estimated')}
-                          </div>
-                        )}
-                      </td>
-                      <td className="px-5 py-3 text-right text-muted-foreground">
-                        {formatRelativeTime(session.started_at)}
-                      </td>
-                      <td className="px-5 py-3 text-right">
-                        <MoreHorizontal className="h-4 w-4 text-subtle-foreground" />
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          </CardContent>
-        </Card>
+                      </div>
+                    </DataTableCell>
+                    <DataTableCell>
+                      <BrandBadge value={session.cli} />
+                    </DataTableCell>
+                    <DataTableCell className="font-mono text-xs text-muted-foreground">
+                      {session.model ?? 'unknown'}
+                    </DataTableCell>
+                    <DataTableCell className="max-w-[220px] truncate text-muted-foreground">
+                      {compactPath(session.project_path)}
+                    </DataTableCell>
+                    <DataTableCell className="text-right font-mono tabular-nums text-muted-foreground">
+                      {formatDuration(session.duration_ms)}
+                    </DataTableCell>
+                    <DataTableCell className="text-right font-mono tabular-nums font-medium text-foreground">
+                      <div>{formatCurrency(session.total_cost_usd)}</div>
+                      {session.cost_source === 'estimated' && (
+                        <div className="mt-1 text-[10px] uppercase tracking-[0.12em] text-warning">
+                          {t('common.estimated')}
+                        </div>
+                      )}
+                    </DataTableCell>
+                    <DataTableCell className="text-right text-muted-foreground">
+                      {formatRelativeTime(session.started_at)}
+                    </DataTableCell>
+                    <DataTableCell className="text-right">
+                      <MoreHorizontal className="h-4 w-4 text-subtle-foreground" />
+                    </DataTableCell>
+                  </DataTableRow>
+                ))}
+              </DataTableBody>
+            </DataTable>
+          </DataTableContainer>
+        </DataPanel>
       </section>
 
       <aside className="space-y-4">
-        <Card className="h-full">
-          <CardContent className="space-y-5">
-            <div className="flex items-start gap-3">
-              <BrandMark value={selectedSession?.cli} size="lg" />
-              <div className="min-w-0 flex-1">
-                <div className="flex items-center justify-between gap-2">
-                  <h2 className="truncate text-base font-semibold text-foreground">
-                    {selectedSession?.session_id?.slice(0, 8) ?? 'Session'}
-                  </h2>
-                  <Badge
-                    variant={
-                      selectedSession?.source_confidence === 'HIGH'
-                        ? 'success'
-                        : selectedSession?.source_confidence === 'MEDIUM'
-                          ? 'default'
-                          : 'warning'
-                    }
-                  >
-                    {selectedSession?.source_confidence ?? '—'}
-                  </Badge>
-                </div>
-                <p className="mt-1 truncate text-sm text-muted-foreground">
-                  {getBrandMeta(selectedSession?.cli).label} · {selectedSession?.model ?? 'unknown'}
-                </p>
+        <DataPanel className="h-full" contentClassName="space-y-5">
+          <div className="flex items-start gap-3">
+            <BrandMark value={selectedSession?.cli} size="lg" />
+            <div className="min-w-0 flex-1">
+              <div className="flex items-center justify-between gap-2">
+                <h2 className="truncate font-mono text-base font-semibold text-foreground">
+                  {selectedSession?.session_id?.slice(0, 8) ?? 'Session'}
+                </h2>
+                <Badge
+                  variant={
+                    selectedSession?.source_confidence === 'HIGH'
+                      ? 'success'
+                      : selectedSession?.source_confidence === 'MEDIUM'
+                        ? 'default'
+                        : 'warning'
+                  }
+                >
+                  {selectedSession?.source_confidence ?? '—'}
+                </Badge>
               </div>
+              <p className="mt-1 truncate text-sm text-muted-foreground">
+                {getBrandMeta(selectedSession?.cli).label} · {selectedSession?.model ?? 'unknown'}
+              </p>
             </div>
+          </div>
 
-            {selectedSessionError ? (
-              <ErrorState
-                title={
-                  selectedSessionError.status === 404
-                    ? 'Session not found'
-                    : 'Unable to load session'
-                }
-                message={selectedSessionError.message}
-                code={selectedSessionError.code}
-                details={selectedSessionError.details}
-                onRetry={() => selectedId && setSelectedId(selectedId)}
-              />
-            ) : (
-              <>
-                <div className="grid grid-cols-3 gap-2 rounded-2xl border border-border bg-surface-muted p-2 text-center">
-                  <MiniMetric
-                    label="Cost"
-                    value={formatCurrency(selectedSession?.total_cost_usd)}
-                  />
-                  <MiniMetric
-                    label="Tokens"
-                    value={formatTokens(selectedUsage.input + selectedUsage.output)}
-                  />
-                  <MiniMetric label="Tools" value={String(selectedSession?.tool_call_count ?? 0)} />
+          {selectedSessionError ? (
+            <ErrorState
+              title={
+                selectedSessionError.status === 404 ? 'Session not found' : 'Unable to load session'
+              }
+              message={selectedSessionError.message}
+              code={selectedSessionError.code}
+              details={selectedSessionError.details}
+              onRetry={() => selectedId && setSelectedId(selectedId)}
+            />
+          ) : (
+            <>
+              <div className="grid grid-cols-3 gap-2 rounded-lg border border-border bg-surface-muted p-2 text-center">
+                <MiniMetric label="Cost" value={formatCurrency(selectedSession?.total_cost_usd)} />
+                <MiniMetric
+                  label="Tokens"
+                  value={formatTokens(selectedUsage.input + selectedUsage.output)}
+                />
+                <MiniMetric label="Tools" value={String(selectedSession?.tool_call_count ?? 0)} />
+              </div>
+
+              <div className="grid grid-cols-2 gap-2 rounded-lg border border-border bg-surface-muted p-2 text-center">
+                <MiniMetric label="Messages" value={String(selectedSession?.message_count ?? 0)} />
+                <MiniMetric label="Duration" value={formatDuration(selectedSession?.duration_ms)} />
+              </div>
+
+              <div className="rounded-lg border border-border p-4">
+                <div className="mb-4 font-mono text-sm font-semibold text-foreground">
+                  Token Usage
                 </div>
+                <TokenUsageBar
+                  input={selectedUsage.input}
+                  output={selectedUsage.output}
+                  cacheRead={selectedUsage.cacheRead}
+                  cacheWrite={selectedUsage.cacheWrite}
+                />
+              </div>
 
-                <div className="grid grid-cols-2 gap-2 rounded-2xl border border-border bg-surface-muted p-2 text-center">
-                  <MiniMetric
-                    label="Messages"
-                    value={String(selectedSession?.message_count ?? 0)}
-                  />
-                  <MiniMetric
-                    label="Duration"
-                    value={formatDuration(selectedSession?.duration_ms)}
-                  />
-                </div>
+              <div className="rounded-lg border border-border p-4 text-sm">
+                <div className="mb-4 font-mono text-sm font-semibold text-foreground">Metadata</div>
+                <InfoRow label="Project" value={basename(selectedSession?.project_path)} />
+                <InfoRow label="Provider" value={selectedSession?.provider ?? '—'} />
+                <InfoRow label="Model" value={selectedSession?.model ?? 'unknown'} />
+                <InfoRow
+                  label="Started"
+                  value={selectedSession?.started_at ? formatDate(selectedSession.started_at) : '—'}
+                />
+                <InfoRow
+                  label="Ended"
+                  value={selectedSession?.ended_at ? formatDate(selectedSession.ended_at) : '—'}
+                />
+                <InfoRow label="Duration" value={formatDuration(selectedSession?.duration_ms)} />
+              </div>
+            </>
+          )}
 
-                <div className="rounded-2xl border border-border p-4">
-                  <div className="mb-4 text-sm font-semibold text-foreground">Token Usage</div>
-                  <TokenUsageBar
-                    input={selectedUsage.input}
-                    output={selectedUsage.output}
-                    cacheRead={selectedUsage.cacheRead}
-                    cacheWrite={selectedUsage.cacheWrite}
-                  />
-                </div>
-
-                <div className="rounded-2xl border border-border p-4 text-sm">
-                  <div className="mb-4 text-sm font-semibold text-foreground">Metadata</div>
-                  <InfoRow label="Project" value={basename(selectedSession?.project_path)} />
-                  <InfoRow label="Provider" value={selectedSession?.provider ?? '—'} />
-                  <InfoRow label="Model" value={selectedSession?.model ?? 'unknown'} />
-                  <InfoRow
-                    label="Started"
-                    value={
-                      selectedSession?.started_at ? formatDate(selectedSession.started_at) : '—'
-                    }
-                  />
-                  <InfoRow
-                    label="Ended"
-                    value={selectedSession?.ended_at ? formatDate(selectedSession.ended_at) : '—'}
-                  />
-                  <InfoRow label="Duration" value={formatDuration(selectedSession?.duration_ms)} />
-                </div>
-              </>
-            )}
-
-            {selectedId && (
-              <Link to={`/sessions/${selectedId}`}>
-                <Button variant="outline" className="w-full">
-                  {t('dashboard.openSession')} <ArrowUpRight className="h-4 w-4" />
-                </Button>
-              </Link>
-            )}
-          </CardContent>
-        </Card>
+          {selectedId && (
+            <Link to={`/sessions/${selectedId}`}>
+              <Button variant="outline" className="w-full">
+                {t('dashboard.openSession')} <ArrowUpRight className="h-4 w-4" />
+              </Button>
+            </Link>
+          )}
+        </DataPanel>
       </aside>
     </div>
   );
@@ -524,83 +518,84 @@ function DonutCard({
   colorFor: (label: string, index: number) => string;
 }) {
   return (
-    <Card className="h-full min-h-[348px]">
-      <CardHeader className="pb-1">
-        <div>
-          <CardTitle>{title}</CardTitle>
-          <p className="mt-1 text-xs text-subtle-foreground">Top contributors by cost</p>
-        </div>
-      </CardHeader>
-      <CardContent className="grid min-h-[292px] grid-rows-[160px_1fr] gap-4 pt-3">
-        <div className="relative mx-auto h-40 w-40">
-          <ResponsiveContainer width="100%" height="100%">
-            <PieChart>
-              <Pie
-                data={data}
-                dataKey="value"
-                nameKey="label"
-                cx="50%"
-                cy="50%"
-                innerRadius={54}
-                outerRadius={76}
-                paddingAngle={2}
-                stroke="var(--surface)"
-                strokeWidth={2}
-              >
-                {data.map((item, index) => (
-                  <Cell key={item.label} fill={colorFor(item.label, index)} />
-                ))}
-              </Pie>
-              <Tooltip
-                contentStyle={tooltipStyle}
-                formatter={(value: number) => [formatCurrency(value), 'Spend']}
-              />
-            </PieChart>
-          </ResponsiveContainer>
-          <div className="pointer-events-none absolute inset-0 grid place-items-center text-center">
-            <div>
-              <div className="text-sm font-semibold text-foreground">{center}</div>
-              <div className="text-[11px] text-subtle-foreground">{centerLabel}</div>
+    <DataPanel
+      className="h-full min-h-[348px]"
+      title={title}
+      description="Top contributors by cost"
+      contentClassName="grid min-h-[292px] grid-rows-[160px_1fr] gap-4 pt-3"
+    >
+      <div className="relative mx-auto h-40 w-40">
+        <ResponsiveContainer width="100%" height="100%">
+          <PieChart>
+            <Pie
+              data={data}
+              dataKey="value"
+              nameKey="label"
+              cx="50%"
+              cy="50%"
+              innerRadius={54}
+              outerRadius={76}
+              paddingAngle={2}
+              stroke="var(--surface)"
+              strokeWidth={2}
+            >
+              {data.map((item, index) => (
+                <Cell key={item.label} fill={colorFor(item.label, index)} />
+              ))}
+            </Pie>
+            <Tooltip
+              contentStyle={tooltipStyle}
+              formatter={(value: number) => [formatCurrency(value), 'Spend']}
+            />
+          </PieChart>
+        </ResponsiveContainer>
+        <div className="pointer-events-none absolute inset-0 grid place-items-center text-center">
+          <div>
+            <div className="font-mono text-sm font-semibold text-foreground">{center}</div>
+            <div className="font-mono text-[10px] uppercase tracking-[0.1em] text-subtle-foreground">
+              {centerLabel}
             </div>
           </div>
         </div>
-        <div className="space-y-2.5">
-          {data.map((item, index) => (
-            <div
-              key={item.label}
-              className="grid grid-cols-[minmax(0,1fr)_auto] items-start gap-3 text-xs"
-            >
-              <div className="flex min-w-0 items-start gap-2">
-                <span
-                  className="h-2.5 w-2.5 shrink-0 rounded-full"
-                  style={{ background: colorFor(item.label, index) }}
-                />
-                <span className="break-words leading-snug text-muted-foreground">{item.label}</span>
-              </div>
-              <div className="flex shrink-0 items-center gap-3 tabular-nums">
-                <span className="hidden text-subtle-foreground 2xl:inline">
-                  {formatCurrency(item.value)}
-                </span>
-                <span className="min-w-12 text-right font-semibold text-foreground">
-                  {item.percentage}%
-                </span>
-              </div>
+      </div>
+      <div className="space-y-2.5">
+        {data.map((item, index) => (
+          <div
+            key={item.label}
+            className="grid grid-cols-[minmax(0,1fr)_auto] items-start gap-3 text-xs"
+          >
+            <div className="flex min-w-0 items-start gap-2">
+              <span
+                className="h-2.5 w-2.5 shrink-0 rounded-sm"
+                style={{ background: colorFor(item.label, index) }}
+              />
+              <span className="break-words leading-snug text-muted-foreground">{item.label}</span>
             </div>
-          ))}
-          {data.length === 0 && (
-            <EmptyState title={emptyTitle} description={emptyDescription} className="p-4" />
-          )}
-        </div>
-      </CardContent>
-    </Card>
+            <div className="flex shrink-0 items-center gap-3 tabular-nums">
+              <span className="hidden text-subtle-foreground 2xl:inline">
+                {formatCurrency(item.value)}
+              </span>
+              <span className="min-w-12 text-right font-mono font-semibold text-foreground">
+                {item.percentage}%
+              </span>
+            </div>
+          </div>
+        ))}
+        {data.length === 0 && (
+          <EmptyState title={emptyTitle} description={emptyDescription} className="p-4" />
+        )}
+      </div>
+    </DataPanel>
   );
 }
 
 function MiniMetric({ label, value }: { label: string; value: string }) {
   return (
     <div>
-      <div className="text-[11px] text-subtle-foreground">{label}</div>
-      <div className="mt-1 truncate text-sm font-semibold text-foreground">{value}</div>
+      <div className="font-mono text-[10px] uppercase tracking-[0.12em] text-subtle-foreground">
+        {label}
+      </div>
+      <div className="mt-1 truncate font-mono text-sm font-semibold text-foreground">{value}</div>
     </div>
   );
 }
@@ -609,7 +604,7 @@ function InfoRow({ label, value }: { label: string; value: string }) {
   return (
     <div className="mb-3 flex justify-between gap-4 last:mb-0">
       <span className="text-muted-foreground">{label}</span>
-      <span className="truncate text-right font-medium text-foreground">{value}</span>
+      <span className="truncate text-right font-mono font-medium text-foreground">{value}</span>
     </div>
   );
 }
