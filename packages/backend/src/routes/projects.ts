@@ -1,6 +1,7 @@
 import type { FastifyInstance } from 'fastify';
 import { existsSync } from 'node:fs';
-import { getDatabase } from '../db/connection.js';
+import { execFileSync } from 'node:child_process';
+import { getDatabase, saveDatabase } from '../db/connection.js';
 
 export function registerProjectRoutes(app: FastifyInstance): void {
   app.get('/api/projects', async (req, reply) => {
@@ -9,10 +10,10 @@ export function registerProjectRoutes(app: FastifyInstance): void {
       const db = getDatabase();
       const search = q.search || null;
 
-      let sql = `SELECT * FROM projects`;
+      let sql = `SELECT * FROM projects WHERE NOT EXISTS (SELECT 1 FROM hidden_projects hp WHERE hp.path = projects.path)`;
       const params: (string | number | null)[] = [];
       if (search) {
-        sql += ` WHERE path LIKE ?`;
+        sql += ` AND path LIKE ?`;
         params.push(`%${search}%`);
       }
       sql += ` ORDER BY total_cost DESC`;
@@ -43,7 +44,7 @@ export function registerProjectRoutes(app: FastifyInstance): void {
     const { id } = req.params as { id: string };
     const db = getDatabase();
 
-    const projResult = db.exec(`SELECT * FROM projects WHERE id = ?`, [Number(id)]);
+    const projResult = db.exec(`SELECT * FROM projects WHERE id = ? AND NOT EXISTS (SELECT 1 FROM hidden_projects hp WHERE hp.path = projects.path)`, [Number(id)]);
     if (projResult.length === 0 || !projResult[0].values || projResult[0].values.length === 0) {
       reply.code(404);
       return { error: { code: 'PROJECT_NOT_FOUND', message: 'Project not found' } };
@@ -59,7 +60,7 @@ export function registerProjectRoutes(app: FastifyInstance): void {
 
     // Sessions for this project
     const sessionResult = db.exec(
-      `SELECT id, cli, model, started_at, ended_at, duration_ms, total_cost_usd, source_confidence, message_count, tool_call_count
+      `SELECT id, cli, model, started_at, ended_at, duration_ms, total_cost_usd, cost_source, source_confidence, message_count, tool_call_count
        FROM sessions WHERE COALESCE(project_path, 'unknown') = ? ORDER BY started_at DESC LIMIT 100`,
       [path],
     );
@@ -122,6 +123,41 @@ export function registerProjectRoutes(app: FastifyInstance): void {
       }
     }
 
-    return { project: proj, sessions, providerBreakdown, modelBreakdown, spendOverTime };
+    const commits = getGitCommits(path);
+    return { project: proj, sessions, providerBreakdown, modelBreakdown, spendOverTime, commits };
   });
+
+  app.delete('/api/projects/:id', async (req, reply) => {
+    try {
+      const { id } = req.params as { id: string };
+      const db = getDatabase();
+      const result = db.exec(`SELECT path FROM projects WHERE id = ?`, [Number(id)]);
+      const path = result[0]?.values?.[0]?.[0] as string | undefined;
+      if (!path) {
+        reply.code(404);
+        return { error: { code: 'PROJECT_NOT_FOUND', message: 'Project not found' } };
+      }
+      db.run(`INSERT OR REPLACE INTO hidden_projects (path, hidden_at) VALUES (?, datetime('now'))`, [path]);
+      saveDatabase();
+      return { ok: true };
+    } catch (error) {
+      reply.code(500);
+      return { error: { code: 'PROJECT_HIDE_FAILED', message: 'Failed to hide project', details: String(error) } };
+    }
+  });
+}
+
+function getGitCommits(path: string): { branch: string | null; commits: { hash: string; author: string; date: string; message: string }[] } {
+  if (!path || path === 'unknown' || !existsSync(path)) return { branch: null, commits: [] };
+  try {
+    const branch = execFileSync('git', ['-C', path, 'rev-parse', '--abbrev-ref', 'HEAD'], { encoding: 'utf-8', timeout: 3000 }).trim() || null;
+    const log = execFileSync('git', ['-C', path, 'log', '-n', '20', '--date=iso-strict', '--pretty=format:%h%x1f%an%x1f%ad%x1f%s'], { encoding: 'utf-8', timeout: 3000 });
+    const commits = log.split('\n').filter(Boolean).map((line) => {
+      const [hash, author, date, message] = line.split('\x1f');
+      return { hash: hash ?? '', author: author ?? '', date: date ?? '', message: message ?? '' };
+    });
+    return { branch, commits };
+  } catch {
+    return { branch: null, commits: [] };
+  }
 }

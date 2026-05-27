@@ -2,6 +2,7 @@ import { getDatabase, saveDatabase } from '../db/connection.js';
 import { registry } from '../adapters/registry.js';
 import type { RawSession, RawModelUsage } from '../adapters/types.js';
 import { execSync } from 'node:child_process';
+import { resolveSessionCost } from '../costing.js';
 
 function normalizePath(p: string | null): string | null {
   if (!p) return null;
@@ -100,6 +101,7 @@ export async function runIngestion(): Promise<IngestionStatus> {
 
   try {
     deleteInvalidSessions();
+    backfillEstimatedCosts();
     refreshProjects();
   } catch (err) {
     errors.push(`refresh-projects: ${String(err)}`);
@@ -127,11 +129,10 @@ function deleteInvalidSessions(): void {
   `);
 }
 
-function persistModelUsage(sessionPk: number, raw: RawSession): void {
+function persistModelUsage(sessionPk: number, rows: RawModelUsage[]): void {
   const db = getDatabase();
   db.run(`DELETE FROM session_model_usage WHERE session_fk = ?`, [sessionPk]);
 
-  const rows = raw.modelUsage ?? aggregateModelUsage(raw);
   for (const row of rows) {
     db.run(
       `INSERT INTO session_model_usage (
@@ -192,6 +193,7 @@ function upsertSession(raw: RawSession): 'new' | 'updated' | 'skipped' {
 
   const normalizedProvider = normalizeProvider(raw.provider);
   const normalizedModel = normalizeModel(raw.model);
+  const cost = resolveSessionCost({ ...raw, provider: normalizedProvider, model: normalizedModel });
 
   const existing = db.exec(
     `SELECT id FROM sessions WHERE session_id = ? AND cli = ? AND provider = ?`,
@@ -205,7 +207,7 @@ function upsertSession(raw: RawSession): 'new' | 'updated' | 'skipped' {
     db.run(
       `UPDATE sessions SET
         project_path = ?, model = ?, started_at = ?, ended_at = ?,
-        duration_ms = ?, total_cost_usd = COALESCE(total_cost_usd, ?),
+        duration_ms = ?, total_cost_usd = ?, cost_source = ?,
         source_confidence = ?, message_count = ?, tool_call_count = ?
       WHERE id = ?`,
       [
@@ -214,7 +216,8 @@ function upsertSession(raw: RawSession): 'new' | 'updated' | 'skipped' {
         raw.startedAt,
         raw.endedAt,
         raw.durationMs,
-        raw.totalCostUsd,
+        cost.totalCostUsd,
+        cost.costSource,
         raw.sourceConfidence,
         raw.messages.length,
         raw.usageEvents.reduce((sum, e) => sum + e.toolCallsCount, 0),
@@ -225,13 +228,13 @@ function upsertSession(raw: RawSession): 'new' | 'updated' | 'skipped' {
     db.run(`DELETE FROM messages WHERE session_fk = ?`, [sessionPk]);
     db.run(`DELETE FROM session_model_usage WHERE session_fk = ?`, [sessionPk]);
     insertEvents(db, sessionPk, raw);
-    persistModelUsage(sessionPk, raw);
+    persistModelUsage(sessionPk, cost.modelUsage);
     return 'updated';
   }
 
   db.run(
-    `INSERT INTO sessions (provider, cli, session_id, project_path, model, started_at, ended_at, duration_ms, total_cost_usd, source_confidence, message_count, tool_call_count)
-     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+    `INSERT INTO sessions (provider, cli, session_id, project_path, model, started_at, ended_at, duration_ms, total_cost_usd, cost_source, source_confidence, message_count, tool_call_count)
+     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
     [
       normalizedProvider,
       raw.cli,
@@ -241,7 +244,8 @@ function upsertSession(raw: RawSession): 'new' | 'updated' | 'skipped' {
       raw.startedAt,
       raw.endedAt,
       raw.durationMs,
-      raw.totalCostUsd,
+      cost.totalCostUsd,
+      cost.costSource,
       raw.sourceConfidence,
       raw.messages.length,
       raw.usageEvents.reduce((sum, e) => sum + e.toolCallsCount, 0),
@@ -251,8 +255,51 @@ function upsertSession(raw: RawSession): 'new' | 'updated' | 'skipped' {
   const lastId = db.exec(`SELECT last_insert_rowid()`);
   sessionPk = Number(lastId[0].values[0][0]);
   insertEvents(db, sessionPk, raw);
-  persistModelUsage(sessionPk, raw);
+  persistModelUsage(sessionPk, cost.modelUsage);
   return 'new';
+}
+
+export function backfillEstimatedCosts(): void {
+  const db = getDatabase();
+  db.run(`UPDATE sessions SET cost_source = 'actual' WHERE COALESCE(total_cost_usd, 0) > 0 AND cost_source = 'unknown'`);
+  const sessions = db.exec(`SELECT id, provider, cli, session_id, project_path, model, started_at, ended_at, duration_ms, source_confidence FROM sessions`);
+  if (sessions.length === 0 || !sessions[0].values) return;
+
+  for (const row of sessions[0].values) {
+    const id = Number(row[0]);
+    const usageRows = db.exec(
+      `SELECT timestamp, input_tokens, output_tokens, cache_read_tokens, cache_write_tokens, reasoning_tokens, tool_calls_count FROM usage_events WHERE session_fk = ?`,
+      [id],
+    );
+    const messageCount = Number(db.exec(`SELECT COUNT(*) FROM messages WHERE session_fk = ?`, [id])[0]?.values?.[0]?.[0] ?? 0);
+    const raw: RawSession = {
+      sessionId: String(row[3]),
+      provider: String(row[1]),
+      cli: row[2] as RawSession['cli'],
+      projectPath: row[4] as string | null,
+      model: row[5] as string | null,
+      startedAt: String(row[6]),
+      endedAt: row[7] as string | null,
+      durationMs: row[8] == null ? null : Number(row[8]),
+      totalCostUsd: null,
+      sourceConfidence: row[9] as RawSession['sourceConfidence'],
+      messages: Array.from({ length: messageCount }, () => ({ role: 'user', content: '', timestamp: String(row[6]) })),
+      usageEvents: (usageRows[0]?.values ?? []).map((usage) => ({
+        timestamp: String(usage[0]),
+        inputTokens: Number(usage[1]) || 0,
+        outputTokens: Number(usage[2]) || 0,
+        cacheReadTokens: Number(usage[3]) || 0,
+        cacheWriteTokens: Number(usage[4]) || 0,
+        reasoningTokens: Number(usage[5]) || 0,
+        toolCallsCount: Number(usage[6]) || 0,
+      })),
+    };
+    const cost = resolveSessionCost(raw);
+    if (cost.costSource === 'unknown') continue;
+    db.run(`UPDATE sessions SET total_cost_usd = ?, cost_source = ? WHERE id = ? AND (total_cost_usd IS NULL OR total_cost_usd = 0 OR cost_source = 'unknown')`, [cost.totalCostUsd, cost.costSource, id]);
+    persistModelUsage(id, cost.modelUsage);
+  }
+  saveDatabase();
 }
 
 function insertEvents(
@@ -309,6 +356,7 @@ function refreshProjects(): void {
         const result = execSync('git remote get-url origin', {
           cwd: p,
           encoding: 'utf-8',
+          stdio: ['ignore', 'pipe', 'ignore'],
           timeout: 3000,
         });
         const remote = result.trim();

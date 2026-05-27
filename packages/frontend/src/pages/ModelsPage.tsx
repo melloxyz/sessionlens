@@ -3,6 +3,7 @@ import { Card, CardContent } from '../components/ui/Card.js';
 import { EmptyState } from '../components/ui/EmptyState.js';
 import { ErrorState } from '../components/ui/ErrorState.js';
 import { TableSkeletonRows } from '../components/ui/LoadingState.js';
+import { useI18n } from '../components/i18n/LanguageProvider.js';
 import { useApi } from '../hooks/useApi.js';
 
 interface ModelRow {
@@ -15,12 +16,13 @@ interface ModelRow {
 }
 
 export function ModelsPage() {
+  const { t } = useI18n();
   const { data, loading, error, refetch } = useApi<{ data: ModelRow[] }>('/api/models');
 
   if (error) {
     return (
       <div className="p-6">
-        <ErrorState title="Models failed to load" message={error.message} code={error.code} details={error.details} onRetry={refetch} />
+        <ErrorState title={t('models.failed')} message={error.message} code={error.code} details={error.details} onRetry={refetch} />
       </div>
     );
   }
@@ -33,8 +35,8 @@ export function ModelsPage() {
             <table className="w-full text-sm">
               <thead>
                 <tr className="border-b border-border text-xs text-subtle-foreground">
-                  <th className="px-5 py-3 text-left font-medium">Provider</th>
-                  <th className="px-5 py-3 text-left font-medium">Model</th>
+                  <th className="px-5 py-3 text-left font-medium">{t('common.provider')}</th>
+                  <th className="px-5 py-3 text-left font-medium">{t('common.model')}</th>
                   <th className="px-5 py-3 text-right font-medium">Input $/1M</th>
                   <th className="px-5 py-3 text-right font-medium">Output $/1M</th>
                   <th className="px-5 py-3 text-right font-medium">Cache $/1M</th>
@@ -55,7 +57,7 @@ export function ModelsPage() {
           </div>
           {!loading && (data?.data.length ?? 0) === 0 && (
             <div className="p-5">
-              <EmptyState title="No model pricing found" description="Pricing rows will appear after seeds or configured models are available." />
+              <EmptyState title={t('models.noPricing.title')} description={t('models.noPricing.description')} />
             </div>
           )}
         </CardContent>

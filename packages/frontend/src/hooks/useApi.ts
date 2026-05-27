@@ -3,6 +3,7 @@ import { useState, useEffect, useCallback } from 'react';
 interface UseApiOptions<T> {
   initialData?: T;
   immediate?: boolean;
+  retries?: number;
 }
 
 export interface ApiError {
@@ -13,7 +14,7 @@ export interface ApiError {
 }
 
 export function useApi<T>(url: string | null, options: UseApiOptions<T> = {}) {
-  const { initialData, immediate = true } = options;
+  const { initialData, immediate = true, retries = 4 } = options;
   const [data, setData] = useState<T | undefined>(initialData);
   const [loading, setLoading] = useState(immediate);
   const [error, setError] = useState<ApiError | null>(null);
@@ -22,7 +23,10 @@ export function useApi<T>(url: string | null, options: UseApiOptions<T> = {}) {
     if (!url) return;
     setLoading(true);
     setError(null);
-    try {
+    let lastError: ApiError | null = null;
+
+    for (let attempt = 0; attempt <= retries; attempt++) {
+      try {
       const res = await fetch(url);
       const text = await res.text();
       let json: unknown = null;
@@ -46,17 +50,35 @@ export function useApi<T>(url: string | null, options: UseApiOptions<T> = {}) {
       }
 
       setData(json as T);
-    } catch (err) {
-      if (typeof err === 'object' && err && 'message' in err) setError(err as ApiError);
-      else setError({ message: err instanceof Error ? err.message : 'Unknown error' });
-    } finally {
       setLoading(false);
+      return;
+      } catch (err) {
+        lastError = normalizeApiError(err);
+        if (attempt >= retries || !isRetryable(lastError)) break;
+        await delay(500 + attempt * 350);
+      }
     }
-  }, [url]);
+
+    setError(lastError ?? { message: 'Unknown error' });
+    setLoading(false);
+  }, [url, retries]);
 
   useEffect(() => {
     if (immediate) fetchData();
   }, [fetchData, immediate]);
 
   return { data, loading, error, refetch: fetchData };
+}
+
+function normalizeApiError(err: unknown): ApiError {
+  if (typeof err === 'object' && err && 'message' in err) return err as ApiError;
+  return { message: err instanceof Error ? err.message : 'Unknown error' };
+}
+
+function isRetryable(error: ApiError): boolean {
+  return error.status == null || error.status >= 500 || /ECONNREFUSED|Failed to fetch|fetch/i.test(error.details ?? error.message);
+}
+
+function delay(ms: number): Promise<void> {
+  return new Promise((resolve) => setTimeout(resolve, ms));
 }

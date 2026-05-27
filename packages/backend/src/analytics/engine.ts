@@ -9,7 +9,8 @@ function validSessionSql(alias?: string): string {
     AND COALESCE(${prefix}message_count, 0) = 0
     AND COALESCE(${prefix}tool_call_count, 0) = 0
     AND COALESCE(${prefix}total_cost_usd, 0) = 0
-  )`;
+  )
+  AND NOT EXISTS (SELECT 1 FROM hidden_projects hp WHERE hp.path = COALESCE(${prefix}project_path, 'unknown'))`;
 }
 
 export interface AnalyticsInsight {

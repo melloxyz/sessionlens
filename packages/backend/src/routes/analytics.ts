@@ -11,6 +11,18 @@ const VALID_SESSION_SQL = `NOT (
   AND COALESCE(total_cost_usd, 0) = 0
 )`;
 
+const VISIBLE_SESSION_SQL = `${VALID_SESSION_SQL}
+  AND NOT EXISTS (SELECT 1 FROM hidden_projects hp WHERE hp.path = COALESCE(project_path, 'unknown'))`;
+const VISIBLE_SESSION_SQL_S = `NOT (
+  s.session_id = 'unknown'
+  AND (s.project_path IS NULL OR s.project_path = 'unknown')
+  AND (s.model IS NULL OR s.model = 'unknown')
+  AND COALESCE(s.message_count, 0) = 0
+  AND COALESCE(s.tool_call_count, 0) = 0
+  AND COALESCE(s.total_cost_usd, 0) = 0
+)
+  AND NOT EXISTS (SELECT 1 FROM hidden_projects hp WHERE hp.path = COALESCE(s.project_path, 'unknown'))`;
+
 export function registerAnalyticsRoutes(app: FastifyInstance): void {
   app.get('/api/analytics/report', async (req, reply) => {
     try {
@@ -42,7 +54,7 @@ export function registerAnalyticsRoutes(app: FastifyInstance): void {
           COALESCE(SUM((SELECT SUM(input_tokens + output_tokens) FROM usage_events WHERE session_fk = sessions.id)), 0) AS total_tokens,
           COUNT(*) AS session_count
         FROM sessions
-        WHERE ${VALID_SESSION_SQL} AND total_cost_usd IS NOT NULL
+        WHERE ${VISIBLE_SESSION_SQL} AND total_cost_usd IS NOT NULL
       `;
       const params: (string | number | null)[] = [];
 
@@ -91,7 +103,7 @@ export function registerAnalyticsRoutes(app: FastifyInstance): void {
         SUM(ue.cache_write_tokens) AS cache_write_tokens
       FROM usage_events ue
       JOIN sessions s ON s.id = ue.session_fk
-      WHERE ${VALID_SESSION_SQL}
+      WHERE ${VISIBLE_SESSION_SQL_S}
     `;
     const params: (string | number | null)[] = [];
 
@@ -144,7 +156,7 @@ export function registerAnalyticsRoutes(app: FastifyInstance): void {
                       metric === 'tokens' ? 'COALESCE(SUM((SELECT SUM(input_tokens+output_tokens) FROM usage_events WHERE session_fk=sessions.id)), 0)' :
                       'COALESCE(SUM(total_cost_usd), 0)';
 
-    let sql = `SELECT ${dim} AS label, ${metricCol} AS value FROM sessions WHERE ${VALID_SESSION_SQL}`;
+    let sql = `SELECT ${dim} AS label, ${metricCol} AS value FROM sessions WHERE ${VISIBLE_SESSION_SQL}`;
     const params: string[] = [];
     if (dateFrom) { sql += ` AND started_at >= ?`; params.push(dateFrom); }
     if (dateTo) { sql += ` AND started_at <= ?`; params.push(dateTo); }

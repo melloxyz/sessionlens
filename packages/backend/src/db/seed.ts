@@ -31,8 +31,13 @@ const PRICING: ModelSeed[] = [
 
   // Google
   { provider: 'google', modelName: 'gemini-2.5-pro', inputCostPerMillion: 1.25, outputCostPerMillion: 10.0, cachedInputCost: null },
+  { provider: 'google', modelName: 'gemini-3.1-pro-preview', inputCostPerMillion: 2.00, outputCostPerMillion: 12.0, cachedInputCost: null },
   { provider: 'google', modelName: 'gemini-2.5-flash', inputCostPerMillion: 0.15, outputCostPerMillion: 0.60, cachedInputCost: null },
   { provider: 'google', modelName: 'gemini-2.0-flash', inputCostPerMillion: 0.10, outputCostPerMillion: 0.40, cachedInputCost: null },
+
+  // Qwen
+  { provider: 'qwen', modelName: 'qwen-plus', inputCostPerMillion: 0.40, outputCostPerMillion: 1.20, cachedInputCost: null },
+  { provider: 'qwen', modelName: 'qwen-max', inputCostPerMillion: 1.60, outputCostPerMillion: 6.40, cachedInputCost: null },
 
   // DeepSeek
   { provider: 'deepseek', modelName: 'deepseek-chat', inputCostPerMillion: 0.27, outputCostPerMillion: 1.10, cachedInputCost: 0.07 },

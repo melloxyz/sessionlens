@@ -10,6 +10,9 @@ const VALID_SESSION_SQL = `NOT (
   AND COALESCE(total_cost_usd, 0) = 0
 )`;
 
+const VISIBLE_SESSION_SQL = `${VALID_SESSION_SQL}
+  AND NOT EXISTS (SELECT 1 FROM hidden_projects hp WHERE hp.path = COALESCE(project_path, 'unknown'))`;
+
 export function registerOverviewRoutes(app: FastifyInstance): void {
   app.get('/api/overview', async (req, reply) => {
     try {
@@ -45,13 +48,13 @@ export function registerOverviewRoutes(app: FastifyInstance): void {
 
       const results = db.exec(`
         SELECT
-          (SELECT COALESCE(SUM(total_cost_usd), 0) FROM sessions WHERE ${VALID_SESSION_SQL} AND started_at >= ?${rangeClause}) AS today_spend,
-          (SELECT COALESCE(SUM(total_cost_usd), 0) FROM sessions WHERE ${VALID_SESSION_SQL} AND started_at >= ?${rangeClause}) AS weekly_spend,
-          (SELECT COALESCE(SUM(total_cost_usd), 0) FROM sessions WHERE ${VALID_SESSION_SQL} AND started_at >= ?${rangeClause}) AS monthly_spend,
-          (SELECT COALESCE(SUM(total_cost_usd), 0) FROM sessions WHERE ${VALID_SESSION_SQL}${rangeClause}) AS total_spend,
-          (SELECT COUNT(*) FROM sessions WHERE ${VALID_SESSION_SQL}${rangeClause}) AS session_count,
-          (SELECT COALESCE(AVG(total_cost_usd), 0) FROM sessions WHERE ${VALID_SESSION_SQL} AND total_cost_usd IS NOT NULL${rangeClause}) AS avg_cost,
-          (SELECT cli FROM sessions WHERE ${VALID_SESSION_SQL}${rangeClause} GROUP BY cli ORDER BY COUNT(*) DESC LIMIT 1) AS most_used_cli
+          (SELECT COALESCE(SUM(total_cost_usd), 0) FROM sessions WHERE ${VISIBLE_SESSION_SQL} AND started_at >= ?${rangeClause}) AS today_spend,
+          (SELECT COALESCE(SUM(total_cost_usd), 0) FROM sessions WHERE ${VISIBLE_SESSION_SQL} AND started_at >= ?${rangeClause}) AS weekly_spend,
+          (SELECT COALESCE(SUM(total_cost_usd), 0) FROM sessions WHERE ${VISIBLE_SESSION_SQL} AND started_at >= ?${rangeClause}) AS monthly_spend,
+          (SELECT COALESCE(SUM(total_cost_usd), 0) FROM sessions WHERE ${VISIBLE_SESSION_SQL}${rangeClause}) AS total_spend,
+          (SELECT COUNT(*) FROM sessions WHERE ${VISIBLE_SESSION_SQL}${rangeClause}) AS session_count,
+          (SELECT COALESCE(AVG(total_cost_usd), 0) FROM sessions WHERE ${VISIBLE_SESSION_SQL} AND total_cost_usd IS NOT NULL${rangeClause}) AS avg_cost,
+          (SELECT cli FROM sessions WHERE ${VISIBLE_SESSION_SQL}${rangeClause} GROUP BY cli ORDER BY COUNT(*) DESC LIMIT 1) AS most_used_cli
       `, params);
 
       if (results.length === 0 || !results[0].values) {

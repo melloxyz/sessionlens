@@ -1,5 +1,7 @@
 import type { FastifyInstance } from 'fastify';
 import { getDatabase } from '../db/connection.js';
+import { syncOpenRouterPricing } from '../openrouter.js';
+import { backfillEstimatedCosts } from '../ingestion/engine.js';
 
 export function registerModelRoutes(app: FastifyInstance): void {
   app.get('/api/models', async () => {
@@ -19,5 +21,27 @@ export function registerModelRoutes(app: FastifyInstance): void {
     }
 
     return { data };
+  });
+
+  app.get('/api/models/sync-openrouter', async (req, reply) => {
+    try {
+      const result = await syncOpenRouterPricing();
+      backfillEstimatedCosts();
+      return result;
+    } catch (error) {
+      reply.code(502);
+      return { error: { code: 'OPENROUTER_SYNC_FAILED', message: 'Failed to sync OpenRouter pricing', details: String(error) } };
+    }
+  });
+
+  app.post('/api/models/sync-openrouter', async (req, reply) => {
+    try {
+      const result = await syncOpenRouterPricing();
+      backfillEstimatedCosts();
+      return result;
+    } catch (error) {
+      reply.code(502);
+      return { error: { code: 'OPENROUTER_SYNC_FAILED', message: 'Failed to sync OpenRouter pricing', details: String(error) } };
+    }
   });
 }

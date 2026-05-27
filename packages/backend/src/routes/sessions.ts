@@ -1,4 +1,7 @@
 import type { FastifyInstance } from 'fastify';
+import { existsSync } from 'node:fs';
+import { spawn } from 'node:child_process';
+import { platform } from 'node:process';
 import { getDatabase } from '../db/connection.js';
 
 const VALID_SESSION_SQL = `NOT (
@@ -9,6 +12,9 @@ const VALID_SESSION_SQL = `NOT (
   AND COALESCE(tool_call_count, 0) = 0
   AND COALESCE(total_cost_usd, 0) = 0
 )`;
+
+const VISIBLE_SESSION_SQL = `${VALID_SESSION_SQL}
+  AND NOT EXISTS (SELECT 1 FROM hidden_projects hp WHERE hp.path = COALESCE(project_path, 'unknown'))`;
 
 export function registerSessionRoutes(app: FastifyInstance): void {
   app.get('/api/sessions', async (req, reply) => {
@@ -33,7 +39,7 @@ export function registerSessionRoutes(app: FastifyInstance): void {
     const sortCol = allowedSort.includes(sortBy) ? sortBy : 'started_at';
 
     // Count query
-    let countSql = `SELECT COUNT(*) FROM sessions WHERE ${VALID_SESSION_SQL}`;
+    let countSql = `SELECT COUNT(*) FROM sessions WHERE ${VISIBLE_SESSION_SQL}`;
     const countParams: (string | number | null)[] = [];
     if (cli) { countSql += ` AND cli = ?`; countParams.push(cli); }
     if (provider) { countSql += ` AND provider = ?`; countParams.push(provider); }
@@ -50,8 +56,8 @@ export function registerSessionRoutes(app: FastifyInstance): void {
     // Data query
     let dataSql = `
       SELECT id, provider, cli, session_id, project_path, model, started_at, ended_at,
-             duration_ms, total_cost_usd, source_confidence, message_count, tool_call_count, created_at
-      FROM sessions WHERE ${VALID_SESSION_SQL}
+              duration_ms, total_cost_usd, cost_source, source_confidence, message_count, tool_call_count, created_at
+      FROM sessions WHERE ${VISIBLE_SESSION_SQL}
     `;
     const dataParams: (string | number | null)[] = [];
     if (cli) { dataSql += ` AND cli = ?`; dataParams.push(cli); }
@@ -92,7 +98,7 @@ export function registerSessionRoutes(app: FastifyInstance): void {
       const { id } = req.params as { id: string };
       const db = getDatabase();
 
-      const sessionResult = db.exec(`SELECT * FROM sessions WHERE id = ?`, [Number(id)]);
+      const sessionResult = db.exec(`SELECT * FROM sessions WHERE id = ? AND NOT EXISTS (SELECT 1 FROM hidden_projects hp WHERE hp.path = COALESCE(project_path, 'unknown'))`, [Number(id)]);
       if (sessionResult.length === 0 || !sessionResult[0].values || sessionResult[0].values.length === 0) {
         reply.code(404);
         return { error: { code: 'SESSION_NOT_FOUND', message: 'Session not found' } };
@@ -104,6 +110,7 @@ export function registerSessionRoutes(app: FastifyInstance): void {
       for (let i = 0; i < sessionCols.length; i++) {
         session[sessionCols[i]] = sessionRow[i];
       }
+      session.project_exists = typeof session.project_path === 'string' && session.project_path !== 'unknown' ? existsSync(session.project_path) : false;
 
       const msgResult = db.exec(
         `SELECT id, role, content, timestamp FROM messages WHERE session_fk = ? ORDER BY timestamp`,
@@ -158,6 +165,27 @@ export function registerSessionRoutes(app: FastifyInstance): void {
     } catch (error) {
       reply.code(500);
       return { error: { code: 'SESSION_DETAIL_FAILED', message: 'Failed to load session detail', details: String(error) } };
+    }
+  });
+
+  app.post('/api/sessions/:id/open-project', async (req, reply) => {
+    try {
+      const { id } = req.params as { id: string };
+      const db = getDatabase();
+      const result = db.exec(`SELECT project_path FROM sessions WHERE id = ?`, [Number(id)]);
+      const projectPath = result[0]?.values?.[0]?.[0] as string | undefined;
+      if (!projectPath || projectPath === 'unknown' || !existsSync(projectPath)) {
+        reply.code(404);
+        return { error: { code: 'PROJECT_PATH_NOT_FOUND', message: 'Project folder not found' } };
+      }
+
+      const command = platform === 'win32' ? 'explorer.exe' : platform === 'darwin' ? 'open' : 'xdg-open';
+      const child = spawn(command, [projectPath], { detached: true, stdio: 'ignore' });
+      child.unref();
+      return { ok: true };
+    } catch (error) {
+      reply.code(500);
+      return { error: { code: 'OPEN_PROJECT_FAILED', message: 'Failed to open project folder', details: String(error) } };
     }
   });
 }

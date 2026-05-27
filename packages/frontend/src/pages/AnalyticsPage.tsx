@@ -23,6 +23,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '../components/ui/Card.
 import { EmptyState } from '../components/ui/EmptyState.js';
 import { ErrorState } from '../components/ui/ErrorState.js';
 import { Select } from '../components/ui/Select.js';
+import { useI18n } from '../components/i18n/LanguageProvider.js';
 
 const COLORS = ['#6366f1', '#818cf8', '#a78bfa', '#22c55e', '#eab308', '#ef4444', '#ec4899'];
 
@@ -98,6 +99,7 @@ interface AnalyticsReport {
 }
 
 export function AnalyticsPage() {
+  const { t, locale } = useI18n();
   const { queryString } = useDateRange();
   const [dimension, setDimension] = useState('model');
   const [metric, setMetric] = useState('cost');
@@ -119,8 +121,8 @@ export function AnalyticsPage() {
     <div className="space-y-6 p-6">
       {(reportError || spendError || tokenError || breakdownError) && (
         <ErrorState
-          title="Analytics failed to load"
-          message={reportError?.message || spendError?.message || tokenError?.message || breakdownError?.message || 'One or more analytics requests failed.'}
+          title={t('analytics.failed')}
+          message={reportError?.message || spendError?.message || tokenError?.message || breakdownError?.message || t('analytics.failed.message')}
           code={reportError?.code || spendError?.code || tokenError?.code || breakdownError?.code}
           details={reportError?.details || spendError?.details || tokenError?.details || breakdownError?.details}
           onRetry={() => window.location.reload()}
@@ -130,24 +132,24 @@ export function AnalyticsPage() {
       <div className="flex flex-wrap items-start justify-between gap-4">
         <div>
           <h1 className="text-lg font-semibold text-foreground">Analytics</h1>
-          <p className="text-sm text-subtle-foreground">Insights engine, anomaly detection and usage breakdowns</p>
+          <p className="text-sm text-subtle-foreground">{t('analytics.subtitle')}</p>
         </div>
         <div className="flex gap-3">
           <Select
             options={[
-              { label: 'By Model', value: 'model' },
-              { label: 'By Provider', value: 'provider' },
-              { label: 'By CLI', value: 'cli' },
-              { label: 'By Project', value: 'project' },
+              { label: t('analytics.byModel'), value: 'model' },
+              { label: t('analytics.byProvider'), value: 'provider' },
+              { label: t('analytics.byCli'), value: 'cli' },
+              { label: t('analytics.byProject'), value: 'project' },
             ]}
             value={dimension}
             onChange={(e) => setDimension(e.target.value)}
           />
           <Select
             options={[
-              { label: 'Cost', value: 'cost' },
-              { label: 'Sessions', value: 'sessions' },
-              { label: 'Tokens', value: 'tokens' },
+              { label: t('common.cost'), value: 'cost' },
+              { label: t('common.sessions'), value: 'sessions' },
+              { label: t('common.tokens'), value: 'tokens' },
             ]}
             value={metric}
             onChange={(e) => setMetric(e.target.value)}
@@ -156,43 +158,43 @@ export function AnalyticsPage() {
       </div>
 
       <div className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-4">
-        <SummaryCard icon={TrendingUp} label="7d Spend" value={formatCurrency(report?.summary.current7DaySpend)} sub={report?.summary.growthPercent != null ? `${report.summary.growthPercent >= 0 ? '+' : ''}${report.summary.growthPercent.toFixed(0)}% vs prior week` : 'Not enough data'} tone="success" />
-        <SummaryCard icon={Gauge} label="Baseline / day" value={formatCurrency(report?.summary.baselineDailySpend)} sub="7-day moving baseline" tone="info" />
-        <SummaryCard icon={Sparkles} label="Insights" value={String(insights.length)} sub="Actionable findings" tone="warning" />
-        <SummaryCard icon={AlertTriangle} label="Anomalies" value={String(anomalies.length)} sub="Outliers and spikes" tone="danger" />
+        <SummaryCard icon={TrendingUp} label={t('analytics.sevenDaySpend')} value={formatCurrency(report?.summary.current7DaySpend)} sub={report?.summary.growthPercent != null ? `${report.summary.growthPercent >= 0 ? '+' : ''}${report.summary.growthPercent.toFixed(0)}% ${t('analytics.vsPriorWeek')}` : t('analytics.notEnoughData')} tone="success" />
+        <SummaryCard icon={Gauge} label={t('analytics.baselineDay')} value={formatCurrency(report?.summary.baselineDailySpend)} sub={t('analytics.movingBaseline')} tone="info" />
+        <SummaryCard icon={Sparkles} label={t('analytics.insights')} value={String(insights.length)} sub={t('analytics.actionableFindings')} tone="warning" />
+        <SummaryCard icon={AlertTriangle} label={t('analytics.anomalies')} value={String(anomalies.length)} sub={t('analytics.outliers')} tone="danger" />
       </div>
 
       <div className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-4">
-        <SummaryCard icon={Sparkles} label="Tool Calls" value={String(productivity?.totalToolCalls ?? 0)} sub="Total across sessions" tone="info" />
-        <SummaryCard icon={Gauge} label="Calls / Session" value={(productivity?.avgToolCallsPerSession ?? 0).toFixed(1)} sub="Average interaction density" tone="success" />
-        <SummaryCard icon={TrendingUp} label="Tokens / Tool" value={formatTokens(productivity?.avgTokensPerToolCall)} sub="Efficiency indicator" tone="warning" />
-        <SummaryCard icon={AlertTriangle} label="Cost / Tool" value={formatCurrency(productivity?.avgCostPerToolCall)} sub={productivity?.costToolCallCorrelation != null ? `Correlation ${productivity.costToolCallCorrelation.toFixed(2)}` : 'Correlation unavailable'} tone="danger" />
+        <SummaryCard icon={Sparkles} label={t('analytics.toolCalls')} value={String(productivity?.totalToolCalls ?? 0)} sub={t('analytics.totalAcrossSessions')} tone="info" />
+        <SummaryCard icon={Gauge} label={t('analytics.callsSession')} value={(productivity?.avgToolCallsPerSession ?? 0).toFixed(1)} sub={t('analytics.averageDensity')} tone="success" />
+        <SummaryCard icon={TrendingUp} label={t('analytics.tokensTool')} value={formatTokens(productivity?.avgTokensPerToolCall)} sub={t('analytics.efficiencyIndicator')} tone="warning" />
+        <SummaryCard icon={AlertTriangle} label={t('analytics.costTool')} value={formatCurrency(productivity?.avgCostPerToolCall)} sub={productivity?.costToolCallCorrelation != null ? `Correlation ${productivity.costToolCallCorrelation.toFixed(2)}` : t('analytics.correlationUnavailable')} tone="danger" />
       </div>
 
       <div className="grid grid-cols-1 gap-4 xl:grid-cols-[1.2fr_0.8fr]">
         <Card>
           <CardHeader>
             <div>
-              <CardTitle>Insights Engine</CardTitle>
-              <p className="mt-1 text-xs text-subtle-foreground">Heuristics computed from local sessions only</p>
+              <CardTitle>{t('analytics.insightsTitle')}</CardTitle>
+              <p className="mt-1 text-xs text-subtle-foreground">{t('analytics.insightsDescription')}</p>
             </div>
-            <Badge variant="neutral">{report ? 'Live' : 'Loading'}</Badge>
+            <Badge variant="neutral">{report ? t('analytics.live') : t('common.loading')}</Badge>
           </CardHeader>
           <CardContent className="space-y-3">
-            {insights.length > 0 ? insights.map((insight) => <InsightRow key={insight.id} item={insight} />) : <EmptyState title="No insights yet" description="Run more sessions or ingest newer history to surface patterns." icon={Sparkles} />}
+            {insights.length > 0 ? insights.map((insight) => <InsightRow key={insight.id} item={localizeInsight(insight, locale)} label={t('analytics.insight')} />) : <EmptyState title={t('analytics.noInsights.title')} description={t('analytics.noInsights.description')} icon={Sparkles} />}
           </CardContent>
         </Card>
 
         <Card>
           <CardHeader>
             <div>
-              <CardTitle>Anomaly Detection</CardTitle>
-              <p className="mt-1 text-xs text-subtle-foreground">Spikes, outliers and elevated cache miss rates</p>
+              <CardTitle>{t('analytics.anomaliesTitle')}</CardTitle>
+              <p className="mt-1 text-xs text-subtle-foreground">{t('analytics.anomaliesDescription')}</p>
             </div>
-            <Badge variant="neutral">Baseline</Badge>
+            <Badge variant="neutral">{t('analytics.baseline')}</Badge>
           </CardHeader>
           <CardContent className="space-y-3">
-            {anomalies.length > 0 ? anomalies.map((anomaly) => <AnomalyRow key={anomaly.id} item={anomaly} />) : <EmptyState title="No anomalies detected" description="Current sessions do not exceed the baseline thresholds." icon={CircleAlert} />}
+            {anomalies.length > 0 ? anomalies.map((anomaly) => <AnomalyRow key={anomaly.id} item={localizeAnomaly(anomaly, locale)} label={t('analytics.anomaly')} />) : <EmptyState title={t('analytics.noAnomalies.title')} description={t('analytics.noAnomalies.description')} icon={CircleAlert} />}
           </CardContent>
         </Card>
       </div>
@@ -201,8 +203,8 @@ export function AnalyticsPage() {
         <Card>
           <CardHeader>
             <div>
-              <CardTitle>Weekly Spend</CardTitle>
-              <p className="mt-1 text-xs text-subtle-foreground">Recent trend across all local sessions</p>
+              <CardTitle>{t('analytics.weeklySpend')}</CardTitle>
+              <p className="mt-1 text-xs text-subtle-foreground">{t('analytics.weeklySpendDescription')}</p>
             </div>
           </CardHeader>
           <CardContent>
@@ -217,7 +219,7 @@ export function AnalyticsPage() {
                 <CartesianGrid stroke="var(--border)" vertical={false} />
                 <XAxis dataKey="date" tick={{ fontSize: 11, fill: 'var(--subtle-foreground)' }} tickLine={false} axisLine={false} />
                 <YAxis tick={{ fontSize: 11, fill: 'var(--subtle-foreground)' }} tickLine={false} axisLine={false} tickFormatter={(v: number) => `$${v.toFixed(0)}`} />
-                <Tooltip contentStyle={tooltipStyle} formatter={(value: number) => [formatCurrency(value), 'Spend']} />
+                <Tooltip contentStyle={tooltipStyle} formatter={(value: number) => [formatCurrency(value), t('common.cost')]} />
                 <Area type="monotone" dataKey="spend" stroke="#6366f1" fill="url(#spendGradient)" strokeWidth={2.4} dot={{ r: 3, fill: '#6366f1' }} />
               </AreaChart>
             </ResponsiveContainer>
@@ -227,8 +229,8 @@ export function AnalyticsPage() {
         <Card>
           <CardHeader>
             <div>
-              <CardTitle>Token Usage</CardTitle>
-              <p className="mt-1 text-xs text-subtle-foreground">Input vs output over time</p>
+              <CardTitle>{t('session.tokenUsage')}</CardTitle>
+              <p className="mt-1 text-xs text-subtle-foreground">{t('analytics.tokenUsageDescription')}</p>
             </div>
           </CardHeader>
           <CardContent>
@@ -238,8 +240,8 @@ export function AnalyticsPage() {
                 <XAxis dataKey="date" tick={{ fontSize: 11, fill: 'var(--subtle-foreground)' }} tickLine={false} axisLine={false} />
                 <YAxis tick={{ fontSize: 11, fill: 'var(--subtle-foreground)' }} tickLine={false} axisLine={false} tickFormatter={(v: number) => formatTokens(v)} />
                 <Tooltip contentStyle={tooltipStyle} />
-                <Area type="monotone" dataKey="inputTokens" stroke="#818cf8" fill="rgba(129,140,248,0.1)" strokeWidth={2} name="Input" />
-                <Area type="monotone" dataKey="outputTokens" stroke="#22c55e" fill="rgba(34,197,94,0.1)" strokeWidth={2} name="Output" />
+                <Area type="monotone" dataKey="inputTokens" stroke="#818cf8" fill="rgba(129,140,248,0.1)" strokeWidth={2} name={t('common.input')} />
+                <Area type="monotone" dataKey="outputTokens" stroke="#22c55e" fill="rgba(34,197,94,0.1)" strokeWidth={2} name={t('common.output')} />
               </AreaChart>
             </ResponsiveContainer>
           </CardContent>
@@ -250,8 +252,8 @@ export function AnalyticsPage() {
         <Card>
           <CardHeader>
             <div>
-              <CardTitle>Breakdown</CardTitle>
-              <p className="mt-1 text-xs text-subtle-foreground">Distribution by selected dimension</p>
+              <CardTitle>{t('analytics.breakdown')}</CardTitle>
+              <p className="mt-1 text-xs text-subtle-foreground">{t('analytics.breakdownDescription')}</p>
             </div>
           </CardHeader>
           <CardContent className="flex items-center gap-6">
@@ -278,8 +280,8 @@ export function AnalyticsPage() {
         <Card>
           <CardHeader>
             <div>
-              <CardTitle>Top Projects Spend</CardTitle>
-              <p className="mt-1 text-xs text-subtle-foreground">Highest contributors in the selected breakdown</p>
+              <CardTitle>{t('analytics.topProjectsSpend')}</CardTitle>
+              <p className="mt-1 text-xs text-subtle-foreground">{t('analytics.topProjectsDescription')}</p>
             </div>
           </CardHeader>
           <CardContent>
@@ -300,17 +302,17 @@ export function AnalyticsPage() {
         <Card>
           <CardHeader>
             <div>
-              <CardTitle>Productivity Analytics</CardTitle>
-              <p className="mt-1 text-xs text-subtle-foreground">Tool-call efficiency across local sessions</p>
+              <CardTitle>{t('analytics.productivity')}</CardTitle>
+              <p className="mt-1 text-xs text-subtle-foreground">{t('analytics.productivityDescription')}</p>
             </div>
           </CardHeader>
           <CardContent className="space-y-3">
-            <MetricLine label="Avg tool calls / minute" value={formatNumber(productivity?.avgToolCallsPerMinute)} />
-            <MetricLine label="Avg messages / tool call" value={formatNumber(productivity?.avgMessagesPerToolCall)} />
-            <MetricLine label="Avg cost / tool call" value={formatCurrency(productivity?.avgCostPerToolCall)} />
-            <MetricLine label="Files modified / session" value="Pending source" muted />
+            <MetricLine label={t('analytics.avgToolCallsMinute')} value={formatNumber(productivity?.avgToolCallsPerMinute)} />
+            <MetricLine label={t('analytics.avgMessagesToolCall')} value={formatNumber(productivity?.avgMessagesPerToolCall)} />
+            <MetricLine label={t('analytics.avgCostToolCall')} value={formatCurrency(productivity?.avgCostPerToolCall)} />
+            <MetricLine label={t('analytics.filesModifiedSession')} value={t('analytics.pendingSource')} muted />
             <div className="rounded-2xl border border-dashed border-border p-4 text-xs text-subtle-foreground">
-              {productivity?.notes?.[0] ?? 'Files modified per session will be added once a reliable adapter source exists.'}
+              {productivity?.notes?.[0] ?? t('analytics.filesNote')}
             </div>
           </CardContent>
         </Card>
@@ -318,8 +320,8 @@ export function AnalyticsPage() {
         <Card>
           <CardHeader>
             <div>
-              <CardTitle>Top Tool-Heavy Sessions</CardTitle>
-              <p className="mt-1 text-xs text-subtle-foreground">Sessions with the highest number of tool calls</p>
+              <CardTitle>{t('analytics.topToolSessions')}</CardTitle>
+              <p className="mt-1 text-xs text-subtle-foreground">{t('analytics.topToolSessionsDescription')}</p>
             </div>
           </CardHeader>
           <CardContent className="space-y-3">
@@ -334,16 +336,16 @@ export function AnalyticsPage() {
                     </div>
                     <div className="mt-2 text-xs text-subtle-foreground">{session.model ?? 'unknown'}</div>
                   </div>
-                  <Badge variant="neutral">{session.toolCalls} tools</Badge>
+                  <Badge variant="neutral">{session.toolCalls} {t('common.tools').toLowerCase()}</Badge>
                 </div>
                 <div className="mt-3 grid grid-cols-2 gap-2 text-xs text-subtle-foreground md:grid-cols-4">
-                  <MetricChip label="Cost" value={formatCurrency(session.cost)} />
-                  <MetricChip label="Tokens" value={formatTokens(session.tokens)} />
-                  <MetricChip label="Msgs/tool" value={formatNumber(session.messagesPerToolCall)} />
-                  <MetricChip label="Tokens/tool" value={formatNumber(session.tokensPerToolCall)} />
+                  <MetricChip label={t('common.cost')} value={formatCurrency(session.cost)} />
+                  <MetricChip label={t('common.tokens')} value={formatTokens(session.tokens)} />
+                  <MetricChip label={t('analytics.messagesTool')} value={formatNumber(session.messagesPerToolCall)} />
+                  <MetricChip label={t('analytics.tokensToolShort')} value={formatNumber(session.tokensPerToolCall)} />
                 </div>
               </div>
-            )) : <EmptyState title="No productivity data yet" description="Tool call efficiency will appear after the next ingest cycle." icon={Sparkles} />}
+            )) : <EmptyState title={t('analytics.noProductivity.title')} description={t('analytics.noProductivity.description')} icon={Sparkles} />}
           </CardContent>
         </Card>
       </div>
@@ -352,8 +354,8 @@ export function AnalyticsPage() {
         <Card>
           <CardHeader>
             <div>
-              <CardTitle>Multi-Model Usage</CardTitle>
-              <p className="mt-1 text-xs text-subtle-foreground">Cost and tokens by provider/model across sessions</p>
+              <CardTitle>{t('analytics.multiModel')}</CardTitle>
+              <p className="mt-1 text-xs text-subtle-foreground">{t('analytics.multiModelDescription')}</p>
             </div>
           </CardHeader>
           <CardContent className="space-y-3">
@@ -365,32 +367,32 @@ export function AnalyticsPage() {
                       <BrandBadge value={item.provider} kind="provider" />
                       <span className="font-medium text-foreground">{item.model}</span>
                     </div>
-                    <div className="text-xs text-subtle-foreground">{item.messageCount} messages · {item.toolCallsCount} tool calls</div>
+                    <div className="text-xs text-subtle-foreground">{item.messageCount} {t('common.messages').toLowerCase()} · {item.toolCallsCount} {t('common.tools').toLowerCase()}</div>
                   </div>
                   <Badge variant="neutral">{formatCurrency(item.totalCostUsd)}</Badge>
                 </div>
                 <div className="mt-3 grid grid-cols-2 gap-2 text-xs text-subtle-foreground md:grid-cols-4">
-                  <MetricChip label="Input" value={formatTokens(item.inputTokens)} />
-                  <MetricChip label="Output" value={formatTokens(item.outputTokens)} />
-                  <MetricChip label="Reasoning" value={formatTokens(item.reasoningTokens)} />
-                  <MetricChip label="Tools" value={String(item.toolCallsCount)} />
+                  <MetricChip label={t('common.input')} value={formatTokens(item.inputTokens)} />
+                  <MetricChip label={t('common.output')} value={formatTokens(item.outputTokens)} />
+                  <MetricChip label={t('common.reasoning')} value={formatTokens(item.reasoningTokens)} />
+                  <MetricChip label={t('common.tools')} value={String(item.toolCallsCount)} />
                 </div>
               </div>
-            )) : <EmptyState title="No multi-model data yet" description="OpenCode sessions will populate this after the next ingest cycle." icon={Sparkles} />}
+            )) : <EmptyState title={t('analytics.noMultiModel.title')} description={t('analytics.noMultiModel.description')} icon={Sparkles} />}
           </CardContent>
         </Card>
 
         <Card>
           <CardHeader>
             <div>
-              <CardTitle>Multi-Model Notes</CardTitle>
-              <p className="mt-1 text-xs text-subtle-foreground">What we can and cannot infer right now</p>
+              <CardTitle>{t('analytics.multiModelNotes')}</CardTitle>
+              <p className="mt-1 text-xs text-subtle-foreground">{t('analytics.multiModelNotesDescription')}</p>
             </div>
           </CardHeader>
           <CardContent className="space-y-3 text-sm text-subtle-foreground">
-            <div className="rounded-2xl border border-border bg-surface-elevated p-4">OpenCode multi-model usage is persisted per provider/model and aggregated into the analytics report.</div>
-            <div className="rounded-2xl border border-border bg-surface-elevated p-4">Claude and Codex still appear as single-model sessions unless the source provides more than one model entry.</div>
-            <div className="rounded-2xl border border-border bg-surface-elevated p-4">`files modified per session` stays deferred until a real adapter source exists.</div>
+            <div className="rounded-2xl border border-border bg-surface-elevated p-4">{t('analytics.opencodeNote')}</div>
+            <div className="rounded-2xl border border-border bg-surface-elevated p-4">{t('analytics.singleModelNote')}</div>
+            <div className="rounded-2xl border border-border bg-surface-elevated p-4">{t('analytics.filesDeferredNote')}</div>
           </CardContent>
         </Card>
       </div>
@@ -422,14 +424,14 @@ function SummaryCard({ icon: Icon, label, value, sub, tone }: { icon: LucideIcon
   );
 }
 
-function InsightRow({ item }: { item: Insight }) {
+function InsightRow({ item, label }: { item: Insight; label: string }) {
   return (
     <div className="rounded-2xl border border-border bg-surface-elevated p-4">
       <div className="flex items-start justify-between gap-3">
         <div className="min-w-0">
           <div className="mb-2 flex items-center gap-2">
             <Badge variant={item.severity === 'high' ? 'success' : item.severity === 'medium' ? 'default' : 'neutral'}>{item.kind}</Badge>
-            <span className="text-xs text-subtle-foreground">Insight</span>
+            <span className="text-xs text-subtle-foreground">{label}</span>
           </div>
           <div className="font-medium text-foreground">{item.title}</div>
           <p className="mt-1 text-sm text-subtle-foreground">{item.description}</p>
@@ -443,14 +445,14 @@ function InsightRow({ item }: { item: Insight }) {
   );
 }
 
-function AnomalyRow({ item }: { item: Anomaly }) {
+function AnomalyRow({ item, label }: { item: Anomaly; label: string }) {
   return (
     <div className="rounded-2xl border border-border bg-surface-elevated p-4">
       <div className="flex items-start justify-between gap-3">
         <div className="min-w-0">
           <div className="mb-2 flex items-center gap-2">
             <Badge variant={item.severity === 'high' ? 'warning' : item.severity === 'medium' ? 'default' : 'neutral'}>{item.kind}</Badge>
-            <span className="text-xs text-subtle-foreground">Anomaly</span>
+            <span className="text-xs text-subtle-foreground">{label}</span>
           </div>
           <div className="font-medium text-foreground">{item.title}</div>
           <p className="mt-1 text-sm text-subtle-foreground">{item.description}</p>
@@ -485,6 +487,25 @@ function MetricChip({ label, value }: { label: string; value: string }) {
 function formatNumber(value: number | null | undefined): string {
   if (value == null || Number.isNaN(value)) return '—';
   return Number.isInteger(value) ? String(value) : value.toFixed(1);
+}
+
+function localizeInsight(item: Insight, locale: string): Insight {
+  if (locale !== 'pt-BR') return item;
+  if (item.id === 'spend-growth') return { ...item, title: 'Uso crescendo mais rápido que na semana passada', description: item.description.replace('The last 7 days spent', 'Os últimos 7 dias gastaram').replace('more than the previous 7 days.', 'a mais que os 7 dias anteriores.') };
+  if (item.id.startsWith('project-')) return { ...item, title: 'Um projeto domina os gastos', description: item.description.replace('is the highest-cost project and takes', 'é o projeto de maior custo e representa').replace('of total spend.', 'do gasto total.') };
+  if (item.id.startsWith('model-')) return { ...item, title: 'Modelo caro usado em sessões leves', description: item.description.replace('averages', 'tem média de').replace('messages per session while staying well above the overall average cost.', 'mensagens por sessão enquanto fica bem acima do custo médio geral.') };
+  if (item.id.startsWith('session-')) return { ...item, title: 'Sessão longa e cara detectada', description: item.description.replace('Session', 'A sessão').replace('is among the priciest entries and may deserve a closer look.', 'está entre as entradas mais caras e pode merecer uma análise.') };
+  if (item.id.startsWith('cache-')) return { ...item, title: 'Alto desperdício de contexto em uma sessão', description: item.description.replace('is missing cache hits for most of its input tokens.', 'não teve cache hit na maior parte dos tokens de entrada.') };
+  return item;
+}
+
+function localizeAnomaly(item: Anomaly, locale: string): Anomaly {
+  if (locale !== 'pt-BR') return item;
+  if (item.id.startsWith('spike-')) return { ...item, title: 'Pico diário de gasto', description: item.description.replace('The latest day spent', 'O último dia gastou').replace('more than the 7-day baseline.', 'a mais que a baseline de 7 dias.') };
+  if (item.id.startsWith('tokens-')) return { ...item, title: 'Outlier de uso de tokens', description: item.description.replace('Session', 'A sessão').replace('used far more tokens than the typical session.', 'usou muito mais tokens que uma sessão típica.') };
+  if (item.id.startsWith('cost-')) return { ...item, title: 'Outlier de sessão de alto custo', description: item.description.replace('Session', 'A sessão').replace('is much more expensive than the average session.', 'é muito mais cara que a sessão média.') };
+  if (item.id === 'cache-basin') return { ...item, title: 'Taxa geral alta de cache miss', description: 'Nas sessões analisadas, os cache misses continuam elevados.' };
+  return item;
 }
 
 const tooltipStyle = {

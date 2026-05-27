@@ -22,6 +22,7 @@ import { TokenUsageBar } from '../components/session/TokenUsageBar.js';
 import { EmptyState } from '../components/ui/EmptyState.js';
 import { ErrorState } from '../components/ui/ErrorState.js';
 import { useDateRange } from '../components/filters/DateRangeProvider.js';
+import { useI18n } from '../components/i18n/LanguageProvider.js';
 import { useApi } from '../hooks/useApi.js';
 import { CLI_COLORS, chartColor } from '../lib/chart-colors.js';
 import { basename, compactPath, formatCurrency, formatDate, formatDuration, formatRelativeTime, formatTokens } from '../lib/format.js';
@@ -46,6 +47,7 @@ interface SessionRow {
   ended_at: string | null;
   duration_ms: number | null;
   total_cost_usd: number | null;
+  cost_source: 'actual' | 'estimated' | 'unknown';
   source_confidence: string;
   message_count: number;
   tool_call_count: number;
@@ -74,6 +76,7 @@ const tooltipStyle = {
 };
 
 export function DashboardPage() {
+  const { t } = useI18n();
   const { queryString } = useDateRange();
   const [selectedId, setSelectedId] = useState<number | null>(null);
   const queryPrefix = queryString ? `?${queryString}` : '';
@@ -119,7 +122,7 @@ export function DashboardPage() {
       {anyError && (
         <section className="xl:col-span-2">
           <ErrorState
-            title="Dashboard requests failed"
+            title={t('dashboard.failed')}
             message={anyError.message}
             code={anyError.code}
             details={anyError.details}
@@ -129,11 +132,11 @@ export function DashboardPage() {
       )}
       <section className="xl:col-span-2">
         <div className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-5">
-          <StatCard label="Total Spend" value={formatCurrency(overview?.totalSpend)} icon={WalletCards} loading={overviewLoading} change="+ live" changeTone="success" sparkline />
-          <StatCard label="Total Tokens" value={formatTokens(totalTokens)} icon={Database} loading={overviewLoading} change="all sources" changeTone="info" sparkline />
-          <StatCard label="Total Sessions" value={String(overview?.sessionCount ?? 0)} icon={MessageSquare} loading={overviewLoading} change={`${formatTokens(totalMessages)} messages`} changeTone="info" sparkline />
-          <StatCard label="Avg. Cost / Session" value={formatCurrency(overview?.averageSessionCost)} icon={Coins} loading={overviewLoading} change={overview?.mostUsedCli ?? '—'} changeTone="warning" sparkline />
-          <StatCard label="Total Duration" value={formatDuration(totalDurationMs)} icon={Timer} loading={overviewLoading} change="indexed" changeTone="success" sparkline />
+          <StatCard label={t('dashboard.totalSpend')} value={formatCurrency(overview?.totalSpend)} icon={WalletCards} loading={overviewLoading} change="+ live" changeTone="success" sparkline />
+          <StatCard label={t('dashboard.totalTokens')} value={formatTokens(totalTokens)} icon={Database} loading={overviewLoading} change="all sources" changeTone="info" sparkline />
+          <StatCard label={t('dashboard.totalSessions')} value={String(overview?.sessionCount ?? 0)} icon={MessageSquare} loading={overviewLoading} change={`${formatTokens(totalMessages)} ${t('common.messages').toLowerCase()}`} changeTone="info" sparkline />
+          <StatCard label={t('dashboard.avgCostSession')} value={formatCurrency(overview?.averageSessionCost)} icon={Coins} loading={overviewLoading} change={overview?.mostUsedCli ?? '—'} changeTone="warning" sparkline />
+          <StatCard label={t('dashboard.totalDuration')} value={formatDuration(totalDurationMs)} icon={Timer} loading={overviewLoading} change="indexed" changeTone="success" sparkline />
         </div>
       </section>
 
@@ -142,7 +145,7 @@ export function DashboardPage() {
           <Card className="lg:col-span-2 2xl:col-span-1">
             <CardHeader>
               <div>
-                <CardTitle>Spend Over Time</CardTitle>
+              <CardTitle>{t('project.spendOverTime')}</CardTitle>
                 <p className="mt-1 text-xs text-subtle-foreground">Daily cost across all AI coding CLIs</p>
               </div>
               <Button variant="outline" size="sm">Daily</Button>
@@ -166,14 +169,14 @@ export function DashboardPage() {
             </CardContent>
           </Card>
 
-          <DonutCard title="Spend by CLI" data={cliData} center={formatCurrency(overview?.totalSpend)} centerLabel="Total" colorFor={(label, index) => CLI_COLORS[label] ?? chartColor(index)} />
-          <DonutCard title="Spend by Model" data={modelData} center={`${modelData.length}`} centerLabel="models" colorFor={(_, index) => chartColor(index)} />
+          <DonutCard title={t('dashboard.spendByCli')} data={cliData} center={formatCurrency(overview?.totalSpend)} centerLabel="Total" emptyTitle={t('dashboard.noSpend.title')} emptyDescription={t('dashboard.noSpend.description')} colorFor={(label, index) => CLI_COLORS[label] ?? chartColor(index)} />
+          <DonutCard title={t('dashboard.spendByModel')} data={modelData} center={`${modelData.length}`} centerLabel="models" emptyTitle={t('dashboard.noSpend.title')} emptyDescription={t('dashboard.noSpend.description')} colorFor={(_, index) => chartColor(index)} />
         </div>
 
         <Card className="overflow-hidden">
           <CardHeader>
             <div>
-              <CardTitle>Recent Sessions</CardTitle>
+              <CardTitle>{t('dashboard.recentSessions')}</CardTitle>
               <p className="mt-1 text-xs text-subtle-foreground">Latest indexed conversations across Codex, OpenCode and Claude</p>
             </div>
             <Link to="/sessions" className="inline-flex items-center gap-2 text-sm font-medium text-accent hover:text-accent-hover">
@@ -185,12 +188,12 @@ export function DashboardPage() {
               <table className="w-full text-sm">
                 <thead className="sticky top-0 z-10 bg-surface">
                   <tr className="border-b border-border text-xs text-subtle-foreground">
-                    <th className="px-5 py-3 text-left font-medium">Session</th>
+                    <th className="px-5 py-3 text-left font-medium">{t('common.session')}</th>
                     <th className="px-5 py-3 text-left font-medium">CLI</th>
-                    <th className="px-5 py-3 text-left font-medium">Model</th>
-                    <th className="px-5 py-3 text-left font-medium">Project</th>
-                    <th className="px-5 py-3 text-right font-medium">Duration</th>
-                    <th className="px-5 py-3 text-right font-medium">Cost</th>
+                    <th className="px-5 py-3 text-left font-medium">{t('common.model')}</th>
+                    <th className="px-5 py-3 text-left font-medium">{t('common.project')}</th>
+                    <th className="px-5 py-3 text-right font-medium">{t('common.duration')}</th>
+                    <th className="px-5 py-3 text-right font-medium">{t('common.cost')}</th>
                     <th className="px-5 py-3 text-right font-medium">Time</th>
                     <th className="w-10 px-5 py-3" />
                   </tr>
@@ -211,7 +214,10 @@ export function DashboardPage() {
                       <td className="px-5 py-3 font-mono text-xs text-muted-foreground">{session.model ?? 'unknown'}</td>
                       <td className="max-w-[220px] truncate px-5 py-3 text-muted-foreground">{compactPath(session.project_path)}</td>
                       <td className="px-5 py-3 text-right tabular-nums text-muted-foreground">{formatDuration(session.duration_ms)}</td>
-                      <td className="px-5 py-3 text-right tabular-nums font-medium text-foreground">{formatCurrency(session.total_cost_usd)}</td>
+                      <td className="px-5 py-3 text-right tabular-nums font-medium text-foreground">
+                        <div>{formatCurrency(session.total_cost_usd)}</div>
+                        {session.cost_source === 'estimated' && <div className="mt-1 text-[10px] uppercase tracking-[0.12em] text-warning">{t('common.estimated')}</div>}
+                      </td>
                       <td className="px-5 py-3 text-right text-muted-foreground">{formatRelativeTime(session.started_at)}</td>
                       <td className="px-5 py-3 text-right"><MoreHorizontal className="h-4 w-4 text-subtle-foreground" /></td>
                     </tr>
@@ -279,7 +285,7 @@ export function DashboardPage() {
 
             {selectedId && (
               <Link to={`/sessions/${selectedId}`}>
-                <Button variant="outline" className="w-full">Open in Session Explorer <ArrowUpRight className="h-4 w-4" /></Button>
+                <Button variant="outline" className="w-full">{t('dashboard.openSession')} <ArrowUpRight className="h-4 w-4" /></Button>
               </Link>
             )}
           </CardContent>
@@ -289,7 +295,7 @@ export function DashboardPage() {
   );
 }
 
-function DonutCard({ title, data, center, centerLabel, colorFor }: { title: string; data: { label: string; value: number; percentage: number }[]; center: string; centerLabel: string; colorFor: (label: string, index: number) => string }) {
+function DonutCard({ title, data, center, centerLabel, emptyTitle, emptyDescription, colorFor }: { title: string; data: { label: string; value: number; percentage: number }[]; center: string; centerLabel: string; emptyTitle: string; emptyDescription: string; colorFor: (label: string, index: number) => string }) {
   return (
     <Card className="h-full min-h-[348px]">
       <CardHeader className="pb-1">
@@ -328,7 +334,7 @@ function DonutCard({ title, data, center, centerLabel, colorFor }: { title: stri
               </div>
             </div>
           ))}
-          {data.length === 0 && <EmptyState title="No spend data yet" description="Cost distribution will appear after sessions with spend are indexed." className="p-4" />}
+          {data.length === 0 && <EmptyState title={emptyTitle} description={emptyDescription} className="p-4" />}
         </div>
       </CardContent>
     </Card>

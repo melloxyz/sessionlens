@@ -57,12 +57,12 @@ export function SettingsPage() {
           <CardHeader>
             <div>
               <CardTitle>{t('settings.appearance')}</CardTitle>
-              <CardDescription>Choose how AIMeter looks on this machine.</CardDescription>
+              <CardDescription>{t('settings.appearance.description')}</CardDescription>
             </div>
           </CardHeader>
           <CardContent className="grid gap-3 sm:grid-cols-2">
-            <PreferenceButton active={theme === 'light'} icon={Sun} title="Light" description="Clean Linear-style surfaces." onClick={() => setTheme('light')} tone="warning" />
-            <PreferenceButton active={theme === 'dark'} icon={Moon} title="Dark" description="OpenCode-inspired OLED theme." onClick={() => setTheme('dark')} tone="accent" />
+            <PreferenceButton active={theme === 'light'} icon={Sun} title="Light" description={t('settings.light.description')} onClick={() => setTheme('light')} tone="warning" />
+            <PreferenceButton active={theme === 'dark'} icon={Moon} title="Dark" description={t('settings.dark.description')} onClick={() => setTheme('dark')} tone="accent" />
           </CardContent>
         </Card>
 
@@ -70,12 +70,12 @@ export function SettingsPage() {
           <CardHeader>
             <div>
               <CardTitle>{t('settings.language')}</CardTitle>
-              <CardDescription>Interface language is stored locally in your browser.</CardDescription>
+              <CardDescription>{t('settings.language.description')}</CardDescription>
             </div>
           </CardHeader>
           <CardContent className="grid gap-3 sm:grid-cols-2">
-            <LanguageButton active={locale === 'en'} label="English" description="Default UI language" onClick={() => setLocale('en')} />
-            <LanguageButton active={locale === 'pt-BR'} label="Português" description="Interface em português do Brasil" onClick={() => setLocale('pt-BR')} />
+            <LanguageButton active={locale === 'en'} label="English" description={t('settings.english.description')} onClick={() => setLocale('en')} />
+            <LanguageButton active={locale === 'pt-BR'} label="Português" description={t('settings.portuguese.description')} onClick={() => setLocale('pt-BR')} />
           </CardContent>
         </Card>
 
@@ -83,13 +83,13 @@ export function SettingsPage() {
           <CardHeader>
             <div>
               <CardTitle>{t('settings.privacy')}</CardTitle>
-              <CardDescription>AIMeter reads local CLI state and keeps the product offline-first.</CardDescription>
+              <CardDescription>{t('settings.privacy.description')}</CardDescription>
             </div>
           </CardHeader>
           <CardContent className="grid gap-3 md:grid-cols-3">
-            <PrivacyItem icon={ShieldCheck} title="No telemetry" description="No product analytics are sent externally." />
-            <PrivacyItem icon={LockKeyhole} title="Local prompts" description="Prompts and responses stay on disk." />
-            <PrivacyItem icon={Database} title="SQLite database" description="Usage is normalized into a local file." />
+            <PrivacyItem icon={ShieldCheck} title={t('settings.noTelemetry')} description={t('settings.noTelemetry.description')} />
+            <PrivacyItem icon={LockKeyhole} title={t('settings.localPrompts')} description={t('settings.localPrompts.description')} />
+            <PrivacyItem icon={Database} title={t('settings.sqlite')} description={t('settings.sqlite.description')} />
           </CardContent>
         </Card>
 
@@ -97,27 +97,27 @@ export function SettingsPage() {
           <CardHeader>
             <div>
               <CardTitle>{t('settings.ingestion')}</CardTitle>
-              <CardDescription>Refresh indexed data from supported AI CLIs.</CardDescription>
+              <CardDescription>{t('settings.ingestion.description')}</CardDescription>
             </div>
             <Button onClick={runIngestion} disabled={ingestionRunning}>
               <RefreshCw className={`h-4 w-4 ${ingestionRunning ? 'animate-spin' : ''}`} />
-              {ingestionRunning ? 'Running' : 'Run ingestion'}
+              {ingestionRunning ? t('settings.running') : t('settings.runIngestion')}
             </Button>
           </CardHeader>
           <CardContent className="space-y-4">
             {ingestError ? (
-              <ErrorState title="Ingestion status failed" message={ingestError.message} code={ingestError.code} details={ingestError.details} onRetry={refetchIngest} />
+              <ErrorState title={t('settings.ingestionFailed')} message={ingestError.message} code={ingestError.code} details={ingestError.details} onRetry={refetchIngest} />
             ) : (
               <>
                 <div className="grid gap-3 sm:grid-cols-3">
-                  <StatusTile label="Total sessions" value={String(ingestStatus?.totalSessions ?? overview?.sessionCount ?? 0)} />
-                  <StatusTile label="New" value={String(ingestStatus?.newSessions ?? 0)} />
-                  <StatusTile label="Updated" value={String(ingestStatus?.updatedSessions ?? 0)} />
+                  <StatusTile label={t('settings.totalSessions')} value={String(ingestStatus?.totalSessions ?? overview?.sessionCount ?? 0)} />
+                  <StatusTile label={t('settings.new')} value={String(ingestStatus?.newSessions ?? 0)} />
+                  <StatusTile label={t('settings.updated')} value={String(ingestStatus?.updatedSessions ?? 0)} />
                 </div>
                 <div className="rounded-2xl border border-border bg-surface-muted p-4 text-sm">
-                  <SummaryRow label="Started" value={ingestStatus?.startedAt ? formatDateTime(ingestStatus.startedAt) : 'Not run in this process'} />
-                  <SummaryRow label="Completed" value={ingestStatus?.completedAt ? formatDateTime(ingestStatus.completedAt) : ingestStatus?.message ?? '—'} />
-                  <SummaryRow label="Warnings" value={String(ingestStatus?.errors?.length ?? 0)} />
+                  <SummaryRow label={t('common.started')} value={ingestStatus?.startedAt ? formatDateTime(ingestStatus.startedAt) : t('settings.notRun')} />
+                  <SummaryRow label={t('settings.completed')} value={ingestStatus?.completedAt ? formatDateTime(ingestStatus.completedAt) : ingestStatus?.message ?? '—'} />
+                  <SummaryRow label={t('settings.warnings')} value={String(ingestStatus?.errors?.length ?? 0)} />
                 </div>
                 {adapterRows.length > 0 && (
                   <div className="grid gap-2 sm:grid-cols-2">
@@ -127,10 +127,10 @@ export function SettingsPage() {
                           <BrandMark value={cli} size="sm" />
                           <div className="min-w-0">
                             <div className="truncate text-sm font-medium text-foreground">{getBrandMeta(cli).label}</div>
-                            <div className="text-xs text-subtle-foreground">{info.paths} paths discovered</div>
+                            <div className="text-xs text-subtle-foreground">{info.paths} {t('settings.pathsDiscovered')}</div>
                           </div>
                         </div>
-                        <Badge variant={info.detected ? 'success' : 'neutral'}>{info.detected ? 'Detected' : 'Missing'}</Badge>
+                        <Badge variant={info.detected ? 'success' : 'neutral'}>{info.detected ? t('common.detected') : t('common.missing')}</Badge>
                       </div>
                     ))}
                   </div>
@@ -143,26 +143,26 @@ export function SettingsPage() {
 
       <aside className="space-y-5">
         <Card>
-          <CardHeader><CardTitle>Workspace Summary</CardTitle></CardHeader>
+          <CardHeader><CardTitle>{t('settings.workspaceSummary')}</CardTitle></CardHeader>
           <CardContent className="space-y-4">
-            {overviewError && <ErrorState title="Overview failed to load" message={overviewError.message} code={overviewError.code} details={overviewError.details} onRetry={refetchOverview} />}
-            <SummaryRow label="Sessions" value={String(overview?.sessionCount ?? 0)} />
-            <SummaryRow label="Total spend" value={formatCurrency(overview?.totalSpend)} />
-            <SummaryRow label="Top CLI" value={overview?.mostUsedCli ? getBrandMeta(overview.mostUsedCli).label : '—'} />
+            {overviewError && <ErrorState title={t('settings.overviewFailed')} message={overviewError.message} code={overviewError.code} details={overviewError.details} onRetry={refetchOverview} />}
+            <SummaryRow label={t('common.sessions')} value={String(overview?.sessionCount ?? 0)} />
+            <SummaryRow label={t('settings.totalSpend')} value={formatCurrency(overview?.totalSpend)} />
+            <SummaryRow label={t('settings.topCli')} value={overview?.mostUsedCli ? getBrandMeta(overview.mostUsedCli).label : '—'} />
           </CardContent>
         </Card>
 
         <Card>
           <CardHeader>
-            <CardTitle>Local Database</CardTitle>
+            <CardTitle>{t('settings.localDatabase')}</CardTitle>
             <Badge variant="success">Local</Badge>
           </CardHeader>
           <CardContent className="space-y-4">
             <div className="grid gap-3 rounded-2xl border border-border bg-surface-muted p-4 text-sm">
-              <SummaryRow label="Engine" value="SQLite via sql.js" />
-              <SummaryRow label="Scope" value="This machine only" />
-              <SummaryRow label="Sessions indexed" value={String(overview?.sessionCount ?? 0)} />
-              <SummaryRow label="Storage" value="Local file" />
+              <SummaryRow label={t('settings.engine')} value="SQLite via sql.js" />
+              <SummaryRow label={t('settings.scope')} value={t('settings.thisMachine')} />
+              <SummaryRow label={t('settings.sessionsIndexed')} value={String(overview?.sessionCount ?? 0)} />
+              <SummaryRow label={t('settings.storage')} value={t('settings.localFile')} />
             </div>
           </CardContent>
         </Card>
@@ -179,7 +179,7 @@ export function SettingsPage() {
                   <BrandMark value={item.cli} size="sm" />
                   <span className="text-sm font-medium text-foreground">{getBrandMeta(item.cli).label}</span>
                 </div>
-                <Badge variant={item.status === 'available' ? 'success' : 'neutral'}>{item.status === 'available' ? 'Detected' : 'Missing'}</Badge>
+                <Badge variant={item.status === 'available' ? 'success' : 'neutral'}>{item.status === 'available' ? t('common.detected') : t('common.missing')}</Badge>
               </div>
             ))}
           </CardContent>
