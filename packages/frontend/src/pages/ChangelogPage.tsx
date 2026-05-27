@@ -1,42 +1,28 @@
-import { CheckCircle2, CircleDot, Clock3, GitBranch, Sparkles } from 'lucide-react';
+import { CheckCircle2, CircleDot, Clock3, GitBranch, Layers3, Sparkles } from 'lucide-react';
 import { Badge } from '../components/ui/Badge.js';
 import { Card, CardContent, CardHeader, CardTitle } from '../components/ui/Card.js';
 import { useI18n } from '../components/i18n/LanguageProvider.js';
 
-const entries = [
-  {
-    version: '0.6.4',
-    status: 'shipped',
-    icon: CheckCircle2,
-    titleKey: 'changelog.entry.models.title',
-    date: '2026-05-26',
-    items: ['changelog.entry.models.1', 'changelog.entry.models.2', 'changelog.entry.models.3'],
-  },
-  {
-    version: '0.6.3',
-    status: 'shipped',
-    icon: CheckCircle2,
-    titleKey: 'changelog.entry.costs.title',
-    date: '2026-05-26',
-    items: ['changelog.entry.costs.1', 'changelog.entry.costs.2', 'changelog.entry.costs.3'],
-  },
-  {
-    version: '0.6.2',
-    status: 'shipped',
-    icon: CheckCircle2,
-    titleKey: 'changelog.entry.ui.title',
-    date: '2026-05-26',
-    items: ['changelog.entry.ui.1', 'changelog.entry.ui.2', 'changelog.entry.ui.3'],
-  },
-  {
-    version: 'Next',
-    status: 'in-progress',
-    icon: Clock3,
-    titleKey: 'changelog.entry.next.title',
-    date: 'In progress',
-    items: ['changelog.entry.next.1', 'changelog.entry.next.2', 'changelog.entry.next.3'],
-  },
+const latest = [
+  ['changelog.ui', 'Sessionless v0.7.0 official foundation release'],
+  ['changelog.analytics', 'Real analytics filters across report, charts and breakdowns'],
+  ['changelog.pricing', 'OpenRouter pricing sync with estimated cost backfill'],
 ];
+
+const released = [
+  { version: 'v0.7.0', title: 'Sessionless foundation', tags: ['changelog.core', 'changelog.ui'], items: ['Sessionless branding and package rename', 'Changelog and project status page', 'Windows-safe dev orchestration'] },
+  { version: 'v0.6.4', title: 'Models and analytics filters', tags: ['changelog.analytics', 'changelog.pricing'], items: ['Model catalog search and used-model ranking', 'Provider/model/project analytics filters', 'OpenRouter model pricing sync'] },
+  { version: 'v0.6.3', title: 'Cost accuracy', tags: ['changelog.pricing', 'changelog.localFirst'], items: ['actual / estimated / unknown cost sources', 'Token-based fallback cost estimation', 'Backfill for sessions previously showing $0.00'] },
+  { version: 'v0.6.2', title: 'Project intelligence', tags: ['changelog.core'], items: ['Hide projects without deleting local folders', 'Open project folder from session detail', 'Git commit timeline for existing repositories'] },
+  { version: 'v0.6.0', title: 'UI polish', tags: ['changelog.ui'], items: ['Premium OpenCode/Linear-style shell', 'Light and dark themes', 'English and Portuguese interface'] },
+  { version: 'v0.5.0', title: 'CLI expansion', tags: ['changelog.adapters'], items: ['Gemini, Kimi, Aider, Qwen and Antigravity adapters', 'Integration detection in sidebar', 'Adapter-isolated parsing'] },
+  { version: 'v0.4.0', title: 'Advanced analytics', tags: ['changelog.analytics'], items: ['Insights Engine', 'Anomaly detection', 'Multi-model session usage'] },
+  { version: 'v0.3.0', title: 'Multi-CLI core', tags: ['changelog.adapters'], items: ['Codex, Claude and OpenCode support', 'Cross-provider normalization', 'Project refresh and usage aggregation'] },
+  { version: 'v0.1.0', title: 'Local-first bootstrap', tags: ['changelog.core', 'changelog.localFirst'], items: ['pnpm monorepo', 'Fastify + Vite app shell', 'sql.js local SQLite database'] },
+];
+
+const inProgress = ['More usable Projects and Project Detail pages', 'Clearer Analytics information architecture', 'More complete visible changelog history'];
+const planned = ['Filesystem watcher for background ingestion', 'Local budget limits and alerts', 'Restore hidden projects controls'];
 
 export function ChangelogPage() {
   const { t } = useI18n();
@@ -45,53 +31,41 @@ export function ChangelogPage() {
     <div className="space-y-6 p-6">
       <Card className="overflow-hidden">
         <CardContent className="relative p-6">
-          <div className="absolute right-6 top-6 hidden h-24 w-24 rounded-full bg-accent-soft blur-2xl md:block" />
-          <div className="relative max-w-2xl">
-            <Badge variant="default" className="gap-1.5"><Sparkles className="h-3 w-3" /> Sessionless</Badge>
-            <h2 className="mt-4 text-2xl font-semibold tracking-[-0.05em] text-foreground">{t('changelog.hero.title')}</h2>
-            <p className="mt-2 text-sm leading-6 text-muted-foreground">{t('changelog.hero.description')}</p>
+          <div className="absolute right-6 top-6 hidden h-28 w-28 rounded-full bg-accent-soft blur-2xl md:block" />
+          <div className="relative flex flex-col gap-5 lg:flex-row lg:items-end lg:justify-between">
+            <div className="max-w-2xl">
+              <div className="flex flex-wrap items-center gap-2">
+                <Badge variant="default" className="gap-1.5"><Sparkles className="h-3 w-3" /> Sessionless</Badge>
+                <Badge variant="success">{t('changelog.current')}</Badge>
+              </div>
+              <h2 className="mt-4 text-3xl font-semibold tracking-[-0.06em] text-foreground">{t('changelog.version')}</h2>
+              <p className="mt-2 text-sm leading-6 text-muted-foreground">{t('changelog.hero.description')}</p>
+            </div>
+            <a href="https://github.com/melloxyz/sessionless" target="_blank" rel="noreferrer" className="inline-flex items-center gap-2 rounded-xl border border-border bg-surface-elevated px-3 py-2 text-sm font-medium text-accent hover:text-accent-hover">
+              <GitBranch className="h-4 w-4" /> github.com/melloxyz/sessionless
+            </a>
           </div>
         </CardContent>
       </Card>
 
-      <div className="grid gap-4 xl:grid-cols-[minmax(0,1fr)_340px]">
-        <section className="space-y-4">
-          {entries.map((entry, index) => {
-            const Icon = entry.icon;
-            return (
-              <Card key={entry.version}>
-                <CardContent className="p-0">
-                  <div className="grid gap-0 md:grid-cols-[150px_minmax(0,1fr)]">
-                    <div className="border-b border-border p-5 md:border-b-0 md:border-r">
-                      <div className="flex items-center gap-2 text-sm font-semibold text-foreground">
-                        <Icon className="h-4 w-4 text-accent" />
-                        {entry.version}
-                      </div>
-                      <div className="mt-2 text-xs text-subtle-foreground">{entry.date}</div>
-                    </div>
-                    <div className="p-5">
-                      <div className="mb-3 flex flex-wrap items-center gap-2">
-                        <h3 className="font-semibold text-foreground">{t(entry.titleKey)}</h3>
-                        <Badge variant={entry.status === 'shipped' ? 'success' : 'warning'}>{entry.status === 'shipped' ? t('changelog.shipped') : t('changelog.inProgress')}</Badge>
-                      </div>
-                      <div className="space-y-2">
-                        {entry.items.map((item) => (
-                          <div key={item} className="flex gap-2 text-sm text-muted-foreground">
-                            <CircleDot className="mt-1 h-3 w-3 shrink-0 fill-accent text-accent" />
-                            <span>{t(item)}</span>
-                          </div>
-                        ))}
-                      </div>
-                      {index < entries.length - 1 && <div className="mt-5 h-px bg-border md:hidden" />}
-                    </div>
-                  </div>
-                </CardContent>
-              </Card>
-            );
-          })}
+      <section className="space-y-3">
+        <SectionTitle title={t('changelog.latest')} description={t('changelog.latest.description')} />
+        <div className="grid gap-3 lg:grid-cols-3">
+          {latest.map(([tag, title]) => <Card key={title}><CardContent className="space-y-3 p-4"><Badge variant="neutral">{t(tag)}</Badge><div className="font-medium text-foreground">{title}</div></CardContent></Card>)}
+        </div>
+      </section>
+
+      <div className="grid gap-4 xl:grid-cols-[minmax(0,1fr)_360px]">
+        <section className="space-y-3">
+          <SectionTitle title={t('changelog.released')} description={t('changelog.released.description')} />
+          <div className="space-y-4">
+            {released.map((entry) => <ReleaseCard key={entry.version} entry={entry} />)}
+          </div>
         </section>
 
         <aside className="space-y-4">
+          <RoadmapCard icon={Clock3} title={t('changelog.inProgress')} description={t('changelog.progress.description')} items={inProgress} tone="warning" />
+          <RoadmapCard icon={Layers3} title={t('changelog.planned')} description={t('changelog.planned.description')} items={planned} tone="info" />
           <Card>
             <CardHeader><CardTitle>{t('changelog.status.title')}</CardTitle></CardHeader>
             <CardContent className="space-y-3 text-sm">
@@ -100,19 +74,39 @@ export function ChangelogPage() {
               <StatusRow label={t('changelog.status.name')} value="Sessionless" />
             </CardContent>
           </Card>
-          <Card>
-            <CardHeader><CardTitle>{t('changelog.github.title')}</CardTitle></CardHeader>
-            <CardContent>
-              <a href="https://github.com/melloxyz/sessionless" target="_blank" rel="noreferrer" className="inline-flex items-center gap-2 text-sm font-medium text-accent hover:text-accent-hover">
-                <GitBranch className="h-4 w-4" />
-                github.com/melloxyz/sessionless
-              </a>
-            </CardContent>
-          </Card>
         </aside>
       </div>
     </div>
   );
+}
+
+function SectionTitle({ title, description }: { title: string; description: string }) {
+  return <div><h2 className="text-sm font-semibold text-foreground">{title}</h2><p className="mt-1 text-xs text-subtle-foreground">{description}</p></div>;
+}
+
+function ReleaseCard({ entry }: { entry: { version: string; title: string; tags: string[]; items: string[] } }) {
+  const { t } = useI18n();
+  return (
+    <Card>
+      <CardContent className="grid gap-0 p-0 md:grid-cols-[160px_minmax(0,1fr)]">
+        <div className="border-b border-border p-5 md:border-b-0 md:border-r">
+          <div className="flex items-center gap-2 font-semibold text-foreground"><CheckCircle2 className="h-4 w-4 text-success" />{entry.version}</div>
+          <div className="mt-3 flex flex-wrap gap-1.5">{entry.tags.map((tag) => <Badge key={tag} variant="neutral">{t(tag)}</Badge>)}</div>
+        </div>
+        <div className="p-5">
+          <div className="font-semibold text-foreground">{entry.title}</div>
+          <div className="mt-3 space-y-2">
+            {entry.items.map((item) => <div key={item} className="flex gap-2 text-sm text-muted-foreground"><CircleDot className="mt-1 h-3 w-3 shrink-0 fill-accent text-accent" /><span>{item}</span></div>)}
+          </div>
+        </div>
+      </CardContent>
+    </Card>
+  );
+}
+
+function RoadmapCard({ icon: Icon, title, description, items, tone }: { icon: typeof Clock3; title: string; description: string; items: string[]; tone: 'warning' | 'info' }) {
+  const toneClass = tone === 'warning' ? 'bg-warning-soft text-warning' : 'bg-info-soft text-info';
+  return <Card><CardHeader><div className="flex items-center gap-3"><div className={`grid h-9 w-9 place-items-center rounded-2xl ${toneClass}`}><Icon className="h-4 w-4" /></div><div><CardTitle>{title}</CardTitle><p className="mt-1 text-xs text-subtle-foreground">{description}</p></div></div></CardHeader><CardContent className="space-y-2">{items.map((item) => <div key={item} className="rounded-xl border border-border bg-surface-muted p-3 text-sm text-muted-foreground">{item}</div>)}</CardContent></Card>;
 }
 
 function StatusRow({ label, value }: { label: string; value: string }) {

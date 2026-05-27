@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react';
+import { useMemo, useState, type ReactNode } from 'react';
 import { AlertTriangle, ChevronRight, CircleAlert, Gauge, Sparkles, TrendingUp, type LucideIcon } from 'lucide-react';
 import {
   AreaChart,
@@ -146,39 +146,27 @@ export function AnalyticsPage() {
         />
       )}
 
-      <div className="flex flex-wrap items-start justify-between gap-4">
-        <div>
-          <h1 className="text-lg font-semibold text-foreground">Analytics</h1>
-          <p className="text-sm text-subtle-foreground">{t('analytics.subtitle')}</p>
-        </div>
-        <div className="flex flex-wrap gap-3">
-          <Select
-            options={[
-              { label: t('analytics.byModel'), value: 'model' },
-              { label: t('analytics.byProvider'), value: 'provider' },
-              { label: t('analytics.byCli'), value: 'cli' },
-              { label: t('analytics.byProject'), value: 'project' },
-            ]}
-            value={dimension}
-            onChange={(e) => setDimension(e.target.value)}
-          />
-          <Select
-            options={[
-              { label: t('common.cost'), value: 'cost' },
-              { label: t('common.sessions'), value: 'sessions' },
-              { label: t('common.tokens'), value: 'tokens' },
-            ]}
-            value={metric}
-            onChange={(e) => setMetric(e.target.value)}
-          />
-          <Select value={cliFilter} onChange={(e) => setCliFilter(e.target.value)} options={[{ label: t('analytics.allClis'), value: '' }, ...(options?.clis ?? []).map((item) => ({ label: `${item.label} (${item.count})`, value: item.value }))]} />
-          <Select value={providerFilter} onChange={(e) => setProviderFilter(e.target.value)} options={[{ label: t('analytics.allProviders'), value: '' }, ...(options?.providers ?? []).map((item) => ({ label: `${item.label} (${item.count})`, value: item.value }))]} />
-          <Select value={modelFilter} onChange={(e) => setModelFilter(e.target.value)} options={[{ label: t('analytics.allModels'), value: '' }, ...(options?.models ?? []).map((item) => ({ label: `${item.label} (${item.count})`, value: item.value }))]} />
-          <Select value={projectFilter} onChange={(e) => setProjectFilter(e.target.value)} options={[{ label: t('analytics.allProjects'), value: '' }, ...(options?.projects ?? []).map((item) => ({ label: `${compactPath(item.label)} (${item.count})`, value: item.value }))]} />
-          {(cliFilter || providerFilter || modelFilter || projectFilter) && <Button variant="outline" onClick={() => { setCliFilter(''); setProviderFilter(''); setModelFilter(''); setProjectFilter(''); }}>{t('analytics.clearFilters')}</Button>}
-        </div>
-      </div>
+      <Card>
+        <CardContent className="space-y-4 p-4">
+          <div className="flex flex-wrap items-start justify-between gap-3">
+            <div>
+              <div className="text-sm font-semibold text-foreground">{t('analytics.filters')}</div>
+              <p className="mt-1 text-xs text-subtle-foreground">{t('analytics.summaryDescription')}</p>
+            </div>
+            {(cliFilter || providerFilter || modelFilter || projectFilter) && <Button variant="outline" size="sm" onClick={() => { setCliFilter(''); setProviderFilter(''); setModelFilter(''); setProjectFilter(''); }}>{t('analytics.clearFilters')}</Button>}
+          </div>
+          <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-6">
+            <FilterField label={t('analytics.groupBy')}><Select options={[{ label: t('analytics.byModel'), value: 'model' }, { label: t('analytics.byProvider'), value: 'provider' }, { label: t('analytics.byCli'), value: 'cli' }, { label: t('analytics.byProject'), value: 'project' }]} value={dimension} onChange={(e) => setDimension(e.target.value)} /></FilterField>
+            <FilterField label={t('analytics.metric')}><Select options={[{ label: t('common.cost'), value: 'cost' }, { label: t('common.sessions'), value: 'sessions' }, { label: t('common.tokens'), value: 'tokens' }]} value={metric} onChange={(e) => setMetric(e.target.value)} /></FilterField>
+            <FilterField label="CLI"><Select value={cliFilter} onChange={(e) => setCliFilter(e.target.value)} options={[{ label: t('analytics.allClis'), value: '' }, ...(options?.clis ?? []).map((item) => ({ label: `${item.label} (${item.count})`, value: item.value }))]} /></FilterField>
+            <FilterField label={t('common.provider')}><Select value={providerFilter} onChange={(e) => setProviderFilter(e.target.value)} options={[{ label: t('analytics.allProviders'), value: '' }, ...(options?.providers ?? []).map((item) => ({ label: `${item.label} (${item.count})`, value: item.value }))]} /></FilterField>
+            <FilterField label={t('common.model')}><Select value={modelFilter} onChange={(e) => setModelFilter(e.target.value)} options={[{ label: t('analytics.allModels'), value: '' }, ...(options?.models ?? []).map((item) => ({ label: `${item.label} (${item.count})`, value: item.value }))]} /></FilterField>
+            <FilterField label={t('common.project')}><Select value={projectFilter} onChange={(e) => setProjectFilter(e.target.value)} options={[{ label: t('analytics.allProjects'), value: '' }, ...(options?.projects ?? []).map((item) => ({ label: `${compactPath(item.label)} (${item.count})`, value: item.value }))]} /></FilterField>
+          </div>
+        </CardContent>
+      </Card>
 
+      <SectionHeader title={t('analytics.summaryTitle')} description={t('analytics.summaryDescription')} />
       <div className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-4">
         <SummaryCard icon={TrendingUp} label={t('analytics.sevenDaySpend')} value={formatCurrency(report?.summary.current7DaySpend)} sub={report?.summary.growthPercent != null ? `${report.summary.growthPercent >= 0 ? '+' : ''}${report.summary.growthPercent.toFixed(0)}% ${t('analytics.vsPriorWeek')}` : t('analytics.notEnoughData')} tone="success" />
         <SummaryCard icon={Gauge} label={t('analytics.baselineDay')} value={formatCurrency(report?.summary.baselineDailySpend)} sub={t('analytics.movingBaseline')} tone="info" />
@@ -193,6 +181,7 @@ export function AnalyticsPage() {
         <SummaryCard icon={AlertTriangle} label={t('analytics.costTool')} value={formatCurrency(productivity?.avgCostPerToolCall)} sub={productivity?.costToolCallCorrelation != null ? `Correlation ${productivity.costToolCallCorrelation.toFixed(2)}` : t('analytics.correlationUnavailable')} tone="danger" />
       </div>
 
+      <SectionHeader title={`${t('analytics.insightsTitle')} & ${t('analytics.anomaliesTitle')}`} description={t('analytics.insightsDescription')} />
       <div className="grid grid-cols-1 gap-4 xl:grid-cols-[1.2fr_0.8fr]">
         <Card>
           <CardHeader>
@@ -221,6 +210,7 @@ export function AnalyticsPage() {
         </Card>
       </div>
 
+      <SectionHeader title={t('analytics.trendsTitle')} description={t('analytics.trendsDescription')} />
       <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
         <Card>
           <CardHeader>
@@ -270,6 +260,7 @@ export function AnalyticsPage() {
         </Card>
       </div>
 
+      <SectionHeader title={t('analytics.explorerTitle')} description={t('analytics.explorerDescription')} />
       <div className="grid grid-cols-1 gap-4 lg:grid-cols-[0.9fr_1.1fr]">
         <Card>
           <CardHeader>
@@ -320,6 +311,7 @@ export function AnalyticsPage() {
         </Card>
       </div>
 
+      <SectionHeader title={t('analytics.productivityTitle')} description={t('analytics.productivityDescription')} />
       <div className="grid grid-cols-1 gap-4 xl:grid-cols-[1.1fr_0.9fr]">
         <Card>
           <CardHeader>
@@ -372,6 +364,7 @@ export function AnalyticsPage() {
         </Card>
       </div>
 
+      <SectionHeader title={t('analytics.modelUsageTitle')} description={t('analytics.multiModelDescription')} />
       <div className="grid grid-cols-1 gap-4 xl:grid-cols-[1.1fr_0.9fr]">
         <Card>
           <CardHeader>
@@ -420,6 +413,14 @@ export function AnalyticsPage() {
       </div>
     </div>
   );
+}
+
+function SectionHeader({ title, description }: { title: string; description: string }) {
+  return <div><h2 className="text-sm font-semibold text-foreground">{title}</h2><p className="mt-1 text-xs text-subtle-foreground">{description}</p></div>;
+}
+
+function FilterField({ label, children }: { label: string; children: ReactNode }) {
+  return <label className="space-y-1.5"><span className="block text-[11px] font-medium uppercase tracking-[0.14em] text-subtle-foreground">{label}</span>{children}</label>;
 }
 
 function SummaryCard({ icon: Icon, label, value, sub, tone }: { icon: LucideIcon; label: string; value: string; sub: string; tone: 'success' | 'info' | 'warning' | 'danger' }) {
