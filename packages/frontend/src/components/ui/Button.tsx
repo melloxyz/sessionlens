@@ -9,7 +9,8 @@ const buttonVariants = cva(
       variant: {
         default: 'bg-accent text-accent-foreground shadow-sm hover:bg-accent-hover',
         secondary: 'border border-border bg-surface text-foreground hover:bg-surface-hover',
-        outline: 'border border-border bg-transparent text-foreground hover:bg-surface-hover hover:border-border-strong',
+        outline:
+          'border border-border bg-transparent text-foreground hover:bg-surface-hover hover:border-border-strong',
         ghost: 'text-muted-foreground hover:bg-surface-hover hover:text-foreground',
         subtle: 'bg-accent-soft text-accent hover:bg-accent-soft/80',
         danger: 'bg-danger text-white hover:opacity-90',
@@ -29,10 +30,13 @@ const buttonVariants = cva(
   },
 );
 
-interface ButtonProps extends ButtonHTMLAttributes<HTMLButtonElement>, VariantProps<typeof buttonVariants> {}
+interface ButtonProps
+  extends ButtonHTMLAttributes<HTMLButtonElement>, VariantProps<typeof buttonVariants> {}
 
-export const Button = forwardRef<HTMLButtonElement, ButtonProps>(({ className, variant, size, ...props }, ref) => (
-  <button ref={ref} className={cn(buttonVariants({ variant, size }), className)} {...props} />
-));
+export const Button = forwardRef<HTMLButtonElement, ButtonProps>(
+  ({ className, variant, size, ...props }, ref) => (
+    <button ref={ref} className={cn(buttonVariants({ variant, size }), className)} {...props} />
+  ),
+);
 
 Button.displayName = 'Button';

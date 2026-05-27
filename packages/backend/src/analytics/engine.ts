@@ -174,7 +174,12 @@ export function buildAnalyticsReport(filters: AnalyticsFilters = {}): AnalyticsR
       const session = sessionById.get(row.session_id);
       if (!session) return null;
 
-      const totalTokens = row.input_tokens + row.output_tokens + row.cache_read_tokens + row.cache_write_tokens + row.reasoning_tokens;
+      const totalTokens =
+        row.input_tokens +
+        row.output_tokens +
+        row.cache_read_tokens +
+        row.cache_write_tokens +
+        row.reasoning_tokens;
       const totalInput = row.input_tokens + row.cache_read_tokens + row.cache_write_tokens;
       const cacheHitRate = totalInput > 0 ? row.cache_read_tokens / totalInput : null;
       const cacheMissRate = cacheHitRate == null ? null : 1 - cacheHitRate;
@@ -201,11 +206,16 @@ export function buildAnalyticsReport(filters: AnalyticsFilters = {}): AnalyticsR
   const totalTokens = aggregatedSessions.reduce((sum, item) => sum + item.totalTokens, 0);
   const avgCost = average(sessions.map((session) => session.total_cost_usd ?? 0));
   const avgMessages = average(sessions.map((session) => session.message_count));
-  const avgDuration = average(sessions.map((session) => session.duration_ms ?? 0));
-  const avgTokens = average(aggregatedSessions.map((item) => item.totalTokens));
-  const avgCacheMiss = average(aggregatedSessions.filter((item) => item.cacheMissRate != null).map((item) => item.cacheMissRate ?? 0));
+  const _avgDuration = average(sessions.map((session) => session.duration_ms ?? 0));
+  const _avgTokens = average(aggregatedSessions.map((item) => item.totalTokens));
+  const avgCacheMiss = average(
+    aggregatedSessions
+      .filter((item) => item.cacheMissRate != null)
+      .map((item) => item.cacheMissRate ?? 0),
+  );
 
-  const { current7Spend, previous7Spend, growthPercent, baselineDailySpend } = computeSpendTrend(dailyTrend);
+  const { current7Spend, previous7Spend, growthPercent, baselineDailySpend } =
+    computeSpendTrend(dailyTrend);
 
   const insights: AnalyticsInsight[] = [];
   const anomalies: AnalyticsAnomaly[] = [];
@@ -217,7 +227,7 @@ export function buildAnalyticsReport(filters: AnalyticsFilters = {}): AnalyticsR
       severity: growthPercent >= 50 ? 'high' : 'medium',
       title: 'Usage is growing faster than last week',
       description: `The last 7 days spent ${formatPercent(growthPercent)} more than the previous 7 days.`,
-          value: `${formatCurrency(current7Spend)} vs ${formatCurrency(previous7Spend)}`,
+      value: `${formatCurrency(current7Spend)} vs ${formatCurrency(previous7Spend)}`,
     });
   }
 
@@ -249,8 +259,11 @@ export function buildAnalyticsReport(filters: AnalyticsFilters = {}): AnalyticsR
     });
   }
 
-  const expensiveSession = [...sessions]
-    .sort((a, b) => (b.total_cost_usd ?? 0) - (a.total_cost_usd ?? 0) || (b.duration_ms ?? 0) - (a.duration_ms ?? 0))[0];
+  const expensiveSession = [...sessions].sort(
+    (a, b) =>
+      (b.total_cost_usd ?? 0) - (a.total_cost_usd ?? 0) ||
+      (b.duration_ms ?? 0) - (a.duration_ms ?? 0),
+  )[0];
   if (expensiveSession && (expensiveSession.total_cost_usd ?? 0) >= Math.max(avgCost * 2, 10)) {
     insights.push({
       id: `session-${expensiveSession.id}`,
@@ -285,7 +298,7 @@ export function buildAnalyticsReport(filters: AnalyticsFilters = {}): AnalyticsR
         severity: currentDay.spend >= baselineDailySpend * 3 ? 'high' : 'medium',
         title: 'Daily spend spike',
         description: `The latest day spent ${formatPercent((currentDay.spend / baselineDailySpend) * 100 - 100)} more than the 7-day baseline.`,
-      value: `${formatCurrency(currentDay.spend)} vs ${formatCurrency(baselineDailySpend)}/day`,
+        value: `${formatCurrency(currentDay.spend)} vs ${formatCurrency(baselineDailySpend)}/day`,
       });
     }
   }
@@ -311,7 +324,10 @@ export function buildAnalyticsReport(filters: AnalyticsFilters = {}): AnalyticsR
 
   const costOutlier = [...sessions]
     .sort((a, b) => (b.total_cost_usd ?? 0) - (a.total_cost_usd ?? 0))
-    .find((session) => (session.total_cost_usd ?? 0) >= Math.max(costMean + costStd * 2, costMean * 2, 10));
+    .find(
+      (session) =>
+        (session.total_cost_usd ?? 0) >= Math.max(costMean + costStd * 2, costMean * 2, 10),
+    );
   if (costOutlier) {
     anomalies.push({
       id: `cost-${costOutlier.id}`,
@@ -361,7 +377,8 @@ export function buildAnalyticsReport(filters: AnalyticsFilters = {}): AnalyticsR
     };
   });
 
-  const productivityToolCallsPerMinute = totalDuration > 0 ? totalTools / (totalDuration / 60000) : null;
+  const productivityToolCallsPerMinute =
+    totalDuration > 0 ? totalTools / (totalDuration / 60000) : null;
   const productivityTokensPerToolCall = totalTools > 0 ? totalTokens / totalTools : null;
   const productivityCostPerToolCall = totalTools > 0 ? totalSpend / totalTools : null;
   const productivityMessagesPerToolCall = totalTools > 0 ? totalMessages / totalTools : null;
@@ -405,7 +422,10 @@ export function buildAnalyticsReport(filters: AnalyticsFilters = {}): AnalyticsR
   };
 }
 
-function querySessions(db: ReturnType<typeof getDatabase>, filters: AnalyticsFilters): SessionRow[] {
+function querySessions(
+  db: ReturnType<typeof getDatabase>,
+  filters: AnalyticsFilters,
+): SessionRow[] {
   const range = buildWhere(filters);
   const validSession = validSessionSql();
   const result = db.exec(
@@ -419,7 +439,10 @@ function querySessions(db: ReturnType<typeof getDatabase>, filters: AnalyticsFil
   return mapRows<SessionRow>(result);
 }
 
-function queryUsageAggregates(db: ReturnType<typeof getDatabase>, filters: AnalyticsFilters): UsageAggregate[] {
+function queryUsageAggregates(
+  db: ReturnType<typeof getDatabase>,
+  filters: AnalyticsFilters,
+): UsageAggregate[] {
   const range = buildWhere(filters, 's');
   const validSession = validSessionSql('s');
   const result = db.exec(
@@ -446,7 +469,10 @@ function queryUsageAggregates(db: ReturnType<typeof getDatabase>, filters: Analy
   return mapRows<UsageAggregate>(result);
 }
 
-function queryProjectSummaries(db: ReturnType<typeof getDatabase>, filters: AnalyticsFilters): ProjectSummary[] {
+function queryProjectSummaries(
+  db: ReturnType<typeof getDatabase>,
+  filters: AnalyticsFilters,
+): ProjectSummary[] {
   const range = buildWhere(filters);
   const validSession = validSessionSql();
   const result = db.exec(
@@ -461,7 +487,10 @@ function queryProjectSummaries(db: ReturnType<typeof getDatabase>, filters: Anal
   return mapRows<ProjectSummary>(result);
 }
 
-function queryModelSummaries(db: ReturnType<typeof getDatabase>, filters: AnalyticsFilters): ModelSummary[] {
+function queryModelSummaries(
+  db: ReturnType<typeof getDatabase>,
+  filters: AnalyticsFilters,
+): ModelSummary[] {
   const range = buildWhere(filters);
   const validSession = validSessionSql();
   const result = db.exec(
@@ -484,7 +513,10 @@ function queryModelSummaries(db: ReturnType<typeof getDatabase>, filters: Analyt
   return mapRows<ModelSummary>(result);
 }
 
-function queryModelUsageBreakdown(db: ReturnType<typeof getDatabase>, filters: AnalyticsFilters): ModelUsageSummary[] {
+function queryModelUsageBreakdown(
+  db: ReturnType<typeof getDatabase>,
+  filters: AnalyticsFilters,
+): ModelUsageSummary[] {
   const range = buildWhere(filters, 's');
   const validSession = validSessionSql('s');
   const result = db.exec(
@@ -508,10 +540,16 @@ function queryModelUsageBreakdown(db: ReturnType<typeof getDatabase>, filters: A
   return mapRows<ModelUsageSummary>(result);
 }
 
-function queryDailyTrend(db: ReturnType<typeof getDatabase>, filters: AnalyticsFilters): { date: string; spend: number }[] {
+function queryDailyTrend(
+  db: ReturnType<typeof getDatabase>,
+  filters: AnalyticsFilters,
+): { date: string; spend: number }[] {
   const range = buildWhere(filters);
   const validSession = validSessionSql();
-  const anchorResult = db.exec(`SELECT date(MAX(started_at)) AS anchor FROM sessions WHERE ${validSession}${range.sql}`, range.params);
+  const anchorResult = db.exec(
+    `SELECT date(MAX(started_at)) AS anchor FROM sessions WHERE ${validSession}${range.sql}`,
+    range.params,
+  );
   const anchor = anchorResult[0]?.values?.[0]?.[0] as string | undefined;
   if (!anchor) return [];
 
@@ -520,7 +558,10 @@ function queryDailyTrend(db: ReturnType<typeof getDatabase>, filters: AnalyticsF
   const filterWhere = buildWhere({ ...filters, dateFrom: null, dateTo: null });
   const params: string[] = [filters.dateFrom ?? toIsoDate(startDate), ...filterWhere.params];
   let dateToSql = '';
-  if (filters.dateTo) { dateToSql = ' AND started_at <= ?'; params.push(filters.dateTo); }
+  if (filters.dateTo) {
+    dateToSql = ' AND started_at <= ?';
+    params.push(filters.dateTo);
+  }
   const spendResult = db.exec(
     `SELECT date(started_at) AS day, COALESCE(SUM(total_cost_usd), 0) AS spend
      FROM sessions
@@ -549,12 +590,30 @@ function buildWhere(filters: AnalyticsFilters, alias?: string): { sql: string; p
   const prefix = alias ? `${alias}.` : '';
   let sql = '';
   const params: string[] = [];
-  if (filters.dateFrom) { sql += ` AND ${prefix}started_at >= ?`; params.push(filters.dateFrom); }
-  if (filters.dateTo) { sql += ` AND ${prefix}started_at <= ?`; params.push(filters.dateTo); }
-  if (filters.cli) { sql += ` AND ${prefix}cli = ?`; params.push(filters.cli); }
-  if (filters.provider) { sql += ` AND LOWER(${prefix}provider) = LOWER(?)`; params.push(filters.provider); }
-  if (filters.model) { sql += ` AND LOWER(COALESCE(${prefix}model, 'unknown')) = LOWER(?)`; params.push(filters.model); }
-  if (filters.project) { sql += ` AND COALESCE(${prefix}project_path, 'unknown') = ?`; params.push(filters.project); }
+  if (filters.dateFrom) {
+    sql += ` AND ${prefix}started_at >= ?`;
+    params.push(filters.dateFrom);
+  }
+  if (filters.dateTo) {
+    sql += ` AND ${prefix}started_at <= ?`;
+    params.push(filters.dateTo);
+  }
+  if (filters.cli) {
+    sql += ` AND ${prefix}cli = ?`;
+    params.push(filters.cli);
+  }
+  if (filters.provider) {
+    sql += ` AND LOWER(${prefix}provider) = LOWER(?)`;
+    params.push(filters.provider);
+  }
+  if (filters.model) {
+    sql += ` AND LOWER(COALESCE(${prefix}model, 'unknown')) = LOWER(?)`;
+    params.push(filters.model);
+  }
+  if (filters.project) {
+    sql += ` AND COALESCE(${prefix}project_path, 'unknown') = ?`;
+    params.push(filters.project);
+  }
   return { sql, params };
 }
 
@@ -649,7 +708,9 @@ function formatCurrency(value: number | null | undefined): string {
 
 function formatTokens(value: number | null | undefined): string {
   if (value == null) return '0';
-  return new Intl.NumberFormat('en-US', { notation: 'compact', maximumFractionDigits: 1 }).format(value);
+  return new Intl.NumberFormat('en-US', { notation: 'compact', maximumFractionDigits: 1 }).format(
+    value,
+  );
 }
 
 function formatDuration(value: number | null): string {
@@ -673,5 +734,8 @@ function compactPath(value: string | null): string {
 }
 
 function slug(value: string): string {
-  return value.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '');
+  return value
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, '-')
+    .replace(/^-+|-+$/g, '');
 }

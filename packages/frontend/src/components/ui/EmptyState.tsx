@@ -17,7 +17,12 @@ export function EmptyState({
   className?: string;
 }) {
   return (
-    <div className={cn('rounded-2xl border border-dashed border-border bg-surface-muted/45 p-8 text-center', className)}>
+    <div
+      className={cn(
+        'rounded-2xl border border-dashed border-border bg-surface-muted/45 p-8 text-center',
+        className,
+      )}
+    >
       <div className="mx-auto mb-3 grid h-11 w-11 place-items-center rounded-2xl border border-border bg-surface-elevated text-subtle-foreground shadow-sm">
         <Icon className="h-5 w-5" />
       </div>

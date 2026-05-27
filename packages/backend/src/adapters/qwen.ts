@@ -1,7 +1,7 @@
 import { existsSync, readdirSync, readFileSync, statSync } from 'node:fs';
 import { homedir } from 'node:os';
 import { join } from 'node:path';
-import type { Adapter, Checkpoint, RawMessage, RawSession, RawUsageEvent } from './types.js';
+import type { Adapter, Checkpoint, RawMessage, RawSession } from './types.js';
 import type { CliProvider, SourceConfidence } from '@sessionless/shared';
 
 const QWEN_ROOTS = [
@@ -12,7 +12,16 @@ const QWEN_ROOTS = [
   join(process.env.LOCALAPPDATA ?? '', 'qwen'),
 ].filter(Boolean);
 
-const VALID_EXTENSIONS = new Set(['.json', '.jsonl', '.log', '.md', '.markdown', '.txt', '.sqlite', '.db']);
+const VALID_EXTENSIONS = new Set([
+  '.json',
+  '.jsonl',
+  '.log',
+  '.md',
+  '.markdown',
+  '.txt',
+  '.sqlite',
+  '.db',
+]);
 
 export function createQwenAdapter(): Adapter {
   return {
@@ -90,7 +99,9 @@ function scan(root: string, depth: number, out: Set<string>): void {
 
 function parseDirectory(path: string): RawSession[] {
   const children = readdirSync(path, { withFileTypes: true });
-  const files = children.filter((entry) => entry.isFile() && VALID_EXTENSIONS.has(extensionOf(entry.name))).map((entry) => join(path, entry.name));
+  const files = children
+    .filter((entry) => entry.isFile() && VALID_EXTENSIONS.has(extensionOf(entry.name)))
+    .map((entry) => join(path, entry.name));
   return files.flatMap((file) => {
     const content = readFileSync(file, 'utf-8');
     const parsed = parseTextContent(file, content);
@@ -99,12 +110,28 @@ function parseDirectory(path: string): RawSession[] {
 }
 
 function parseTextContent(sessionPath: string, content: string): RawSession | null {
-  const lines = content.split(/\r?\n/).map((line) => line.trim()).filter(Boolean);
+  const lines = content
+    .split(/\r?\n/)
+    .map((line) => line.trim())
+    .filter(Boolean);
   if (lines.length === 0) return null;
 
   const messages: RawMessage[] = [];
-  const usageEvents: RawUsageEvent[] = [];
-  const modelUsage = new Map<string, { provider: string; model: string; messageCount: number; inputTokens: number; outputTokens: number; reasoningTokens: number; cacheReadTokens: number; cacheWriteTokens: number; toolCallsCount: number; totalCostUsd: number; }>();
+  const modelUsage = new Map<
+    string,
+    {
+      provider: string;
+      model: string;
+      messageCount: number;
+      inputTokens: number;
+      outputTokens: number;
+      reasoningTokens: number;
+      cacheReadTokens: number;
+      cacheWriteTokens: number;
+      toolCallsCount: number;
+      totalCostUsd: number;
+    }
+  >();
 
   let sessionId = `qwen-${hashString(sessionPath)}`;
   let provider = 'alibaba';
@@ -129,14 +156,24 @@ function parseTextContent(sessionPath: string, content: string): RawSession | nu
     sessionId = pickString(data.sessionId) ?? pickString(data.id) ?? sessionId;
     provider = pickString(data.provider) ?? pickString(data.providerId) ?? provider;
     model = pickString(data.model) ?? pickString(data.modelId) ?? model;
-    projectPath = pickString(data.projectPath) ?? pickString(data.cwd) ?? pickString(data.directory) ?? projectPath;
+    projectPath =
+      pickString(data.projectPath) ??
+      pickString(data.cwd) ??
+      pickString(data.directory) ??
+      projectPath;
     startedAt = pickString(data.startedAt) ?? pickString(data.timestamp) ?? startedAt;
     endedAt = pickString(data.endedAt) ?? pickString(data.timestamp) ?? endedAt;
 
-    const role = normalizeRole(pickString(data.role) ?? pickString(data.type) ?? pickString(data.kind));
+    const role = normalizeRole(
+      pickString(data.role) ?? pickString(data.type) ?? pickString(data.kind),
+    );
     const contentText = extractContent(data.content ?? data.message ?? data.text ?? data.parts);
     if (role && contentText) {
-      messages.push({ role, content: contentText, timestamp: pickString(data.timestamp) ?? new Date().toISOString() });
+      messages.push({
+        role,
+        content: contentText,
+        timestamp: pickString(data.timestamp) ?? new Date().toISOString(),
+      });
     }
 
     const usage = extractUsage(data.usage ?? data.tokenUsage ?? data.tokens ?? data.metrics);
@@ -181,8 +218,14 @@ function parseTextContent(sessionPath: string, content: string): RawSession | nu
     }
   }
 
-  const hasTokens = totalInput > 0 || totalOutput > 0 || totalReasoning > 0 || totalCacheRead > 0 || totalCacheWrite > 0;
-  const confidence: SourceConfidence = hasTokens || totalCost > 0 ? 'HIGH' : seenStructured ? 'MEDIUM' : 'LOW';
+  const hasTokens =
+    totalInput > 0 ||
+    totalOutput > 0 ||
+    totalReasoning > 0 ||
+    totalCacheRead > 0 ||
+    totalCacheWrite > 0;
+  const confidence: SourceConfidence =
+    hasTokens || totalCost > 0 ? 'HIGH' : seenStructured ? 'MEDIUM' : 'LOW';
   const costEstimate = totalCost > 0 ? totalCost : estimateCost(totalInput, totalOutput, model);
 
   if (!messages.length && !hasTokens && costEstimate === 0) return null;
@@ -200,15 +243,19 @@ function parseTextContent(sessionPath: string, content: string): RawSession | nu
     totalCostUsd: costEstimate,
     sourceConfidence: confidence,
     messages,
-    usageEvents: hasTokens ? [{
-      timestamp: startedAt || new Date().toISOString(),
-      inputTokens: totalInput,
-      outputTokens: totalOutput,
-      cacheReadTokens: totalCacheRead,
-      cacheWriteTokens: totalCacheWrite,
-      reasoningTokens: totalReasoning,
-      toolCallsCount: toolCalls,
-    }] : [],
+    usageEvents: hasTokens
+      ? [
+          {
+            timestamp: startedAt || new Date().toISOString(),
+            inputTokens: totalInput,
+            outputTokens: totalOutput,
+            cacheReadTokens: totalCacheRead,
+            cacheWriteTokens: totalCacheWrite,
+            reasoningTokens: totalReasoning,
+            toolCallsCount: toolCalls,
+          },
+        ]
+      : [],
     modelUsage: [...modelUsage.values()],
   };
 }
@@ -217,7 +264,8 @@ function tryParseLine(line: string): Record<string, unknown> | null {
   if (line.startsWith('{') || line.startsWith('[')) {
     try {
       const parsed = JSON.parse(line);
-      if (parsed && typeof parsed === 'object' && !Array.isArray(parsed)) return parsed as Record<string, unknown>;
+      if (parsed && typeof parsed === 'object' && !Array.isArray(parsed))
+        return parsed as Record<string, unknown>;
       return null;
     } catch {
       return null;
@@ -228,7 +276,8 @@ function tryParseLine(line: string): Record<string, unknown> | null {
   if (jsonMatch) {
     try {
       const parsed = JSON.parse(jsonMatch[0]);
-      if (parsed && typeof parsed === 'object' && !Array.isArray(parsed)) return parsed as Record<string, unknown>;
+      if (parsed && typeof parsed === 'object' && !Array.isArray(parsed))
+        return parsed as Record<string, unknown>;
     } catch {
       return null;
     }
@@ -241,7 +290,8 @@ function normalizeRole(value: string | null): RawMessage['role'] | null {
   if (!value) return null;
   const lower = value.toLowerCase();
   if (lower.includes('user')) return 'user';
-  if (lower.includes('assistant') || lower.includes('agent') || lower.includes('model')) return 'assistant';
+  if (lower.includes('assistant') || lower.includes('agent') || lower.includes('model'))
+    return 'assistant';
   if (lower.includes('system')) return 'system';
   if (lower.includes('tool')) return 'tool';
   return null;
@@ -250,27 +300,54 @@ function normalizeRole(value: string | null): RawMessage['role'] | null {
 function extractContent(value: unknown): string {
   if (typeof value === 'string') return value;
   if (Array.isArray(value)) {
-    return value.map((item) => extractContent(item)).filter(Boolean).join('\n');
+    return value
+      .map((item) => extractContent(item))
+      .filter(Boolean)
+      .join('\n');
   }
   if (value && typeof value === 'object') {
     const obj = value as Record<string, unknown>;
     if (typeof obj.text === 'string') return obj.text;
     if (typeof obj.content === 'string') return obj.content;
-    if (Array.isArray(obj.parts)) return obj.parts.map((part) => extractContent(part)).filter(Boolean).join('\n');
+    if (Array.isArray(obj.parts))
+      return obj.parts
+        .map((part) => extractContent(part))
+        .filter(Boolean)
+        .join('\n');
   }
   return '';
 }
 
-function extractUsage(value: unknown): { input: number; output: number; reasoning: number; cacheRead: number; cacheWrite: number; toolCalls: number; } | null {
+function extractUsage(value: unknown): {
+  input: number;
+  output: number;
+  reasoning: number;
+  cacheRead: number;
+  cacheWrite: number;
+  toolCalls: number;
+} | null {
   if (!value || typeof value !== 'object') return null;
   const obj = value as Record<string, unknown>;
-  const input = Number(obj.input_tokens ?? obj.inputTokens ?? obj.prompt_tokens ?? obj.promptTokens ?? 0) || 0;
-  const output = Number(obj.output_tokens ?? obj.outputTokens ?? obj.completion_tokens ?? obj.completionTokens ?? 0) || 0;
+  const input =
+    Number(obj.input_tokens ?? obj.inputTokens ?? obj.prompt_tokens ?? obj.promptTokens ?? 0) || 0;
+  const output =
+    Number(
+      obj.output_tokens ?? obj.outputTokens ?? obj.completion_tokens ?? obj.completionTokens ?? 0,
+    ) || 0;
   const reasoning = Number(obj.reasoning_tokens ?? obj.reasoningTokens ?? 0) || 0;
-  const cacheRead = Number(obj.cached_tokens ?? obj.cache_read_tokens ?? obj.cacheReadTokens ?? 0) || 0;
+  const cacheRead =
+    Number(obj.cached_tokens ?? obj.cache_read_tokens ?? obj.cacheReadTokens ?? 0) || 0;
   const cacheWrite = Number(obj.cache_write_tokens ?? obj.cacheWriteTokens ?? 0) || 0;
   const toolCalls = Number(obj.tool_calls_count ?? obj.toolCallsCount ?? obj.tool_calls ?? 0) || 0;
-  if (input === 0 && output === 0 && reasoning === 0 && cacheRead === 0 && cacheWrite === 0 && toolCalls === 0) return null;
+  if (
+    input === 0 &&
+    output === 0 &&
+    reasoning === 0 &&
+    cacheRead === 0 &&
+    cacheWrite === 0 &&
+    toolCalls === 0
+  )
+    return null;
   return { input, output, reasoning, cacheRead, cacheWrite, toolCalls };
 }
 

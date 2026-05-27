@@ -1,7 +1,17 @@
 import { useState } from 'react';
 import { Link, useParams } from 'react-router-dom';
 import type { LucideIcon } from 'lucide-react';
-import { ArrowLeft, Bot, Clock, Database, DollarSign, MessageSquare, Terminal, Wrench, Zap } from 'lucide-react';
+import {
+  ArrowLeft,
+  Bot,
+  Clock,
+  Database,
+  DollarSign,
+  MessageSquare,
+  Terminal,
+  Wrench,
+  Zap,
+} from 'lucide-react';
 import { BrandBadge, BrandMark } from '../components/brand/BrandMark.js';
 import { Badge } from '../components/ui/Badge.js';
 import { Button } from '../components/ui/Button.js';
@@ -12,7 +22,16 @@ import { ErrorState } from '../components/ui/ErrorState.js';
 import { LoadingState } from '../components/ui/LoadingState.js';
 import { useI18n } from '../components/i18n/LanguageProvider.js';
 import { useApi } from '../hooks/useApi.js';
-import { basename, compactPath, formatCurrency, formatDate, formatDateTime, formatDuration, formatRelativeTime, formatTokens } from '../lib/format.js';
+import {
+  basename,
+  compactPath,
+  formatCurrency,
+  formatDate,
+  formatDateTime,
+  formatDuration,
+  formatRelativeTime,
+  formatTokens,
+} from '../lib/format.js';
 
 interface Message {
   id: number;
@@ -70,7 +89,12 @@ export function SessionDetailPage() {
   const { t } = useI18n();
   const { id } = useParams<{ id: string }>();
   const [openingProject, setOpeningProject] = useState(false);
-  const { data: session, loading, error, refetch } = useApi<SessionDetail>(id ? `/api/sessions/${id}` : null, { immediate: Boolean(id) });
+  const {
+    data: session,
+    loading,
+    error,
+    refetch,
+  } = useApi<SessionDetail>(id ? `/api/sessions/${id}` : null, { immediate: Boolean(id) });
 
   if (loading) return <LoadingState />;
 
@@ -88,7 +112,16 @@ export function SessionDetailPage() {
     );
   }
 
-  if (!session) return <div className="p-6"><EmptyState title={t('session.notFound')} description={t('session.notFound.description')} icon={MessageSquare} /></div>;
+  if (!session)
+    return (
+      <div className="p-6">
+        <EmptyState
+          title={t('session.notFound')}
+          description={t('session.notFound.description')}
+          icon={MessageSquare}
+        />
+      </div>
+    );
 
   const messages = session.messages ?? [];
   const usageEvents = session.usageEvents ?? [];
@@ -113,10 +146,21 @@ export function SessionDetailPage() {
   return (
     <div className="space-y-6 p-6">
       <div className="flex flex-wrap items-center justify-between gap-3">
-        <Link to="/sessions" className="inline-flex items-center gap-2 text-sm font-medium text-muted-foreground transition-colors hover:text-foreground">
+        <Link
+          to="/sessions"
+          className="inline-flex items-center gap-2 text-sm font-medium text-muted-foreground transition-colors hover:text-foreground"
+        >
           <ArrowLeft className="h-4 w-4" /> {t('session.back')}
         </Link>
-        <Badge variant={session.source_confidence === 'HIGH' ? 'success' : session.source_confidence === 'MEDIUM' ? 'default' : 'warning'}>
+        <Badge
+          variant={
+            session.source_confidence === 'HIGH'
+              ? 'success'
+              : session.source_confidence === 'MEDIUM'
+                ? 'default'
+                : 'warning'
+          }
+        >
           {session.source_confidence} confidence
         </Badge>
       </div>
@@ -129,25 +173,71 @@ export function SessionDetailPage() {
               <div className="mb-2 flex flex-wrap items-center gap-2">
                 <BrandBadge value={session.cli} />
                 <BrandBadge value={session.provider} kind="provider" />
-                <span className="text-xs text-subtle-foreground">{formatRelativeTime(session.started_at)}</span>
+                <span className="text-xs text-subtle-foreground">
+                  {formatRelativeTime(session.started_at)}
+                </span>
               </div>
-              <h1 className="truncate text-2xl font-semibold tracking-[-0.04em] text-foreground">Session {session.session_id.slice(0, 12)}</h1>
-              <p className="mt-1 truncate text-sm text-muted-foreground">{compactPath(session.project_path)}</p>
+              <h1 className="truncate text-2xl font-semibold tracking-[-0.04em] text-foreground">
+                Session {session.session_id.slice(0, 12)}
+              </h1>
+              <p className="mt-1 truncate text-sm text-muted-foreground">
+                {compactPath(session.project_path)}
+              </p>
             </div>
           </div>
-          <Button variant="outline" onClick={openProject} disabled={!session.project_exists || openingProject}>
-            {openingProject ? t('session.opening') : session.project_exists ? t('session.openFolder') : t('session.folderMissing')}
+          <Button
+            variant="outline"
+            onClick={openProject}
+            disabled={!session.project_exists || openingProject}
+          >
+            {openingProject
+              ? t('session.opening')
+              : session.project_exists
+                ? t('session.openFolder')
+                : t('session.folderMissing')}
           </Button>
         </CardContent>
       </Card>
 
       <div className="grid grid-cols-2 gap-3 md:grid-cols-3 xl:grid-cols-6">
-        <MetricBadge icon={DollarSign} label={session.cost_source === 'estimated' ? t('session.costEstimated') : t('common.cost')} value={formatCurrency(session.total_cost_usd)} tone="success" />
-        <MetricBadge icon={Database} label={t('common.tokens')} value={formatTokens(totalTokens)} tone="info" />
-        <MetricBadge icon={MessageSquare} label={t('common.messages')} value={String(session.message_count ?? messages.length)} tone="info" />
-        <MetricBadge icon={Wrench} label={t('common.tools')} value={String(session.tool_call_count ?? 0)} tone="warning" />
-        <MetricBadge icon={Clock} label={t('common.duration')} value={formatDuration(session.duration_ms)} tone="success" />
-        <MetricBadge icon={Zap} label={t('common.model')} value={session.model ?? t('common.unknown')} tone="warning" />
+        <MetricBadge
+          icon={DollarSign}
+          label={
+            session.cost_source === 'estimated' ? t('session.costEstimated') : t('common.cost')
+          }
+          value={formatCurrency(session.total_cost_usd)}
+          tone="success"
+        />
+        <MetricBadge
+          icon={Database}
+          label={t('common.tokens')}
+          value={formatTokens(totalTokens)}
+          tone="info"
+        />
+        <MetricBadge
+          icon={MessageSquare}
+          label={t('common.messages')}
+          value={String(session.message_count ?? messages.length)}
+          tone="info"
+        />
+        <MetricBadge
+          icon={Wrench}
+          label={t('common.tools')}
+          value={String(session.tool_call_count ?? 0)}
+          tone="warning"
+        />
+        <MetricBadge
+          icon={Clock}
+          label={t('common.duration')}
+          value={formatDuration(session.duration_ms)}
+          tone="success"
+        />
+        <MetricBadge
+          icon={Zap}
+          label={t('common.model')}
+          value={session.model ?? t('common.unknown')}
+          tone="warning"
+        />
       </div>
 
       <div className="grid grid-cols-1 gap-6 lg:grid-cols-[minmax(0,1fr)_380px]">
@@ -155,13 +245,23 @@ export function SessionDetailPage() {
           <CardHeader className="border-b border-border pb-5">
             <div>
               <CardTitle>{t('session.conversation')}</CardTitle>
-              <p className="mt-1 text-xs text-subtle-foreground">{messages.length} {t('session.normalizedMessages')}</p>
+              <p className="mt-1 text-xs text-subtle-foreground">
+                {messages.length} {t('session.normalizedMessages')}
+              </p>
             </div>
           </CardHeader>
           <CardContent className="p-0">
             <div className="max-h-[68vh] space-y-4 overflow-y-auto p-5">
-              {messages.map((message) => <MessageBubble key={message.id} message={message} />)}
-              {messages.length === 0 && <EmptyState title={t('session.noMessages.title')} description={t('session.noMessages.description')} icon={MessageSquare} />}
+              {messages.map((message) => (
+                <MessageBubble key={message.id} message={message} />
+              ))}
+              {messages.length === 0 && (
+                <EmptyState
+                  title={t('session.noMessages.title')}
+                  description={t('session.noMessages.description')}
+                  icon={MessageSquare}
+                />
+              )}
             </div>
           </CardContent>
         </Card>
@@ -174,11 +274,18 @@ export function SessionDetailPage() {
               </CardHeader>
               <CardContent className="space-y-3 pt-3">
                 {modelUsage.map((item) => (
-                  <div key={`${item.provider}/${item.model}`} className="rounded-2xl border border-border bg-surface-elevated p-3 text-sm">
+                  <div
+                    key={`${item.provider}/${item.model}`}
+                    className="rounded-2xl border border-border bg-surface-elevated p-3 text-sm"
+                  >
                     <div className="flex items-center justify-between gap-3">
                       <div className="min-w-0">
-                        <div className="font-medium text-foreground">{item.provider}/{item.model}</div>
-                        <div className="text-xs text-subtle-foreground">{item.message_count} messages</div>
+                        <div className="font-medium text-foreground">
+                          {item.provider}/{item.model}
+                        </div>
+                        <div className="text-xs text-subtle-foreground">
+                          {item.message_count} messages
+                        </div>
                       </div>
                       <Badge variant="neutral">{formatCurrency(item.total_cost_usd)}</Badge>
                     </div>
@@ -199,7 +306,12 @@ export function SessionDetailPage() {
               <CardTitle>{t('session.tokenUsage')}</CardTitle>
             </CardHeader>
             <CardContent className="space-y-5 pt-3">
-              <TokenUsageBar input={totalInput} output={totalOutput} cacheRead={cacheRead} cacheWrite={cacheWrite} />
+              <TokenUsageBar
+                input={totalInput}
+                output={totalOutput}
+                cacheRead={cacheRead}
+                cacheWrite={cacheWrite}
+              />
               {reasoning > 0 && <DetailRow label="Reasoning" value={formatTokens(reasoning)} />}
             </CardContent>
           </Card>
@@ -214,9 +326,15 @@ export function SessionDetailPage() {
               <DetailRow label="CLI" value={session.cli} />
               <DetailRow label={t('common.provider')} value={session.provider} />
               <DetailRow label={t('common.model')} value={session.model ?? t('common.unknown')} />
-              <DetailRow label={t('session.costSource')} value={session.cost_source ?? t('common.unknown')} />
+              <DetailRow
+                label={t('session.costSource')}
+                value={session.cost_source ?? t('common.unknown')}
+              />
               <DetailRow label={t('common.started')} value={formatDateTime(session.started_at)} />
-              <DetailRow label={t('common.ended')} value={session.ended_at ? formatDateTime(session.ended_at) : '—'} />
+              <DetailRow
+                label={t('common.ended')}
+                value={session.ended_at ? formatDateTime(session.ended_at) : '—'}
+              />
               <DetailRow label={t('common.date')} value={formatDate(session.started_at)} />
               <DetailRow label="Session ID" value={session.session_id} mono />
             </CardContent>
@@ -236,7 +354,17 @@ function DetailMetric({ label, value }: { label: string; value: string }) {
   );
 }
 
-function MetricBadge({ icon: Icon, label, value, tone }: { icon: LucideIcon; label: string; value: string; tone: 'success' | 'warning' | 'info' }) {
+function MetricBadge({
+  icon: Icon,
+  label,
+  value,
+  tone,
+}: {
+  icon: LucideIcon;
+  label: string;
+  value: string;
+  tone: 'success' | 'warning' | 'info';
+}) {
   const toneClass = {
     success: 'bg-success-soft text-success',
     warning: 'bg-warning-soft text-warning',
@@ -250,7 +378,9 @@ function MetricBadge({ icon: Icon, label, value, tone }: { icon: LucideIcon; lab
           <Icon className="h-[18px] w-[18px]" />
         </div>
         <div className="min-w-0">
-          <p className="text-[11px] font-medium uppercase tracking-[0.14em] text-subtle-foreground">{label}</p>
+          <p className="text-[11px] font-medium uppercase tracking-[0.14em] text-subtle-foreground">
+            {label}
+          </p>
           <p className="mt-1 truncate text-sm font-semibold text-foreground">{value}</p>
         </div>
       </CardContent>
@@ -284,7 +414,9 @@ function MessageBubble({ message }: { message: Message }) {
             <span>{message.role}</span>
             <span className="normal-case tracking-normal">{formatDateTime(message.timestamp)}</span>
           </div>
-          <pre className="whitespace-pre-wrap break-words font-sans leading-6 [overflow-wrap:anywhere]">{message.content}</pre>
+          <pre className="whitespace-pre-wrap break-words font-sans leading-6 [overflow-wrap:anywhere]">
+            {message.content}
+          </pre>
         </div>
       </div>
       {isUser && (
@@ -300,7 +432,11 @@ function DetailRow({ label, value, mono }: { label: string; value: string; mono?
   return (
     <div className="flex items-start justify-between gap-4 border-b border-border pb-3 last:border-0 last:pb-0">
       <span className="shrink-0 text-muted-foreground">{label}</span>
-      <span className={`min-w-0 text-right font-medium text-foreground ${mono ? 'break-all font-mono text-xs' : 'truncate'}`}>{value}</span>
+      <span
+        className={`min-w-0 text-right font-medium text-foreground ${mono ? 'break-all font-mono text-xs' : 'truncate'}`}
+      >
+        {value}
+      </span>
     </div>
   );
 }

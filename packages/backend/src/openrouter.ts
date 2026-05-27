@@ -21,9 +21,11 @@ export async function syncOpenRouterPricing(timeoutMs = 8000): Promise<OpenRoute
   const timer = setTimeout(() => controller.abort(), timeoutMs);
 
   try {
-    const response = await fetch('https://openrouter.ai/api/v1/models', { signal: controller.signal });
+    const response = await fetch('https://openrouter.ai/api/v1/models', {
+      signal: controller.signal,
+    });
     if (!response.ok) throw new Error(`OpenRouter returned ${response.status}`);
-    const payload = await response.json() as { data?: OpenRouterModel[] };
+    const payload = (await response.json()) as { data?: OpenRouterModel[] };
     const models = Array.isArray(payload.data) ? payload.data : [];
     const db = getDatabase();
     let synced = 0;
@@ -41,10 +43,16 @@ export async function syncOpenRouterPricing(timeoutMs = 8000): Promise<OpenRoute
     try {
       for (const model of models) {
         const id = model.id?.trim();
-        if (!id) { skipped++; continue; }
+        if (!id) {
+          skipped++;
+          continue;
+        }
         const inputPer1M = Number(model.pricing?.prompt ?? 0) * 1_000_000;
         const outputPer1M = Number(model.pricing?.completion ?? 0) * 1_000_000;
-        if (!(inputPer1M > 0 || outputPer1M > 0)) { skipped++; continue; }
+        if (!(inputPer1M > 0 || outputPer1M > 0)) {
+          skipped++;
+          continue;
+        }
 
         const { provider, modelName } = splitOpenRouterId(id);
         stmt.run([provider, modelName, inputPer1M, outputPer1M, null]);

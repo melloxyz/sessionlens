@@ -1,4 +1,4 @@
-import type { Adapter, Checkpoint, RawSession } from './types.js';
+import type { Adapter, Checkpoint } from './types.js';
 import { getDatabase, saveDatabase } from '../db/connection.js';
 
 export class AdapterRegistry {
@@ -20,7 +20,13 @@ export class AdapterRegistry {
     const db = getDatabase();
     db.run(
       `INSERT OR REPLACE INTO __checkpoints (cli, session_path, last_file_mtime, last_file_size, last_session_id) VALUES (?, ?, ?, ?, ?)`,
-      [cli, sessionPath, checkpoint.lastFileMtime, checkpoint.lastFileSize, checkpoint.lastSessionId],
+      [
+        cli,
+        sessionPath,
+        checkpoint.lastFileMtime,
+        checkpoint.lastFileSize,
+        checkpoint.lastSessionId,
+      ],
     );
     saveDatabase();
   }

@@ -27,31 +27,39 @@ export function useApi<T>(url: string | null, options: UseApiOptions<T> = {}) {
 
     for (let attempt = 0; attempt <= retries; attempt++) {
       try {
-      const res = await fetch(url);
-      const text = await res.text();
-      let json: unknown = null;
-      if (text) {
-        try {
-          json = JSON.parse(text);
-        } catch {
-          json = text;
+        const res = await fetch(url);
+        const text = await res.text();
+        let json: unknown = null;
+        if (text) {
+          try {
+            json = JSON.parse(text);
+          } catch {
+            json = text;
+          }
         }
-      }
 
-      if (!res.ok) {
-        const payload = (json && typeof json === 'object') ? json as Record<string, unknown> : null;
-        const nestedError = payload?.error && typeof payload.error === 'object' ? payload.error as Record<string, unknown> : null;
-        throw {
-          message: nestedError?.message as string ?? payload?.message as string ?? res.statusText ?? 'Request failed',
-          status: res.status,
-          code: (nestedError?.code ?? payload?.code) as string | undefined,
-          details: (nestedError?.details ?? payload?.details ?? text) as string | undefined,
-        } as ApiError;
-      }
+        if (!res.ok) {
+          const payload =
+            json && typeof json === 'object' ? (json as Record<string, unknown>) : null;
+          const nestedError =
+            payload?.error && typeof payload.error === 'object'
+              ? (payload.error as Record<string, unknown>)
+              : null;
+          throw {
+            message:
+              (nestedError?.message as string) ??
+              (payload?.message as string) ??
+              res.statusText ??
+              'Request failed',
+            status: res.status,
+            code: (nestedError?.code ?? payload?.code) as string | undefined,
+            details: (nestedError?.details ?? payload?.details ?? text) as string | undefined,
+          } as ApiError;
+        }
 
-      setData(json as T);
-      setLoading(false);
-      return;
+        setData(json as T);
+        setLoading(false);
+        return;
       } catch (err) {
         lastError = normalizeApiError(err);
         if (attempt >= retries || !isRetryable(lastError)) break;
@@ -76,7 +84,11 @@ function normalizeApiError(err: unknown): ApiError {
 }
 
 function isRetryable(error: ApiError): boolean {
-  return error.status == null || error.status >= 500 || /ECONNREFUSED|Failed to fetch|fetch/i.test(error.details ?? error.message);
+  return (
+    error.status == null ||
+    error.status >= 500 ||
+    /ECONNREFUSED|Failed to fetch|fetch/i.test(error.details ?? error.message)
+  );
 }
 
 function delay(ms: number): Promise<void> {

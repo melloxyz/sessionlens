@@ -31,11 +31,19 @@ export function ErrorState({
               {code && <Badge variant="danger">{code}</Badge>}
             </div>
             <p className="mt-1 text-sm text-subtle-foreground">{message}</p>
-            {details && <pre className="mt-3 overflow-auto rounded-2xl border border-border bg-surface-muted p-3 text-xs text-muted-foreground">{details}</pre>}
+            {details && (
+              <pre className="mt-3 overflow-auto rounded-2xl border border-border bg-surface-muted p-3 text-xs text-muted-foreground">
+                {details}
+              </pre>
+            )}
           </div>
         </div>
         {onRetry && (
-          <button type="button" onClick={onRetry} className="inline-flex rounded-xl border border-border px-3 py-2 text-sm font-medium text-foreground transition-colors hover:bg-surface-elevated">
+          <button
+            type="button"
+            onClick={onRetry}
+            className="inline-flex rounded-xl border border-border px-3 py-2 text-sm font-medium text-foreground transition-colors hover:bg-surface-elevated"
+          >
             Retry
           </button>
         )}

@@ -30,11 +30,14 @@ export function ThemeProvider({ children }: { children: ReactNode }) {
     window.localStorage.setItem(STORAGE_KEY, theme);
   }, [theme]);
 
-  const value = useMemo<ThemeContextValue>(() => ({
-    theme,
-    setTheme: setThemeState,
-    toggleTheme: () => setThemeState((current) => (current === 'dark' ? 'light' : 'dark')),
-  }), [theme]);
+  const value = useMemo<ThemeContextValue>(
+    () => ({
+      theme,
+      setTheme: setThemeState,
+      toggleTheme: () => setThemeState((current) => (current === 'dark' ? 'light' : 'dark')),
+    }),
+    [theme],
+  );
 
   return <ThemeContext.Provider value={value}>{children}</ThemeContext.Provider>;
 }

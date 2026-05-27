@@ -10,7 +10,8 @@ export function Card({ className, interactive, ...props }: CardProps) {
     <div
       className={cn(
         'premium-card rounded-2xl border border-border bg-surface text-foreground',
-        interactive && 'transition-all duration-200 hover:-translate-y-0.5 hover:border-border-strong hover:bg-surface-elevated',
+        interactive &&
+          'transition-all duration-200 hover:-translate-y-0.5 hover:border-border-strong hover:bg-surface-elevated',
         className,
       )}
       {...props}
@@ -19,7 +20,9 @@ export function Card({ className, interactive, ...props }: CardProps) {
 }
 
 export function CardHeader({ className, ...props }: HTMLAttributes<HTMLDivElement>) {
-  return <div className={cn('flex items-center justify-between gap-4 p-5 pb-0', className)} {...props} />;
+  return (
+    <div className={cn('flex items-center justify-between gap-4 p-5 pb-0', className)} {...props} />
+  );
 }
 
 export function CardContent({ className, ...props }: HTMLAttributes<HTMLDivElement>) {
@@ -27,7 +30,12 @@ export function CardContent({ className, ...props }: HTMLAttributes<HTMLDivEleme
 }
 
 export function CardTitle({ className, ...props }: HTMLAttributes<HTMLHeadingElement>) {
-  return <h3 className={cn('text-sm font-semibold tracking-[-0.01em] text-foreground', className)} {...props} />;
+  return (
+    <h3
+      className={cn('text-sm font-semibold tracking-[-0.01em] text-foreground', className)}
+      {...props}
+    />
+  );
 }
 
 export function CardDescription({ className, ...props }: HTMLAttributes<HTMLParagraphElement>) {

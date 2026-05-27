@@ -1,4 +1,12 @@
-export type CliProvider = 'claude' | 'opencode' | 'codex' | 'gemini' | 'kimi' | 'aider' | 'qwen' | 'antigravity';
+export type CliProvider =
+  | 'claude'
+  | 'opencode'
+  | 'codex'
+  | 'gemini'
+  | 'kimi'
+  | 'aider'
+  | 'qwen'
+  | 'antigravity';
 
 export type SourceConfidence = 'HIGH' | 'MEDIUM' | 'LOW';
 

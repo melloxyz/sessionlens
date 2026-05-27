@@ -48,10 +48,7 @@ export function createClaudeAdapter(): Adapter {
       };
     },
 
-    async parse(
-      sessionPath: string,
-      _checkpoint: Checkpoint | null,
-    ): Promise<RawSession[]> {
+    async parse(sessionPath: string, _checkpoint: Checkpoint | null): Promise<RawSession[]> {
       if (!existsSync(sessionPath)) return [];
 
       const raw = await readFile(sessionPath, 'utf-8');
@@ -76,22 +73,22 @@ export function createClaudeAdapter(): Adapter {
   };
 }
 
-function buildClaudeSessions(
-  events: Record<string, unknown>[],
-  _filePath: string,
-): RawSession[] {
-  const sessionMap = new Map<string, {
-    messages: RawMessage[];
-    firstTs: string;
-    lastTs: string;
-    cwd: string | null;
-    totalInputTokens: number;
-    totalOutputTokens: number;
-    totalCacheRead: number;
-    totalCacheWrite: number;
-    toolCallCount: number;
-    totalCost: number | null;
-  }>();
+function buildClaudeSessions(events: Record<string, unknown>[], _filePath: string): RawSession[] {
+  const sessionMap = new Map<
+    string,
+    {
+      messages: RawMessage[];
+      firstTs: string;
+      lastTs: string;
+      cwd: string | null;
+      totalInputTokens: number;
+      totalOutputTokens: number;
+      totalCacheRead: number;
+      totalCacheWrite: number;
+      toolCallCount: number;
+      totalCost: number | null;
+    }
+  >();
 
   for (const evt of events) {
     const type = evt.type as string;
@@ -178,9 +175,10 @@ function buildClaudeSessions(
 
     const startTime = data.firstTs || new Date().toISOString();
     const endTime = data.lastTs || startTime;
-    const durationMs = data.firstTs && data.lastTs
-      ? new Date(data.lastTs).getTime() - new Date(data.firstTs).getTime()
-      : null;
+    const durationMs =
+      data.firstTs && data.lastTs
+        ? new Date(data.lastTs).getTime() - new Date(data.firstTs).getTime()
+        : null;
 
     // Calculate cost from pricing table if we have tokens
     let totalCostUsd: number | null = data.totalCost;
@@ -204,15 +202,19 @@ function buildClaudeSessions(
       totalCostUsd,
       sourceConfidence: confidence,
       messages: data.messages,
-      usageEvents: hasTokenData ? [{
-        timestamp: startTime,
-        inputTokens: data.totalInputTokens,
-        outputTokens: data.totalOutputTokens,
-        cacheReadTokens: data.totalCacheRead,
-        cacheWriteTokens: data.totalCacheWrite,
-        reasoningTokens: 0,
-        toolCallsCount: data.toolCallCount,
-      }] : [],
+      usageEvents: hasTokenData
+        ? [
+            {
+              timestamp: startTime,
+              inputTokens: data.totalInputTokens,
+              outputTokens: data.totalOutputTokens,
+              cacheReadTokens: data.totalCacheRead,
+              cacheWriteTokens: data.totalCacheWrite,
+              reasoningTokens: 0,
+              toolCallsCount: data.toolCallCount,
+            },
+          ]
+        : [],
     });
   }
 
@@ -220,7 +222,7 @@ function buildClaudeSessions(
 }
 
 function estimateCost(inputTokens: number, outputTokens: number): number {
-  const INPUT_RATE = 3.00 / 1_000_000;
+  const INPUT_RATE = 3.0 / 1_000_000;
   const OUTPUT_RATE = 15.0 / 1_000_000;
   return inputTokens * INPUT_RATE + outputTokens * OUTPUT_RATE;
 }

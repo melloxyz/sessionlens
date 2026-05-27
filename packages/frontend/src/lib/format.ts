@@ -58,5 +58,11 @@ export function compactPath(path: string | null | undefined): string {
 
 export function basename(path: string | null | undefined): string {
   if (!path) return 'unknown';
-  return path.replace(/^\\\\\?\\/, '').split(/[\\/]/).filter(Boolean).pop() ?? path;
+  return (
+    path
+      .replace(/^\\\\\?\\/, '')
+      .split(/[\\/]/)
+      .filter(Boolean)
+      .pop() ?? path
+  );
 }

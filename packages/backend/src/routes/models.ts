@@ -24,17 +24,22 @@ export function registerModelRoutes(app: FastifyInstance): void {
     }
     if (usedOnly) where += ` AND COALESCE(u.session_count, 0) > 0`;
 
-    const orderBy = sort === 'price-input' ? 'm.input_cost_per_million ASC, m.output_cost_per_million ASC' :
-      sort === 'price-output' ? 'm.output_cost_per_million ASC, m.input_cost_per_million ASC' :
-      sort === 'name' ? 'm.provider ASC, m.model_name ASC' :
-      `CASE WHEN COALESCE(u.session_count, 0) > 0 THEN 0 WHEN ${popularCase('m.model_name')} THEN 1 ELSE 2 END,
+    const orderBy =
+      sort === 'price-input'
+        ? 'm.input_cost_per_million ASC, m.output_cost_per_million ASC'
+        : sort === 'price-output'
+          ? 'm.output_cost_per_million ASC, m.input_cost_per_million ASC'
+          : sort === 'name'
+            ? 'm.provider ASC, m.model_name ASC'
+            : `CASE WHEN COALESCE(u.session_count, 0) > 0 THEN 0 WHEN ${popularCase('m.model_name')} THEN 1 ELSE 2 END,
        COALESCE(u.session_count, 0) DESC,
        ${popularRank('m.model_name')} ASC,
        COALESCE(u.total_cost, 0) DESC,
        m.provider ASC,
        m.model_name ASC`;
 
-    const results = db.exec(`
+    const results = db.exec(
+      `
       WITH usage AS (
         SELECT LOWER(COALESCE(provider, 'unknown')) AS provider,
                LOWER(COALESCE(model, 'unknown')) AS model_name,
@@ -76,7 +81,9 @@ export function registerModelRoutes(app: FastifyInstance): void {
       ${where}
       ORDER BY ${orderBy}
       LIMIT 500
-    `, params);
+    `,
+      params,
+    );
 
     const data: Record<string, unknown>[] = [];
     if (results.length > 0 && results[0].values && results[0].columns) {
@@ -106,7 +113,13 @@ export function registerModelRoutes(app: FastifyInstance): void {
       return result;
     } catch (error) {
       reply.code(502);
-      return { error: { code: 'OPENROUTER_SYNC_FAILED', message: 'Failed to sync OpenRouter pricing', details: String(error) } };
+      return {
+        error: {
+          code: 'OPENROUTER_SYNC_FAILED',
+          message: 'Failed to sync OpenRouter pricing',
+          details: String(error),
+        },
+      };
     }
   });
 
@@ -117,7 +130,13 @@ export function registerModelRoutes(app: FastifyInstance): void {
       return result;
     } catch (error) {
       reply.code(502);
-      return { error: { code: 'OPENROUTER_SYNC_FAILED', message: 'Failed to sync OpenRouter pricing', details: String(error) } };
+      return {
+        error: {
+          code: 'OPENROUTER_SYNC_FAILED',
+          message: 'Failed to sync OpenRouter pricing',
+          details: String(error),
+        },
+      };
     }
   });
 }

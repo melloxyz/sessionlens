@@ -14,7 +14,9 @@ const DateRangeContext = createContext<{
 function getInitialRange(): DateRangeValue {
   if (typeof window === 'undefined') return '30d';
   const stored = window.localStorage.getItem(STORAGE_KEY);
-  return stored === '7d' || stored === '30d' || stored === '90d' || stored === 'all' ? stored : '30d';
+  return stored === '7d' || stored === '30d' || stored === '90d' || stored === 'all'
+    ? stored
+    : '30d';
 }
 
 export function getDateRangeParams(range: DateRangeValue): Record<string, string> {

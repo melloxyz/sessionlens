@@ -7,7 +7,12 @@ interface TokenUsageBarProps {
   cacheWrite?: number;
 }
 
-export function TokenUsageBar({ input, output, cacheRead = 0, cacheWrite = 0 }: TokenUsageBarProps) {
+export function TokenUsageBar({
+  input,
+  output,
+  cacheRead = 0,
+  cacheWrite = 0,
+}: TokenUsageBarProps) {
   const total = Math.max(1, input + output + cacheRead + cacheWrite);
   const rows = [
     { label: 'Input', value: input, color: 'bg-success' },
@@ -20,7 +25,11 @@ export function TokenUsageBar({ input, output, cacheRead = 0, cacheWrite = 0 }: 
     <div className="space-y-4">
       <div className="flex h-3 overflow-hidden rounded-full bg-surface-muted ring-1 ring-border">
         {rows.map((row) => (
-          <div key={row.label} className={row.color} style={{ width: `${(row.value / total) * 100}%` }} />
+          <div
+            key={row.label}
+            className={row.color}
+            style={{ width: `${(row.value / total) * 100}%` }}
+          />
         ))}
       </div>
       <div className="space-y-3">
@@ -30,7 +39,12 @@ export function TokenUsageBar({ input, output, cacheRead = 0, cacheWrite = 0 }: 
               <span className={`h-2.5 w-2.5 rounded-full ${row.color}`} />
               {row.label}
             </div>
-            <div className="font-medium text-foreground">{formatTokens(row.value)} <span className="text-xs text-subtle-foreground">({((row.value / total) * 100).toFixed(1)}%)</span></div>
+            <div className="font-medium text-foreground">
+              {formatTokens(row.value)}{' '}
+              <span className="text-xs text-subtle-foreground">
+                ({((row.value / total) * 100).toFixed(1)}%)
+              </span>
+            </div>
           </div>
         ))}
       </div>

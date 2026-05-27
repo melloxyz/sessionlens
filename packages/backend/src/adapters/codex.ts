@@ -51,9 +51,7 @@ export function createCodexAdapter(): Adapter {
 
       const paths = new Set<string>();
       try {
-        const results = db.exec(
-          'SELECT rollout_path FROM threads WHERE archived = 0',
-        );
+        const results = db.exec('SELECT rollout_path FROM threads WHERE archived = 0');
         if (results.length > 0 && results[0].values) {
           for (const row of results[0].values) {
             paths.add(row[0] as string);
@@ -79,10 +77,7 @@ export function createCodexAdapter(): Adapter {
       };
     },
 
-    async parse(
-      sessionPath: string,
-      _checkpoint: Checkpoint | null,
-    ): Promise<RawSession[]> {
+    async parse(sessionPath: string, _checkpoint: Checkpoint | null): Promise<RawSession[]> {
       if (!existsSync(sessionPath)) return [];
 
       const raw = await readFile(sessionPath, 'utf-8');
@@ -110,10 +105,7 @@ export function createCodexAdapter(): Adapter {
   };
 }
 
-function buildSession(
-  events: Record<string, unknown>[],
-  thread: ThreadRow,
-): RawSession[] {
+function buildSession(events: Record<string, unknown>[], thread: ThreadRow): RawSession[] {
   const messages: RawMessage[] = [];
   const usageEvents: RawUsageEvent[] = [];
   let toolCallCount = 0;
@@ -183,27 +175,30 @@ function buildSession(
   const endTime = thread.updated_at_ms
     ? new Date(thread.updated_at_ms).toISOString()
     : lastTs || startTime;
-  const durationMs = thread.created_at_ms && thread.updated_at_ms
-    ? thread.updated_at_ms - thread.created_at_ms
-    : null;
+  const durationMs =
+    thread.created_at_ms && thread.updated_at_ms
+      ? thread.updated_at_ms - thread.created_at_ms
+      : null;
 
   const confidence: SourceConfidence = totalTokens > 0 ? 'MEDIUM' : 'LOW';
   const totalCostUsd = totalTokens > 0 ? estimateCodexCost(totalTokens, thread.model) : null;
 
-  return [{
-    sessionId: thread.id,
-    provider: thread.model_provider ?? 'openai',
-    cli: 'codex',
-    projectPath: thread.cwd ? thread.cwd.replace(/^\\\\\?\\/, '') : null,
-    model: thread.model,
-    startedAt: startTime,
-    endedAt: endTime,
-    durationMs,
-    totalCostUsd,
-    sourceConfidence: confidence,
-    messages,
-    usageEvents,
-  }];
+  return [
+    {
+      sessionId: thread.id,
+      provider: thread.model_provider ?? 'openai',
+      cli: 'codex',
+      projectPath: thread.cwd ? thread.cwd.replace(/^\\\\\?\\/, '') : null,
+      model: thread.model,
+      startedAt: startTime,
+      endedAt: endTime,
+      durationMs,
+      totalCostUsd,
+      sourceConfidence: confidence,
+      messages,
+      usageEvents,
+    },
+  ];
 }
 
 function extractContent(content: unknown): string {
@@ -257,9 +252,9 @@ async function getThreadData(sessionPath: string): Promise<ThreadRow | null> {
 
 const COST_RATES: Record<string, { input: number; output: number }> = {
   'gpt-5.4': { input: 1.75, output: 14.0 },
-  'gpt-5.4-mini': { input: 0.15, output: 0.60 },
-  'gpt-5.5': { input: 2.50, output: 20.0 },
-  'gpt-5.3-codex': { input: 3.00, output: 15.0 },
+  'gpt-5.4-mini': { input: 0.15, output: 0.6 },
+  'gpt-5.5': { input: 2.5, output: 20.0 },
+  'gpt-5.3-codex': { input: 3.0, output: 15.0 },
 };
 
 function estimateCodexCost(totalTokens: number, model: string | null): number {

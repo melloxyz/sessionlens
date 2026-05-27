@@ -60,7 +60,7 @@ export async function runIngestion(): Promise<IngestionStatus> {
 }
 
 async function runIngestionInternal(): Promise<IngestionStatus> {
-  const db = getDatabase();
+  const _db = getDatabase();
   const errors: string[] = [];
   let newSessions = 0;
   let updatedSessions = 0;
@@ -169,7 +169,7 @@ function persistModelUsage(sessionPk: number, rows: RawModelUsage[]): void {
   }
 }
 
-function aggregateModelUsage(raw: RawSession): RawModelUsage[] {
+function _aggregateModelUsage(raw: RawSession): RawModelUsage[] {
   const provider = raw.provider || 'unknown';
   const model = raw.model || 'unknown';
   const usage = raw.usageEvents.reduce(
@@ -187,18 +187,20 @@ function aggregateModelUsage(raw: RawSession): RawModelUsage[] {
   const cost = raw.totalCostUsd ?? 0;
   if (usage.input === 0 && usage.output === 0 && usage.toolCalls === 0 && cost === 0) return [];
 
-  return [{
-    provider,
-    model,
-    messageCount: raw.messages.length,
-    inputTokens: usage.input,
-    outputTokens: usage.output,
-    reasoningTokens: usage.reasoning,
-    cacheReadTokens: usage.cacheRead,
-    cacheWriteTokens: usage.cacheWrite,
-    toolCallsCount: usage.toolCalls,
-    totalCostUsd: cost,
-  }];
+  return [
+    {
+      provider,
+      model,
+      messageCount: raw.messages.length,
+      inputTokens: usage.input,
+      outputTokens: usage.output,
+      reasoningTokens: usage.reasoning,
+      cacheReadTokens: usage.cacheRead,
+      cacheWriteTokens: usage.cacheWrite,
+      toolCallsCount: usage.toolCalls,
+      totalCostUsd: cost,
+    },
+  ];
 }
 
 function upsertSession(raw: RawSession): 'new' | 'updated' | 'skipped' {
@@ -274,8 +276,12 @@ function upsertSession(raw: RawSession): 'new' | 'updated' | 'skipped' {
 
 export function backfillEstimatedCosts(): void {
   const db = getDatabase();
-  db.run(`UPDATE sessions SET cost_source = 'actual' WHERE COALESCE(total_cost_usd, 0) > 0 AND cost_source = 'unknown'`);
-  const sessions = db.exec(`SELECT id, provider, cli, session_id, project_path, model, started_at, ended_at, duration_ms, source_confidence FROM sessions`);
+  db.run(
+    `UPDATE sessions SET cost_source = 'actual' WHERE COALESCE(total_cost_usd, 0) > 0 AND cost_source = 'unknown'`,
+  );
+  const sessions = db.exec(
+    `SELECT id, provider, cli, session_id, project_path, model, started_at, ended_at, duration_ms, source_confidence FROM sessions`,
+  );
   if (sessions.length === 0 || !sessions[0].values) return;
 
   for (const row of sessions[0].values) {
@@ -284,7 +290,9 @@ export function backfillEstimatedCosts(): void {
       `SELECT timestamp, input_tokens, output_tokens, cache_read_tokens, cache_write_tokens, reasoning_tokens, tool_calls_count FROM usage_events WHERE session_fk = ?`,
       [id],
     );
-    const messageCount = Number(db.exec(`SELECT COUNT(*) FROM messages WHERE session_fk = ?`, [id])[0]?.values?.[0]?.[0] ?? 0);
+    const messageCount = Number(
+      db.exec(`SELECT COUNT(*) FROM messages WHERE session_fk = ?`, [id])[0]?.values?.[0]?.[0] ?? 0,
+    );
     const raw: RawSession = {
       sessionId: String(row[3]),
       provider: String(row[1]),
@@ -296,7 +304,11 @@ export function backfillEstimatedCosts(): void {
       durationMs: row[8] == null ? null : Number(row[8]),
       totalCostUsd: null,
       sourceConfidence: row[9] as RawSession['sourceConfidence'],
-      messages: Array.from({ length: messageCount }, () => ({ role: 'user', content: '', timestamp: String(row[6]) })),
+      messages: Array.from({ length: messageCount }, () => ({
+        role: 'user',
+        content: '',
+        timestamp: String(row[6]),
+      })),
       usageEvents: (usageRows[0]?.values ?? []).map((usage) => ({
         timestamp: String(usage[0]),
         inputTokens: Number(usage[1]) || 0,
@@ -309,7 +321,10 @@ export function backfillEstimatedCosts(): void {
     };
     const cost = resolveSessionCost(raw);
     if (cost.costSource === 'unknown') continue;
-    db.run(`UPDATE sessions SET total_cost_usd = ?, cost_source = ? WHERE id = ? AND (total_cost_usd IS NULL OR total_cost_usd = 0 OR cost_source = 'unknown')`, [cost.totalCostUsd, cost.costSource, id]);
+    db.run(
+      `UPDATE sessions SET total_cost_usd = ?, cost_source = ? WHERE id = ? AND (total_cost_usd IS NULL OR total_cost_usd = 0 OR cost_source = 'unknown')`,
+      [cost.totalCostUsd, cost.costSource, id],
+    );
     persistModelUsage(id, cost.modelUsage);
   }
   saveDatabase();
@@ -321,10 +336,12 @@ function insertEvents(
   raw: RawSession,
 ): void {
   for (const msg of raw.messages) {
-    db.run(
-      `INSERT INTO messages (session_fk, role, content, timestamp) VALUES (?, ?, ?, ?)`,
-      [sessionFk, msg.role, msg.content.substring(0, 10000), msg.timestamp],
-    );
+    db.run(`INSERT INTO messages (session_fk, role, content, timestamp) VALUES (?, ?, ?, ?)`, [
+      sessionFk,
+      msg.role,
+      msg.content.substring(0, 10000),
+      msg.timestamp,
+    ]);
   }
 
   for (const ue of raw.usageEvents) {

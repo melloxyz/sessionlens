@@ -63,10 +63,7 @@ export interface Adapter {
 
   computeCheckpoint(sessionPath: string): Promise<Checkpoint | null>;
 
-  parse(
-    sessionPath: string,
-    checkpoint: Checkpoint | null,
-  ): Promise<RawSession[]>;
+  parse(sessionPath: string, checkpoint: Checkpoint | null): Promise<RawSession[]>;
 
   normalize(raw: RawSession): RawSession;
 }

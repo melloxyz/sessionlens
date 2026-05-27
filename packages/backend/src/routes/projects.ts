@@ -28,7 +28,8 @@ export function registerProjectRoutes(app: FastifyInstance): void {
           for (let i = 0; i < cols.length; i++) {
             obj[cols[i]] = row[i];
           }
-          obj.exists = typeof obj.path === 'string' && obj.path !== 'unknown' ? existsSync(obj.path) : false;
+          obj.exists =
+            typeof obj.path === 'string' && obj.path !== 'unknown' ? existsSync(obj.path) : false;
           data.push(obj);
         }
       }
@@ -36,7 +37,13 @@ export function registerProjectRoutes(app: FastifyInstance): void {
       return { data };
     } catch (error) {
       reply.code(500);
-      return { error: { code: 'PROJECTS_FAILED', message: 'Failed to load projects', details: String(error) } };
+      return {
+        error: {
+          code: 'PROJECTS_FAILED',
+          message: 'Failed to load projects',
+          details: String(error),
+        },
+      };
     }
   });
 
@@ -44,7 +51,10 @@ export function registerProjectRoutes(app: FastifyInstance): void {
     const { id } = req.params as { id: string };
     const db = getDatabase();
 
-    const projResult = db.exec(`SELECT * FROM projects WHERE id = ? AND NOT EXISTS (SELECT 1 FROM hidden_projects hp WHERE hp.path = projects.path)`, [Number(id)]);
+    const projResult = db.exec(
+      `SELECT * FROM projects WHERE id = ? AND NOT EXISTS (SELECT 1 FROM hidden_projects hp WHERE hp.path = projects.path)`,
+      [Number(id)],
+    );
     if (projResult.length === 0 || !projResult[0].values || projResult[0].values.length === 0) {
       reply.code(404);
       return { error: { code: 'PROJECT_NOT_FOUND', message: 'Project not found' } };
@@ -54,7 +64,8 @@ export function registerProjectRoutes(app: FastifyInstance): void {
     const cols = projResult[0].columns;
     const row = projResult[0].values[0];
     for (let i = 0; i < cols.length; i++) proj[cols[i]] = row[i];
-    proj.exists = typeof proj.path === 'string' && proj.path !== 'unknown' ? existsSync(proj.path) : false;
+    proj.exists =
+      typeof proj.path === 'string' && proj.path !== 'unknown' ? existsSync(proj.path) : false;
 
     const path = proj.path as string;
 
@@ -137,25 +148,56 @@ export function registerProjectRoutes(app: FastifyInstance): void {
         reply.code(404);
         return { error: { code: 'PROJECT_NOT_FOUND', message: 'Project not found' } };
       }
-      db.run(`INSERT OR REPLACE INTO hidden_projects (path, hidden_at) VALUES (?, datetime('now'))`, [path]);
+      db.run(
+        `INSERT OR REPLACE INTO hidden_projects (path, hidden_at) VALUES (?, datetime('now'))`,
+        [path],
+      );
       saveDatabase();
       return { ok: true };
     } catch (error) {
       reply.code(500);
-      return { error: { code: 'PROJECT_HIDE_FAILED', message: 'Failed to hide project', details: String(error) } };
+      return {
+        error: {
+          code: 'PROJECT_HIDE_FAILED',
+          message: 'Failed to hide project',
+          details: String(error),
+        },
+      };
     }
   });
 }
 
-function getGitCommits(path: string): { branch: string | null; commits: { hash: string; author: string; date: string; message: string }[] } {
+function getGitCommits(path: string): {
+  branch: string | null;
+  commits: { hash: string; author: string; date: string; message: string }[];
+} {
   if (!path || path === 'unknown' || !existsSync(path)) return { branch: null, commits: [] };
   try {
-    const branch = execFileSync('git', ['-C', path, 'rev-parse', '--abbrev-ref', 'HEAD'], { encoding: 'utf-8', timeout: 3000 }).trim() || null;
-    const log = execFileSync('git', ['-C', path, 'log', '-n', '20', '--date=iso-strict', '--pretty=format:%h%x1f%an%x1f%ad%x1f%s'], { encoding: 'utf-8', timeout: 3000 });
-    const commits = log.split('\n').filter(Boolean).map((line) => {
-      const [hash, author, date, message] = line.split('\x1f');
-      return { hash: hash ?? '', author: author ?? '', date: date ?? '', message: message ?? '' };
-    });
+    const branch =
+      execFileSync('git', ['-C', path, 'rev-parse', '--abbrev-ref', 'HEAD'], {
+        encoding: 'utf-8',
+        timeout: 3000,
+      }).trim() || null;
+    const log = execFileSync(
+      'git',
+      [
+        '-C',
+        path,
+        'log',
+        '-n',
+        '20',
+        '--date=iso-strict',
+        '--pretty=format:%h%x1f%an%x1f%ad%x1f%s',
+      ],
+      { encoding: 'utf-8', timeout: 3000 },
+    );
+    const commits = log
+      .split('\n')
+      .filter(Boolean)
+      .map((line) => {
+        const [hash, author, date, message] = line.split('\x1f');
+        return { hash: hash ?? '', author: author ?? '', date: date ?? '', message: message ?? '' };
+      });
     return { branch, commits };
   } catch {
     return { branch: null, commits: [] };

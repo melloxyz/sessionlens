@@ -1,7 +1,7 @@
 import { existsSync, readdirSync, readFileSync, statSync } from 'node:fs';
 import { join } from 'node:path';
 import { homedir } from 'node:os';
-import type { Adapter, Checkpoint, RawMessage, RawSession, RawUsageEvent } from './types.js';
+import type { Adapter, Checkpoint, RawMessage, RawSession } from './types.js';
 import type { CliProvider, SourceConfidence } from '@sessionless/shared';
 
 const GEMINI_HOME = join(homedir(), '.gemini');
@@ -57,12 +57,28 @@ export function createGeminiAdapter(): Adapter {
     async parse(sessionPath: string, _checkpoint: Checkpoint | null): Promise<RawSession[]> {
       if (!existsSync(sessionPath)) return [];
       const raw = readFileSync(sessionPath, 'utf-8');
-      const lines = raw.split('\n').map((line) => line.trim()).filter(Boolean);
+      const lines = raw
+        .split('\n')
+        .map((line) => line.trim())
+        .filter(Boolean);
       if (lines.length === 0) return [];
 
       const messages: RawMessage[] = [];
-      const usageEvents: RawUsageEvent[] = [];
-      const modelUsage = new Map<string, { provider: string; model: string; messageCount: number; inputTokens: number; outputTokens: number; reasoningTokens: number; cacheReadTokens: number; cacheWriteTokens: number; toolCallsCount: number; totalCostUsd: number; }>();
+      const modelUsage = new Map<
+        string,
+        {
+          provider: string;
+          model: string;
+          messageCount: number;
+          inputTokens: number;
+          outputTokens: number;
+          reasoningTokens: number;
+          cacheReadTokens: number;
+          cacheWriteTokens: number;
+          toolCallsCount: number;
+          totalCostUsd: number;
+        }
+      >();
       let sessionId = 'unknown';
       let provider = 'google';
       let model: string | null = null;
@@ -96,7 +112,11 @@ export function createGeminiAdapter(): Adapter {
         const role = normalizeRole(pickString(data.role) ?? pickString(data.type));
         const content = extractContent(data.content ?? data.text ?? data.message);
         if (role && content) {
-          messages.push({ role, content, timestamp: pickString(data.timestamp) ?? new Date().toISOString() });
+          messages.push({
+            role,
+            content,
+            timestamp: pickString(data.timestamp) ?? new Date().toISOString(),
+          });
         }
 
         const usage = extractUsage(data.usage ?? data.tokenUsage ?? data.tokens);
@@ -138,38 +158,51 @@ export function createGeminiAdapter(): Adapter {
         modelUsage.set(key, current);
       }
 
-      const hasTokens = totalInput > 0 || totalOutput > 0 || totalReasoning > 0 || totalCacheRead > 0 || totalCacheWrite > 0;
+      const hasTokens =
+        totalInput > 0 ||
+        totalOutput > 0 ||
+        totalReasoning > 0 ||
+        totalCacheRead > 0 ||
+        totalCacheWrite > 0;
       const confidence: SourceConfidence = hasTokens || totalCost > 0 ? 'HIGH' : 'MEDIUM';
       const totalTokens = totalInput + totalOutput;
-      const costEstimate = totalCost > 0 ? totalCost : estimateGeminiCost(totalInput, totalOutput, model);
+      const costEstimate =
+        totalCost > 0 ? totalCost : estimateGeminiCost(totalInput, totalOutput, model);
 
       if (!messages.length && !hasTokens && costEstimate === 0) return [];
 
       const orderedModelUsage = [...modelUsage.values()];
 
-      return [{
-        sessionId,
-        provider,
-        cli: 'gemini',
-        projectPath,
-        model,
-        startedAt: startedAt || new Date().toISOString(),
-        endedAt: endedAt || startedAt || new Date().toISOString(),
-        durationMs: null,
-        totalCostUsd: costEstimate,
-        sourceConfidence: confidence,
-        messages,
-        usageEvents: totalTokens > 0 ? [{
-          timestamp: startedAt || new Date().toISOString(),
-          inputTokens: totalInput,
-          outputTokens: totalOutput,
-          cacheReadTokens: totalCacheRead,
-          cacheWriteTokens: totalCacheWrite,
-          reasoningTokens: totalReasoning,
-          toolCallsCount: toolCalls,
-        }] : [],
-        modelUsage: orderedModelUsage,
-      }];
+      return [
+        {
+          sessionId,
+          provider,
+          cli: 'gemini',
+          projectPath,
+          model,
+          startedAt: startedAt || new Date().toISOString(),
+          endedAt: endedAt || startedAt || new Date().toISOString(),
+          durationMs: null,
+          totalCostUsd: costEstimate,
+          sourceConfidence: confidence,
+          messages,
+          usageEvents:
+            totalTokens > 0
+              ? [
+                  {
+                    timestamp: startedAt || new Date().toISOString(),
+                    inputTokens: totalInput,
+                    outputTokens: totalOutput,
+                    cacheReadTokens: totalCacheRead,
+                    cacheWriteTokens: totalCacheWrite,
+                    reasoningTokens: totalReasoning,
+                    toolCallsCount: toolCalls,
+                  },
+                ]
+              : [],
+          modelUsage: orderedModelUsage,
+        },
+      ];
     },
 
     normalize(raw: RawSession): RawSession {
@@ -190,7 +223,8 @@ function normalizeRole(value: string | null): RawMessage['role'] | null {
   if (!value) return null;
   const lower = value.toLowerCase();
   if (lower.includes('user')) return 'user';
-  if (lower.includes('assistant') || lower.includes('model') || lower.includes('agent')) return 'assistant';
+  if (lower.includes('assistant') || lower.includes('model') || lower.includes('agent'))
+    return 'assistant';
   if (lower.includes('system')) return 'system';
   if (lower.includes('tool')) return 'tool';
   return null;
@@ -202,7 +236,8 @@ function extractContent(value: unknown): string {
     return value
       .map((item) => {
         if (typeof item === 'string') return item;
-        if (item && typeof item === 'object' && 'text' in item) return String((item as Record<string, unknown>).text ?? '');
+        if (item && typeof item === 'object' && 'text' in item)
+          return String((item as Record<string, unknown>).text ?? '');
         return '';
       })
       .filter(Boolean)
@@ -215,20 +250,40 @@ function extractContent(value: unknown): string {
   return '';
 }
 
-function extractUsage(value: unknown): { input: number; output: number; reasoning: number; cacheRead: number; cacheWrite: number; toolCalls: number; } | null {
+function extractUsage(value: unknown): {
+  input: number;
+  output: number;
+  reasoning: number;
+  cacheRead: number;
+  cacheWrite: number;
+  toolCalls: number;
+} | null {
   if (!value || typeof value !== 'object') return null;
   const obj = value as Record<string, unknown>;
   const input = Number(obj.input_tokens ?? obj.inputTokens ?? obj.prompt_tokens ?? 0) || 0;
   const output = Number(obj.output_tokens ?? obj.outputTokens ?? obj.completion_tokens ?? 0) || 0;
   const reasoning = Number(obj.reasoning_tokens ?? obj.reasoningTokens ?? 0) || 0;
-  const cacheRead = Number(obj.cached_tokens ?? obj.cache_read_tokens ?? obj.cacheReadTokens ?? 0) || 0;
+  const cacheRead =
+    Number(obj.cached_tokens ?? obj.cache_read_tokens ?? obj.cacheReadTokens ?? 0) || 0;
   const cacheWrite = Number(obj.cache_write_tokens ?? obj.cacheWriteTokens ?? 0) || 0;
   const toolCalls = Number(obj.tool_calls_count ?? obj.toolCallsCount ?? obj.tool_calls ?? 0) || 0;
-  if (input === 0 && output === 0 && reasoning === 0 && cacheRead === 0 && cacheWrite === 0 && toolCalls === 0) return null;
+  if (
+    input === 0 &&
+    output === 0 &&
+    reasoning === 0 &&
+    cacheRead === 0 &&
+    cacheWrite === 0 &&
+    toolCalls === 0
+  )
+    return null;
   return { input, output, reasoning, cacheRead, cacheWrite, toolCalls };
 }
 
-function estimateGeminiCost(inputTokens: number, outputTokens: number, model: string | null): number {
+function estimateGeminiCost(
+  inputTokens: number,
+  outputTokens: number,
+  model: string | null,
+): number {
   const normalized = model?.toLowerCase() ?? 'gemini-2.5-pro';
   const pricing = GEMINI_PRICING[normalized] ?? GEMINI_PRICING['gemini-2.5-pro'];
   return (inputTokens / 1_000_000) * pricing.input + (outputTokens / 1_000_000) * pricing.output;
@@ -236,6 +291,6 @@ function estimateGeminiCost(inputTokens: number, outputTokens: number, model: st
 
 const GEMINI_PRICING: Record<string, { input: number; output: number }> = {
   'gemini-2.5-pro': { input: 1.25, output: 10.0 },
-  'gemini-2.5-flash': { input: 0.15, output: 0.60 },
-  'gemini-2.0-flash': { input: 0.10, output: 0.40 },
+  'gemini-2.5-flash': { input: 0.15, output: 0.6 },
+  'gemini-2.0-flash': { input: 0.1, output: 0.4 },
 };

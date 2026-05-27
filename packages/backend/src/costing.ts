@@ -22,11 +22,27 @@ const FALLBACK_PRICING: Record<string, Omit<PricingRow, 'provider' | 'modelName'
   'gpt-5.4': { inputCostPerMillion: 1.75, outputCostPerMillion: 14, cachedInputCost: 0.875 },
   'gpt-5.4-mini': { inputCostPerMillion: 0.15, outputCostPerMillion: 0.6, cachedInputCost: 0.075 },
   'gpt-5.3-codex': { inputCostPerMillion: 3, outputCostPerMillion: 15, cachedInputCost: null },
-  'claude-sonnet-4-20250514': { inputCostPerMillion: 3, outputCostPerMillion: 15, cachedInputCost: 0.3 },
-  'claude-opus-4-20250514': { inputCostPerMillion: 15, outputCostPerMillion: 75, cachedInputCost: 1.5 },
-  'gemini-3.1-pro-preview': { inputCostPerMillion: 2, outputCostPerMillion: 12, cachedInputCost: null },
+  'claude-sonnet-4-20250514': {
+    inputCostPerMillion: 3,
+    outputCostPerMillion: 15,
+    cachedInputCost: 0.3,
+  },
+  'claude-opus-4-20250514': {
+    inputCostPerMillion: 15,
+    outputCostPerMillion: 75,
+    cachedInputCost: 1.5,
+  },
+  'gemini-3.1-pro-preview': {
+    inputCostPerMillion: 2,
+    outputCostPerMillion: 12,
+    cachedInputCost: null,
+  },
   'gemini-2.5-pro': { inputCostPerMillion: 1.25, outputCostPerMillion: 10, cachedInputCost: null },
-  'gemini-2.5-flash': { inputCostPerMillion: 0.15, outputCostPerMillion: 0.6, cachedInputCost: null },
+  'gemini-2.5-flash': {
+    inputCostPerMillion: 0.15,
+    outputCostPerMillion: 0.6,
+    cachedInputCost: null,
+  },
   'qwen-plus': { inputCostPerMillion: 0.4, outputCostPerMillion: 1.2, cachedInputCost: null },
 };
 
@@ -34,12 +50,17 @@ export function resolveSessionCost(raw: RawSession): CostResolution {
   const rows = raw.modelUsage?.length ? raw.modelUsage : aggregateUsage(raw);
   const actualTotal = normalizeCost(raw.totalCostUsd) ?? sumActualCost(rows);
   if (actualTotal != null && actualTotal > 0) {
-    return { totalCostUsd: actualTotal, costSource: 'actual', modelUsage: distributeActualCost(rows, actualTotal) };
+    return {
+      totalCostUsd: actualTotal,
+      costSource: 'actual',
+      modelUsage: distributeActualCost(rows, actualTotal),
+    };
   }
 
   const estimatedRows = rows.map((row) => ({ ...row, totalCostUsd: estimateRowCost(row) ?? 0 }));
   const estimatedTotal = estimatedRows.reduce((sum, row) => sum + row.totalCostUsd, 0);
-  if (estimatedTotal > 0) return { totalCostUsd: estimatedTotal, costSource: 'estimated', modelUsage: estimatedRows };
+  if (estimatedTotal > 0)
+    return { totalCostUsd: estimatedTotal, costSource: 'estimated', modelUsage: estimatedRows };
 
   return { totalCostUsd: null, costSource: 'unknown', modelUsage: rows };
 }
@@ -54,21 +75,35 @@ function aggregateUsage(raw: RawSession): RawModelUsage[] {
       cacheWriteTokens: sum.cacheWriteTokens + (event.cacheWriteTokens ?? 0),
       toolCallsCount: sum.toolCallsCount + (event.toolCallsCount ?? 0),
     }),
-    { inputTokens: 0, outputTokens: 0, reasoningTokens: 0, cacheReadTokens: 0, cacheWriteTokens: 0, toolCallsCount: 0 },
+    {
+      inputTokens: 0,
+      outputTokens: 0,
+      reasoningTokens: 0,
+      cacheReadTokens: 0,
+      cacheWriteTokens: 0,
+      toolCallsCount: 0,
+    },
   );
 
   if (
-    usage.inputTokens === 0 && usage.outputTokens === 0 && usage.reasoningTokens === 0 &&
-    usage.cacheReadTokens === 0 && usage.cacheWriteTokens === 0 && usage.toolCallsCount === 0
-  ) return [];
+    usage.inputTokens === 0 &&
+    usage.outputTokens === 0 &&
+    usage.reasoningTokens === 0 &&
+    usage.cacheReadTokens === 0 &&
+    usage.cacheWriteTokens === 0 &&
+    usage.toolCallsCount === 0
+  )
+    return [];
 
-  return [{
-    provider: raw.provider || 'unknown',
-    model: raw.model || 'unknown',
-    messageCount: raw.messages.length,
-    totalCostUsd: normalizeCost(raw.totalCostUsd) ?? 0,
-    ...usage,
-  }];
+  return [
+    {
+      provider: raw.provider || 'unknown',
+      model: raw.model || 'unknown',
+      messageCount: raw.messages.length,
+      totalCostUsd: normalizeCost(raw.totalCostUsd) ?? 0,
+      ...usage,
+    },
+  ];
 }
 
 function sumActualCost(rows: RawModelUsage[]): number | null {
@@ -79,12 +114,17 @@ function sumActualCost(rows: RawModelUsage[]): number | null {
 function distributeActualCost(rows: RawModelUsage[], totalCost: number): RawModelUsage[] {
   if (rows.length === 0) return rows;
   const rowTotal = sumActualCost(rows);
-  if (rowTotal != null) return rows.map((row) => ({ ...row, totalCostUsd: normalizeCost(row.totalCostUsd) ?? 0 }));
+  if (rowTotal != null)
+    return rows.map((row) => ({ ...row, totalCostUsd: normalizeCost(row.totalCostUsd) ?? 0 }));
 
   const tokenWeights = rows.map((row) => billableTokens(row));
   const totalWeight = tokenWeights.reduce((sum, value) => sum + value, 0);
-  if (totalWeight <= 0) return rows.map((row, index) => ({ ...row, totalCostUsd: index === 0 ? totalCost : 0 }));
-  return rows.map((row, index) => ({ ...row, totalCostUsd: totalCost * (tokenWeights[index] / totalWeight) }));
+  if (totalWeight <= 0)
+    return rows.map((row, index) => ({ ...row, totalCostUsd: index === 0 ? totalCost : 0 }));
+  return rows.map((row, index) => ({
+    ...row,
+    totalCostUsd: totalCost * (tokenWeights[index] / totalWeight),
+  }));
 }
 
 function estimateRowCost(row: RawModelUsage): number | null {
@@ -94,7 +134,8 @@ function estimateRowCost(row: RawModelUsage): number | null {
   const cachedRead = Math.max(0, row.cacheReadTokens);
   const output = Math.max(0, row.outputTokens + row.reasoningTokens);
   const inputCost = (input / 1_000_000) * pricing.inputCostPerMillion;
-  const cachedCost = (cachedRead / 1_000_000) * (pricing.cachedInputCost ?? pricing.inputCostPerMillion);
+  const cachedCost =
+    (cachedRead / 1_000_000) * (pricing.cachedInputCost ?? pricing.inputCostPerMillion);
   const outputCost = (output / 1_000_000) * pricing.outputCostPerMillion;
   const total = inputCost + cachedCost + outputCost;
   return total > 0 ? total : null;
@@ -120,9 +161,15 @@ function findPricing(provider: string, model: string): PricingRow | null {
   const modelOnlyRow = mapPricing(modelOnly);
   if (modelOnlyRow) return modelOnlyRow;
 
-  const fallbackKey = Object.keys(FALLBACK_PRICING).find((key) => normalizedModel === key || normalizedModel.includes(key));
+  const fallbackKey = Object.keys(FALLBACK_PRICING).find(
+    (key) => normalizedModel === key || normalizedModel.includes(key),
+  );
   if (!fallbackKey) return null;
-  return { provider: normalizedProvider, modelName: normalizedModel, ...FALLBACK_PRICING[fallbackKey] };
+  return {
+    provider: normalizedProvider,
+    modelName: normalizedModel,
+    ...FALLBACK_PRICING[fallbackKey],
+  };
 }
 
 function mapPricing(result: ReturnType<ReturnType<typeof getDatabase>['exec']>): PricingRow | null {
@@ -154,5 +201,11 @@ function normalizeModel(value: string): string {
 }
 
 function billableTokens(row: RawModelUsage): number {
-  return row.inputTokens + row.outputTokens + row.reasoningTokens + row.cacheReadTokens + row.cacheWriteTokens;
+  return (
+    row.inputTokens +
+    row.outputTokens +
+    row.reasoningTokens +
+    row.cacheReadTokens +
+    row.cacheWriteTokens
+  );
 }

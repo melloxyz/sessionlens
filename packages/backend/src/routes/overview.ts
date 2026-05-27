@@ -34,19 +34,29 @@ export function registerOverviewRoutes(app: FastifyInstance): void {
 
       let rangeClause = '';
       const rangeParams: string[] = [];
-      if (dateFrom) { rangeClause += ' AND started_at >= ?'; rangeParams.push(dateFrom); }
-      if (dateTo) { rangeClause += ' AND started_at <= ?'; rangeParams.push(dateTo); }
+      if (dateFrom) {
+        rangeClause += ' AND started_at >= ?';
+        rangeParams.push(dateFrom);
+      }
+      if (dateTo) {
+        rangeClause += ' AND started_at <= ?';
+        rangeParams.push(dateTo);
+      }
       const params = [
-        todayStr, ...rangeParams,
-        weekStr, ...rangeParams,
-        monthStr, ...rangeParams,
+        todayStr,
+        ...rangeParams,
+        weekStr,
+        ...rangeParams,
+        monthStr,
+        ...rangeParams,
         ...rangeParams,
         ...rangeParams,
         ...rangeParams,
         ...rangeParams,
       ];
 
-      const results = db.exec(`
+      const results = db.exec(
+        `
         SELECT
           (SELECT COALESCE(SUM(total_cost_usd), 0) FROM sessions WHERE ${VISIBLE_SESSION_SQL} AND started_at >= ?${rangeClause}) AS today_spend,
           (SELECT COALESCE(SUM(total_cost_usd), 0) FROM sessions WHERE ${VISIBLE_SESSION_SQL} AND started_at >= ?${rangeClause}) AS weekly_spend,
@@ -55,7 +65,9 @@ export function registerOverviewRoutes(app: FastifyInstance): void {
           (SELECT COUNT(*) FROM sessions WHERE ${VISIBLE_SESSION_SQL}${rangeClause}) AS session_count,
           (SELECT COALESCE(AVG(total_cost_usd), 0) FROM sessions WHERE ${VISIBLE_SESSION_SQL} AND total_cost_usd IS NOT NULL${rangeClause}) AS avg_cost,
           (SELECT cli FROM sessions WHERE ${VISIBLE_SESSION_SQL}${rangeClause} GROUP BY cli ORDER BY COUNT(*) DESC LIMIT 1) AS most_used_cli
-      `, params);
+      `,
+        params,
+      );
 
       if (results.length === 0 || !results[0].values) {
         return {
@@ -81,7 +93,13 @@ export function registerOverviewRoutes(app: FastifyInstance): void {
       };
     } catch (error) {
       reply.code(500);
-      return { error: { code: 'OVERVIEW_FAILED', message: 'Failed to load overview', details: String(error) } };
+      return {
+        error: {
+          code: 'OVERVIEW_FAILED',
+          message: 'Failed to load overview',
+          details: String(error),
+        },
+      };
     }
   });
 }

@@ -81,11 +81,13 @@ const dictionaries = {
     'projects.top.title': 'Top projects',
     'projects.top.description': 'Highest local AI spend across visible workspaces.',
     'projects.all.title': 'All projects',
-    'projects.all.description': 'Search, sort and hide projects without deleting anything from disk.',
+    'projects.all.description':
+      'Search, sort and hide projects without deleting anything from disk.',
     'projects.hide.help': 'Hide from analytics',
     'project.failed': 'Project failed to load',
     'project.notFound.title': 'Project not found',
-    'project.notFound.description': 'This project may have been removed or the local database has not indexed it yet.',
+    'project.notFound.description':
+      'This project may have been removed or the local database has not indexed it yet.',
     'project.totalCost': 'Total Cost',
     'project.avgCost': 'Avg Cost',
     'project.gitRemote': 'Git Remote',
@@ -93,7 +95,8 @@ const dictionaries = {
     'project.modelDistribution': 'Model Distribution',
     'project.gitCommits': 'Git commits',
     'project.noCommits.title': 'No git commits found',
-    'project.noCommits.description': 'Commit history appears when the project folder exists and is a git repository.',
+    'project.noCommits.description':
+      'Commit history appears when the project folder exists and is a git repository.',
     'project.back': 'Back to projects',
     'project.overview': 'Overview',
     'project.lastActivity': 'Last activity',
@@ -113,7 +116,8 @@ const dictionaries = {
     'session.conversation': 'Conversation',
     'session.normalizedMessages': 'normalized messages from this local session',
     'session.noMessages.title': 'No messages in this session',
-    'session.noMessages.description': 'The adapter found session metadata, but no normalized messages were available.',
+    'session.noMessages.description':
+      'The adapter found session metadata, but no normalized messages were available.',
     'session.modelsUsed': 'Models Used',
     'session.tokenUsage': 'Token Usage',
     'session.metadata': 'Metadata',
@@ -130,7 +134,8 @@ const dictionaries = {
     'dashboard.spendByModel': 'Spend by Model',
     'dashboard.openSession': 'Open in Session Explorer',
     'dashboard.noSpend.title': 'No spend data yet',
-    'dashboard.noSpend.description': 'Cost distribution will appear after sessions with spend are indexed.',
+    'dashboard.noSpend.description':
+      'Cost distribution will appear after sessions with spend are indexed.',
     'analytics.failed': 'Analytics failed to load',
     'analytics.failed.message': 'One or more analytics requests failed.',
     'analytics.byModel': 'By Model',
@@ -151,16 +156,20 @@ const dictionaries = {
     'analytics.productivity': 'Productivity Analytics',
     'analytics.multiModel': 'Multi-Model Usage',
     'analytics.noInsights.title': 'No insights yet',
-    'analytics.noInsights.description': 'Run more sessions or ingest newer history to surface patterns.',
+    'analytics.noInsights.description':
+      'Run more sessions or ingest newer history to surface patterns.',
     'analytics.noAnomalies.title': 'No anomalies detected',
     'analytics.noAnomalies.description': 'Current sessions do not exceed the baseline thresholds.',
     'analytics.noProductivity.title': 'No productivity data yet',
-    'analytics.noProductivity.description': 'Tool call efficiency will appear after the next ingest cycle.',
+    'analytics.noProductivity.description':
+      'Tool call efficiency will appear after the next ingest cycle.',
     'analytics.noMultiModel.title': 'No multi-model data yet',
-    'analytics.noMultiModel.description': 'OpenCode sessions will populate this after the next ingest cycle.',
+    'analytics.noMultiModel.description':
+      'OpenCode sessions will populate this after the next ingest cycle.',
     'models.failed': 'Models failed to load',
     'models.noPricing.title': 'No model pricing found',
-    'models.noPricing.description': 'Pricing rows will appear after seeds or configured models are available.',
+    'models.noPricing.description':
+      'Pricing rows will appear after seeds or configured models are available.',
     'models.search.placeholder': 'Search models by name or provider',
     'models.allProviders': 'All providers',
     'models.sortRecommended': 'Recommended',
@@ -171,9 +180,11 @@ const dictionaries = {
     'models.syncOpenRouter': 'Sync OpenRouter',
     'models.syncing': 'Syncing',
     'models.usedTitle': 'Models used by you',
-    'models.usedDescription': 'Detected from your local sessions and ranked before popular catalog models.',
+    'models.usedDescription':
+      'Detected from your local sessions and ranked before popular catalog models.',
     'models.catalogTitle': 'Model catalog',
-    'models.catalogDescription': 'Search OpenRouter and seeded pricing by provider, popularity and usage.',
+    'models.catalogDescription':
+      'Search OpenRouter and seeded pricing by provider, popularity and usage.',
     'models.inputPer1M': 'Input $/1M',
     'models.outputPer1M': 'Output $/1M',
     'models.cachePer1M': 'Cache $/1M',
@@ -190,11 +201,13 @@ const dictionaries = {
     'analytics.groupBy': 'Group by',
     'analytics.metric': 'Metric',
     'analytics.summaryTitle': 'Executive summary',
-    'analytics.summaryDescription': 'A quick read of spend, activity and model usage for the selected filters.',
+    'analytics.summaryDescription':
+      'A quick read of spend, activity and model usage for the selected filters.',
     'analytics.trendsTitle': 'Trends',
     'analytics.trendsDescription': 'How spend and token volume moved over time.',
     'analytics.explorerTitle': 'Breakdown explorer',
-    'analytics.explorerDescription': 'Compare spend, sessions or tokens across your selected dimension.',
+    'analytics.explorerDescription':
+      'Compare spend, sessions or tokens across your selected dimension.',
     'analytics.productivityTitle': 'Productivity',
     'analytics.modelUsageTitle': 'Model usage',
     'common.input': 'Input',
@@ -229,7 +242,8 @@ const dictionaries = {
     'analytics.avgCostToolCall': 'Avg cost / tool call',
     'analytics.filesModifiedSession': 'Files modified / session',
     'analytics.pendingSource': 'Pending source',
-    'analytics.filesNote': 'Files modified per session will be added once a reliable adapter source exists.',
+    'analytics.filesNote':
+      'Files modified per session will be added once a reliable adapter source exists.',
     'analytics.topToolSessions': 'Top Tool-Heavy Sessions',
     'analytics.topToolSessionsDescription': 'Sessions with the highest number of tool calls',
     'analytics.messagesTool': 'Msgs/tool',
@@ -237,9 +251,12 @@ const dictionaries = {
     'analytics.multiModelDescription': 'Cost and tokens by provider/model across sessions',
     'analytics.multiModelNotes': 'Multi-Model Notes',
     'analytics.multiModelNotesDescription': 'What we can and cannot infer right now',
-    'analytics.opencodeNote': 'OpenCode multi-model usage is persisted per provider/model and aggregated into the analytics report.',
-    'analytics.singleModelNote': 'Claude and Codex still appear as single-model sessions unless the source provides more than one model entry.',
-    'analytics.filesDeferredNote': '`files modified per session` stays deferred until a real adapter source exists.',
+    'analytics.opencodeNote':
+      'OpenCode multi-model usage is persisted per provider/model and aggregated into the analytics report.',
+    'analytics.singleModelNote':
+      'Claude and Codex still appear as single-model sessions unless the source provides more than one model entry.',
+    'analytics.filesDeferredNote':
+      '`files modified per session` stays deferred until a real adapter source exists.',
     'analytics.insight': 'Insight',
     'analytics.anomaly': 'Anomaly',
     'settings.appearance.description': 'Choose how Sessionless looks on this machine.',
@@ -248,7 +265,8 @@ const dictionaries = {
     'settings.language.description': 'Interface language is stored locally in your browser.',
     'settings.english.description': 'Default UI language',
     'settings.portuguese.description': 'Brazilian Portuguese interface',
-    'settings.privacy.description': 'Sessionless reads local CLI state and keeps the product offline-first.',
+    'settings.privacy.description':
+      'Sessionless reads local CLI state and keeps the product offline-first.',
     'settings.noTelemetry': 'No telemetry',
     'settings.noTelemetry.description': 'No product analytics are sent externally.',
     'settings.localPrompts': 'Local prompts',
@@ -257,7 +275,8 @@ const dictionaries = {
     'settings.sqlite.description': 'Usage is normalized into a local file.',
     'settings.ingestion.description': 'Refresh indexed data from supported AI CLIs.',
     'settings.autoIngestion': 'Auto-ingestion',
-    'settings.autoIngestion.description': 'Watch local CLI data and refresh Sessionless after changes are written.',
+    'settings.autoIngestion.description':
+      'Watch local CLI data and refresh Sessionless after changes are written.',
     'settings.enableAutoIngestion': 'Enable auto-ingestion',
     'settings.disableAutoIngestion': 'Disable auto-ingestion',
     'settings.enabled': 'Enabled',
@@ -290,11 +309,13 @@ const dictionaries = {
     'settings.storage': 'Storage',
     'settings.localFile': 'Local file',
     'changelog.hero.title': 'Follow what is changing in Sessionless',
-    'changelog.hero.description': 'A compact product log for improvements, shipped features and the local-first roadmap we are actively building.',
+    'changelog.hero.description':
+      'A compact product log for improvements, shipped features and the local-first roadmap we are actively building.',
     'changelog.shipped': 'Shipped',
     'changelog.inProgress': 'In progress',
     'changelog.entry.models.title': 'Model search and real filters',
-    'changelog.entry.models.1': 'Models now rank your used models first, then popular models, then the rest of the catalog.',
+    'changelog.entry.models.1':
+      'Models now rank your used models first, then popular models, then the rest of the catalog.',
     'changelog.entry.models.2': 'OpenRouter pricing sync updates input/output costs per 1M tokens.',
     'changelog.entry.models.3': 'Analytics filters now apply to report, charts and breakdowns.',
     'changelog.entry.costs.title': 'Cost accuracy and project controls',
@@ -302,7 +323,8 @@ const dictionaries = {
     'changelog.entry.costs.2': 'Estimated costs are calculated from token usage and model pricing.',
     'changelog.entry.costs.3': 'Projects can be hidden without deleting anything from disk.',
     'changelog.entry.ui.title': 'UI polish and Sessionless branding',
-    'changelog.entry.ui.1': 'Navigation, settings and integrations were streamlined for a cleaner workspace.',
+    'changelog.entry.ui.1':
+      'Navigation, settings and integrations were streamlined for a cleaner workspace.',
     'changelog.entry.ui.2': 'The app adopted Sessionless branding across the interface.',
     'changelog.entry.ui.3': 'Light/dark theme controls now live in the sidebar.',
     'changelog.entry.next.title': 'What we are working on next',
@@ -320,7 +342,8 @@ const dictionaries = {
     'changelog.latest': 'Latest',
     'changelog.released': 'Released',
     'changelog.planned': 'Planned',
-    'changelog.latest.description': 'Most recent changes shipped in the current Sessionless milestone.',
+    'changelog.latest.description':
+      'Most recent changes shipped in the current Sessionless milestone.',
     'changelog.released.description': 'Everything already available in the local-first app.',
     'changelog.progress.description': 'Work currently being shaped for the next milestone.',
     'changelog.planned.description': 'Planned improvements after the v0.7.0 foundation release.',
@@ -411,7 +434,8 @@ const dictionaries = {
     'projects.hide.help': 'Ocultar do analytics',
     'project.failed': 'Falha ao carregar projeto',
     'project.notFound.title': 'Projeto não encontrado',
-    'project.notFound.description': 'Este projeto pode ter sido removido ou ainda não foi indexado pelo banco local.',
+    'project.notFound.description':
+      'Este projeto pode ter sido removido ou ainda não foi indexado pelo banco local.',
     'project.totalCost': 'Custo total',
     'project.avgCost': 'Custo médio',
     'project.gitRemote': 'Git Remote',
@@ -419,7 +443,8 @@ const dictionaries = {
     'project.modelDistribution': 'Distribuição por modelo',
     'project.gitCommits': 'Commits git',
     'project.noCommits.title': 'Nenhum commit git encontrado',
-    'project.noCommits.description': 'O histórico aparece quando a pasta existe e é um repositório git.',
+    'project.noCommits.description':
+      'O histórico aparece quando a pasta existe e é um repositório git.',
     'project.back': 'Voltar para projetos',
     'project.overview': 'Overview',
     'project.lastActivity': 'Última atividade',
@@ -439,7 +464,8 @@ const dictionaries = {
     'session.conversation': 'Conversa',
     'session.normalizedMessages': 'mensagens normalizadas desta sessão local',
     'session.noMessages.title': 'Sem mensagens nesta sessão',
-    'session.noMessages.description': 'O adapter encontrou metadados da sessão, mas não havia mensagens normalizadas disponíveis.',
+    'session.noMessages.description':
+      'O adapter encontrou metadados da sessão, mas não havia mensagens normalizadas disponíveis.',
     'session.modelsUsed': 'Modelos usados',
     'session.tokenUsage': 'Uso de tokens',
     'session.metadata': 'Metadados',
@@ -456,7 +482,8 @@ const dictionaries = {
     'dashboard.spendByModel': 'Gasto por modelo',
     'dashboard.openSession': 'Abrir no explorador de sessões',
     'dashboard.noSpend.title': 'Sem dados de gasto ainda',
-    'dashboard.noSpend.description': 'A distribuição de custos aparece após indexar sessões com gasto.',
+    'dashboard.noSpend.description':
+      'A distribuição de custos aparece após indexar sessões com gasto.',
     'analytics.failed': 'Falha ao carregar analytics',
     'analytics.failed.message': 'Uma ou mais requisições de analytics falharam.',
     'analytics.byModel': 'Por modelo',
@@ -477,16 +504,20 @@ const dictionaries = {
     'analytics.productivity': 'Analytics de produtividade',
     'analytics.multiModel': 'Uso multi-modelo',
     'analytics.noInsights.title': 'Sem insights ainda',
-    'analytics.noInsights.description': 'Rode mais sessões ou faça uma nova ingestão para revelar padrões.',
+    'analytics.noInsights.description':
+      'Rode mais sessões ou faça uma nova ingestão para revelar padrões.',
     'analytics.noAnomalies.title': 'Nenhuma anomalia detectada',
     'analytics.noAnomalies.description': 'As sessões atuais não excedem os limites da baseline.',
     'analytics.noProductivity.title': 'Sem dados de produtividade ainda',
-    'analytics.noProductivity.description': 'A eficiência por ferramenta aparece após a próxima ingestão.',
+    'analytics.noProductivity.description':
+      'A eficiência por ferramenta aparece após a próxima ingestão.',
     'analytics.noMultiModel.title': 'Sem dados multi-modelo ainda',
-    'analytics.noMultiModel.description': 'Sessões OpenCode irão preencher isto após a próxima ingestão.',
+    'analytics.noMultiModel.description':
+      'Sessões OpenCode irão preencher isto após a próxima ingestão.',
     'models.failed': 'Falha ao carregar modelos',
     'models.noPricing.title': 'Nenhum preço de modelo encontrado',
-    'models.noPricing.description': 'Os preços aparecem após seeds ou modelos configurados estarem disponíveis.',
+    'models.noPricing.description':
+      'Os preços aparecem após seeds ou modelos configurados estarem disponíveis.',
     'models.search.placeholder': 'Buscar modelos por nome ou provider',
     'models.allProviders': 'Todos os providers',
     'models.sortRecommended': 'Recomendados',
@@ -497,9 +528,11 @@ const dictionaries = {
     'models.syncOpenRouter': 'Sincronizar OpenRouter',
     'models.syncing': 'Sincronizando',
     'models.usedTitle': 'Modelos usados por você',
-    'models.usedDescription': 'Detectados nas suas sessões locais e priorizados antes dos modelos populares do catálogo.',
+    'models.usedDescription':
+      'Detectados nas suas sessões locais e priorizados antes dos modelos populares do catálogo.',
     'models.catalogTitle': 'Catálogo de modelos',
-    'models.catalogDescription': 'Busque preços do OpenRouter e seeds por provider, popularidade e uso.',
+    'models.catalogDescription':
+      'Busque preços do OpenRouter e seeds por provider, popularidade e uso.',
     'models.inputPer1M': 'Entrada $/1M',
     'models.outputPer1M': 'Saída $/1M',
     'models.cachePer1M': 'Cache $/1M',
@@ -516,7 +549,8 @@ const dictionaries = {
     'analytics.groupBy': 'Agrupar por',
     'analytics.metric': 'Métrica',
     'analytics.summaryTitle': 'Resumo executivo',
-    'analytics.summaryDescription': 'Uma leitura rápida de gasto, atividade e modelos para os filtros selecionados.',
+    'analytics.summaryDescription':
+      'Uma leitura rápida de gasto, atividade e modelos para os filtros selecionados.',
     'analytics.trendsTitle': 'Tendências',
     'analytics.trendsDescription': 'Como gasto e volume de tokens mudaram ao longo do tempo.',
     'analytics.explorerTitle': 'Explorador de breakdown',
@@ -555,7 +589,8 @@ const dictionaries = {
     'analytics.avgCostToolCall': 'Custo médio / chamada',
     'analytics.filesModifiedSession': 'Arquivos modificados / sessão',
     'analytics.pendingSource': 'Fonte pendente',
-    'analytics.filesNote': 'Arquivos modificados por sessão serão adicionados quando houver uma fonte confiável no adapter.',
+    'analytics.filesNote':
+      'Arquivos modificados por sessão serão adicionados quando houver uma fonte confiável no adapter.',
     'analytics.topToolSessions': 'Sessões com mais ferramentas',
     'analytics.topToolSessionsDescription': 'Sessões com o maior número de chamadas de ferramenta',
     'analytics.messagesTool': 'Msgs/ferramenta',
@@ -563,9 +598,12 @@ const dictionaries = {
     'analytics.multiModelDescription': 'Custo e tokens por provider/modelo nas sessões',
     'analytics.multiModelNotes': 'Notas multi-modelo',
     'analytics.multiModelNotesDescription': 'O que podemos e não podemos inferir agora',
-    'analytics.opencodeNote': 'O uso multi-modelo do OpenCode é persistido por provider/modelo e agregado no relatório de analytics.',
-    'analytics.singleModelNote': 'Claude e Codex ainda aparecem como sessões de modelo único, a menos que a fonte forneça mais de um modelo.',
-    'analytics.filesDeferredNote': '`files modified per session` permanece adiado até existir uma fonte real no adapter.',
+    'analytics.opencodeNote':
+      'O uso multi-modelo do OpenCode é persistido por provider/modelo e agregado no relatório de analytics.',
+    'analytics.singleModelNote':
+      'Claude e Codex ainda aparecem como sessões de modelo único, a menos que a fonte forneça mais de um modelo.',
+    'analytics.filesDeferredNote':
+      '`files modified per session` permanece adiado até existir uma fonte real no adapter.',
     'analytics.insight': 'Insight',
     'analytics.anomaly': 'Anomalia',
     'settings.appearance.description': 'Escolha como o Sessionless aparece nesta máquina.',
@@ -574,7 +612,8 @@ const dictionaries = {
     'settings.language.description': 'O idioma da interface fica salvo localmente no navegador.',
     'settings.english.description': 'Idioma padrão da interface',
     'settings.portuguese.description': 'Interface em português do Brasil',
-    'settings.privacy.description': 'O Sessionless lê estado local das CLIs e mantém o produto offline-first.',
+    'settings.privacy.description':
+      'O Sessionless lê estado local das CLIs e mantém o produto offline-first.',
     'settings.noTelemetry': 'Sem telemetria',
     'settings.noTelemetry.description': 'Nenhuma analytics de produto é enviada externamente.',
     'settings.localPrompts': 'Prompts locais',
@@ -583,7 +622,8 @@ const dictionaries = {
     'settings.sqlite.description': 'O uso é normalizado em um arquivo local.',
     'settings.ingestion.description': 'Atualize dados indexados das AI CLIs suportadas.',
     'settings.autoIngestion': 'Auto-ingestão',
-    'settings.autoIngestion.description': 'Observa dados locais das CLIs e atualiza o Sessionless quando mudanças são gravadas.',
+    'settings.autoIngestion.description':
+      'Observa dados locais das CLIs e atualiza o Sessionless quando mudanças são gravadas.',
     'settings.enableAutoIngestion': 'Ativar auto-ingestão',
     'settings.disableAutoIngestion': 'Desativar auto-ingestão',
     'settings.enabled': 'Ativa',
@@ -616,25 +656,31 @@ const dictionaries = {
     'settings.storage': 'Armazenamento',
     'settings.localFile': 'Arquivo local',
     'changelog.hero.title': 'Acompanhe o que muda no Sessionless',
-    'changelog.hero.description': 'Um log compacto do produto com melhorias, recursos entregues e o roadmap local-first que estamos construindo.',
+    'changelog.hero.description':
+      'Um log compacto do produto com melhorias, recursos entregues e o roadmap local-first que estamos construindo.',
     'changelog.shipped': 'Entregue',
     'changelog.inProgress': 'Em andamento',
     'changelog.entry.models.title': 'Busca de modelos e filtros reais',
-    'changelog.entry.models.1': 'Modelos agora priorizam os usados por você, depois modelos populares e depois o restante do catálogo.',
-    'changelog.entry.models.2': 'Sync com OpenRouter atualiza custos de entrada/saída por 1M tokens.',
-    'changelog.entry.models.3': 'Filtros de Analytics agora afetam relatório, gráficos e breakdowns.',
+    'changelog.entry.models.1':
+      'Modelos agora priorizam os usados por você, depois modelos populares e depois o restante do catálogo.',
+    'changelog.entry.models.2':
+      'Sync com OpenRouter atualiza custos de entrada/saída por 1M tokens.',
+    'changelog.entry.models.3':
+      'Filtros de Analytics agora afetam relatório, gráficos e breakdowns.',
     'changelog.entry.costs.title': 'Precisão de custos e controles de projeto',
     'changelog.entry.costs.1': 'Sessões agora rastreiam custo real, estimado e desconhecido.',
     'changelog.entry.costs.2': 'Custos estimados são calculados com tokens e preço do modelo.',
     'changelog.entry.costs.3': 'Projetos podem ser ocultados sem apagar nada do disco.',
     'changelog.entry.ui.title': 'Polimento de UI e marca Sessionless',
-    'changelog.entry.ui.1': 'Navegação, configurações e integrações foram simplificadas para um workspace mais limpo.',
+    'changelog.entry.ui.1':
+      'Navegação, configurações e integrações foram simplificadas para um workspace mais limpo.',
     'changelog.entry.ui.2': 'O app adotou a marca Sessionless em toda a interface.',
     'changelog.entry.ui.3': 'Controles de tema claro/escuro agora ficam na sidebar.',
     'changelog.entry.next.title': 'O que vem a seguir',
     'changelog.entry.next.1': 'Validação mais robusta de adapters das AI coding CLIs locais.',
     'changelog.entry.next.2': 'Mais clareza para explicar cálculos de custo estimado.',
-    'changelog.entry.next.3': 'Mais controles locais para projetos ocultos e restauração de visibilidade.',
+    'changelog.entry.next.3':
+      'Mais controles locais para projetos ocultos e restauração de visibilidade.',
     'changelog.status.title': 'Status do projeto',
     'changelog.status.localFirst': 'Local-first',
     'changelog.status.pricing': 'Fonte de preços',
@@ -646,7 +692,8 @@ const dictionaries = {
     'changelog.latest': 'Mais recente',
     'changelog.released': 'Entregue',
     'changelog.planned': 'Planejado',
-    'changelog.latest.description': 'Mudanças mais recentes entregues no milestone atual do Sessionless.',
+    'changelog.latest.description':
+      'Mudanças mais recentes entregues no milestone atual do Sessionless.',
     'changelog.released.description': 'Tudo que já está disponível no app local-first.',
     'changelog.progress.description': 'Trabalho sendo preparado para o próximo milestone.',
     'changelog.planned.description': 'Melhorias planejadas após a release foundation v0.7.0.',
@@ -684,11 +731,14 @@ export function LanguageProvider({ children }: { children: ReactNode }) {
     window.localStorage.setItem(STORAGE_KEY, locale);
   }, [locale]);
 
-  const value = useMemo<LanguageContextValue>(() => ({
-    locale,
-    setLocale: setLocaleState,
-    t: (key) => (dictionaries[locale] as Record<string, string>)[key] ?? key,
-  }), [locale]);
+  const value = useMemo<LanguageContextValue>(
+    () => ({
+      locale,
+      setLocale: setLocaleState,
+      t: (key) => (dictionaries[locale] as Record<string, string>)[key] ?? key,
+    }),
+    [locale],
+  );
 
   return <LanguageContext.Provider value={value}>{children}</LanguageContext.Provider>;
 }

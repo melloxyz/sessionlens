@@ -103,11 +103,15 @@ async function refreshWatchers(): Promise<void> {
   for (const path of watchedPaths) {
     try {
       const stat = statSync(path);
-      const watcher = watch(path, { recursive: SUPPORTS_RECURSIVE_WATCH && stat.isDirectory() }, (eventType, filename) => {
-        const eventPath = filename ? join(path, String(filename)) : path;
-        if (shouldIgnore(eventPath)) return;
-        scheduleAutoIngestion(`${eventType}:${basename(String(filename || path))}`);
-      });
+      const watcher = watch(
+        path,
+        { recursive: SUPPORTS_RECURSIVE_WATCH && stat.isDirectory() },
+        (eventType, filename) => {
+          const eventPath = filename ? join(path, String(filename)) : path;
+          if (shouldIgnore(eventPath)) return;
+          scheduleAutoIngestion(`${eventType}:${basename(String(filename || path))}`);
+        },
+      );
       watcher.on('error', (err) => log?.warn({ err, path }, 'Auto-ingestion watcher failed'));
       watchers.push(watcher);
     } catch (err) {
@@ -197,7 +201,11 @@ function clearDebounce(): void {
 function shouldIgnore(path: string): boolean {
   const normalized = resolve(path).toLowerCase();
   const dbPath = resolve(getDbPath()).toLowerCase();
-  return normalized === dbPath || normalized.endsWith('sessionless.db') || normalized.endsWith('sessionless.db-journal');
+  return (
+    normalized === dbPath ||
+    normalized.endsWith('sessionless.db') ||
+    normalized.endsWith('sessionless.db-journal')
+  );
 }
 
 function samePaths(a: string[], b: string[]): boolean {

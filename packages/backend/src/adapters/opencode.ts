@@ -1,7 +1,14 @@
 import { existsSync, readFileSync } from 'node:fs';
 import { dirname, join } from 'node:path';
 import { homedir } from 'node:os';
-import type { Adapter, Checkpoint, RawSession, RawMessage, RawUsageEvent, RawModelUsage } from './types.js';
+import type {
+  Adapter,
+  Checkpoint,
+  RawSession,
+  RawMessage,
+  RawUsageEvent,
+  RawModelUsage,
+} from './types.js';
 import type { CliProvider, SourceConfidence } from '@sessionless/shared';
 
 const OPENCODE_DB = join(homedir(), '.local', 'share', 'opencode', 'opencode.db');
@@ -15,7 +22,7 @@ async function getSqlJs(): Promise<import('sql.js').SqlJsStatic> {
   return sqlJsStatic;
 }
 
-interface SessionRow {
+interface _SessionRow {
   id: string;
   directory: string | null;
   model: string | null;
@@ -48,7 +55,9 @@ export function createOpencodeAdapter(): Adapter {
         if (results.length > 0 && results[0].values) {
           for (const row of results[0].values) ids.push(row[0] as string);
         }
-      } finally { db.close(); }
+      } finally {
+        db.close();
+      }
       return ids;
     },
 
@@ -65,10 +74,12 @@ export function createOpencodeAdapter(): Adapter {
           return { lastFileMtime: 0, lastFileSize: 0, lastSessionId: sessionId };
         }
         return null;
-      } finally { db.close(); }
+      } finally {
+        db.close();
+      }
     },
 
-    async parse(sessionId: string, _cp: Checkpoint | null): Promise<RawSession[]> {
+    async parse(sessionId: string, _checkpoint: Checkpoint | null): Promise<RawSession[]> {
       const sql = await getSqlJs();
       const db = new sql.Database(readFileSync(OPENCODE_DB));
 
@@ -80,7 +91,11 @@ export function createOpencodeAdapter(): Adapter {
            FROM session WHERE id = ?`,
           [sessionId],
         );
-        if (sessionResults.length === 0 || !sessionResults[0].values || sessionResults[0].values.length === 0) {
+        if (
+          sessionResults.length === 0 ||
+          !sessionResults[0].values ||
+          sessionResults[0].values.length === 0
+        ) {
           return [];
         }
 
@@ -110,7 +125,6 @@ export function createOpencodeAdapter(): Adapter {
             const timeCreated = Number(msgRow[2]);
 
             let role = 'unknown';
-            let perMsgCost = 0;
             let perMsgInput = 0;
             let perMsgOutput = 0;
 
@@ -153,7 +167,9 @@ export function createOpencodeAdapter(): Adapter {
                 if (data.finish === 'tool-calls') current.toolCallsCount += 1;
                 modelUsage.set(key, current);
               }
-            } catch { /* bad JSON */ }
+            } catch {
+              /* bad JSON */
+            }
 
             // Get parts (content) for this message
             const partResults = db.exec(
@@ -161,7 +177,7 @@ export function createOpencodeAdapter(): Adapter {
               [msgId],
             );
 
-            let contentParts: string[] = [];
+            const contentParts: string[] = [];
             let hasToolUse = false;
             if (partResults.length > 0 && partResults[0].values) {
               for (const partRow of partResults[0].values) {
@@ -171,9 +187,13 @@ export function createOpencodeAdapter(): Adapter {
                     contentParts.push(partData.text);
                   } else if (partData.type === 'tool_use' || partData.type === 'tool_call') {
                     hasToolUse = true;
-                    contentParts.push(`[${partData.type}] ${partData.text ?? JSON.stringify(partData)}`);
+                    contentParts.push(
+                      `[${partData.type}] ${partData.text ?? JSON.stringify(partData)}`,
+                    );
                   }
-                } catch { /* bad JSON */ }
+                } catch {
+                  /* bad JSON */
+                }
               }
             }
 
@@ -216,54 +236,78 @@ export function createOpencodeAdapter(): Adapter {
               }
               if (data.providerID) provider = data.providerID;
               if (model) break;
-            } catch { /* skip */ }
+            } catch {
+              /* skip */
+            }
           }
         }
 
         const hasCost = (s.cost as number) != null && (s.cost as number) > 0;
-        const hasTokens = totalInputTokens > 0 || totalOutputTokens > 0 ||
-          ((s.tokens_input as number) ?? 0) > 0 || ((s.tokens_output as number) ?? 0) > 0;
+        const hasTokens =
+          totalInputTokens > 0 ||
+          totalOutputTokens > 0 ||
+          ((s.tokens_input as number) ?? 0) > 0 ||
+          ((s.tokens_output as number) ?? 0) > 0;
         const confidence: SourceConfidence = hasCost ? 'HIGH' : hasTokens ? 'MEDIUM' : 'LOW';
 
         const startTime = (s.time_created as number)
-          ? new Date(s.time_created as number).toISOString() : new Date().toISOString();
+          ? new Date(s.time_created as number).toISOString()
+          : new Date().toISOString();
         const endTime = (s.time_updated as number)
-          ? new Date(s.time_updated as number).toISOString() : startTime;
-        const durationMs = ((s.time_updated as number) && (s.time_created as number))
-          ? (s.time_updated as number) - (s.time_created as number) : null;
+          ? new Date(s.time_updated as number).toISOString()
+          : startTime;
+        const durationMs =
+          (s.time_updated as number) && (s.time_created as number)
+            ? (s.time_updated as number) - (s.time_created as number)
+            : null;
 
         // Aggregate usage events
         const usageEvents: RawUsageEvent[] = [];
-        const finalInput = totalInputTokens > 0 ? totalInputTokens : ((s.tokens_input as number) ?? 0);
-        const finalOutput = totalOutputTokens > 0 ? totalOutputTokens : ((s.tokens_output as number) ?? 0);
+        const finalInput =
+          totalInputTokens > 0 ? totalInputTokens : ((s.tokens_input as number) ?? 0);
+        const finalOutput =
+          totalOutputTokens > 0 ? totalOutputTokens : ((s.tokens_output as number) ?? 0);
         if (finalInput > 0 || finalOutput > 0) {
           usageEvents.push({
             timestamp: startTime,
             inputTokens: Number(finalInput),
             outputTokens: Number(finalOutput),
-            cacheReadTokens: totalCacheReadTokens > 0 ? totalCacheReadTokens : ((s.tokens_cache_read as number) ?? 0),
-            cacheWriteTokens: totalCacheWriteTokens > 0 ? totalCacheWriteTokens : ((s.tokens_cache_write as number) ?? 0),
-            reasoningTokens: totalReasoningTokens > 0 ? totalReasoningTokens : ((s.tokens_reasoning as number) ?? 0),
+            cacheReadTokens:
+              totalCacheReadTokens > 0
+                ? totalCacheReadTokens
+                : ((s.tokens_cache_read as number) ?? 0),
+            cacheWriteTokens:
+              totalCacheWriteTokens > 0
+                ? totalCacheWriteTokens
+                : ((s.tokens_cache_write as number) ?? 0),
+            reasoningTokens:
+              totalReasoningTokens > 0
+                ? totalReasoningTokens
+                : ((s.tokens_reasoning as number) ?? 0),
             toolCallsCount: toolCallCount,
           });
         }
 
-        return [{
-          sessionId: s.id as string,
-          provider,
-          cli: 'opencode',
-          projectPath: (s.directory as string) ?? null,
-          model,
-          startedAt: startTime,
-          endedAt: endTime,
-          durationMs,
-          totalCostUsd: (s.cost as number) ?? null,
-          sourceConfidence: confidence,
-          messages,
-          usageEvents,
-          modelUsage: [...modelUsage.values()],
-        }];
-      } finally { db.close(); }
+        return [
+          {
+            sessionId: s.id as string,
+            provider,
+            cli: 'opencode',
+            projectPath: (s.directory as string) ?? null,
+            model,
+            startedAt: startTime,
+            endedAt: endTime,
+            durationMs,
+            totalCostUsd: (s.cost as number) ?? null,
+            sourceConfidence: confidence,
+            messages,
+            usageEvents,
+            modelUsage: [...modelUsage.values()],
+          },
+        ];
+      } finally {
+        db.close();
+      }
     },
 
     normalize(raw: RawSession): RawSession {

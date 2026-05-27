@@ -30,7 +30,13 @@ export function registerAnalyticsRoutes(app: FastifyInstance): void {
       return buildAnalyticsReport(parseAnalyticsFilters(q));
     } catch (error) {
       reply.code(500);
-      return { error: { code: 'ANALYTICS_REPORT_FAILED', message: 'Failed to build analytics report', details: String(error) } };
+      return {
+        error: {
+          code: 'ANALYTICS_REPORT_FAILED',
+          message: 'Failed to build analytics report',
+          details: String(error),
+        },
+      };
     }
   });
 
@@ -46,9 +52,12 @@ export function registerAnalyticsRoutes(app: FastifyInstance): void {
       const dateTo = q.dateTo || null;
 
       const db = getDatabase();
-      const labelFmt = granularity === 'month' ? "strftime('%Y-%m', started_at)" :
-                       granularity === 'week' ? "strftime('%Y-%W', started_at)" :
-                       "date(started_at)";
+      const labelFmt =
+        granularity === 'month'
+          ? "strftime('%Y-%m', started_at)"
+          : granularity === 'week'
+            ? "strftime('%Y-%W', started_at)"
+            : 'date(started_at)';
 
       let sql = `
         SELECT
@@ -61,12 +70,30 @@ export function registerAnalyticsRoutes(app: FastifyInstance): void {
       `;
       const params: (string | number | null)[] = [];
 
-      if (cli) { sql += ` AND cli = ?`; params.push(cli); }
-      if (provider) { sql += ` AND LOWER(provider) = LOWER(?)`; params.push(provider); }
-      if (model) { sql += ` AND LOWER(COALESCE(model, 'unknown')) = LOWER(?)`; params.push(model); }
-      if (project) { sql += ` AND COALESCE(project_path, 'unknown') = ?`; params.push(project); }
-      if (dateFrom) { sql += ` AND started_at >= ?`; params.push(dateFrom); }
-      if (dateTo) { sql += ` AND started_at <= ?`; params.push(dateTo); }
+      if (cli) {
+        sql += ` AND cli = ?`;
+        params.push(cli);
+      }
+      if (provider) {
+        sql += ` AND LOWER(provider) = LOWER(?)`;
+        params.push(provider);
+      }
+      if (model) {
+        sql += ` AND LOWER(COALESCE(model, 'unknown')) = LOWER(?)`;
+        params.push(model);
+      }
+      if (project) {
+        sql += ` AND COALESCE(project_path, 'unknown') = ?`;
+        params.push(project);
+      }
+      if (dateFrom) {
+        sql += ` AND started_at >= ?`;
+        params.push(dateFrom);
+      }
+      if (dateTo) {
+        sql += ` AND started_at <= ?`;
+        params.push(dateTo);
+      }
 
       sql += ` GROUP BY period ORDER BY period`;
 
@@ -87,23 +114,29 @@ export function registerAnalyticsRoutes(app: FastifyInstance): void {
       return { points };
     } catch (error) {
       reply.code(500);
-      return { error: { code: 'SPEND_TIMELINE_FAILED', message: 'Failed to load spend timeline', details: String(error) } };
+      return {
+        error: {
+          code: 'SPEND_TIMELINE_FAILED',
+          message: 'Failed to load spend timeline',
+          details: String(error),
+        },
+      };
     }
   });
 
   app.get('/api/analytics/tokens-over-time', async (req, reply) => {
     try {
-    const q = req.query as Record<string, string>;
-    const cli = q.cli || null;
-    const provider = q.provider || null;
-    const model = q.model || null;
-    const project = q.project || null;
-    const dateFrom = q.dateFrom || null;
-    const dateTo = q.dateTo || null;
+      const q = req.query as Record<string, string>;
+      const cli = q.cli || null;
+      const provider = q.provider || null;
+      const model = q.model || null;
+      const project = q.project || null;
+      const dateFrom = q.dateFrom || null;
+      const dateTo = q.dateTo || null;
 
-    const db = getDatabase();
+      const db = getDatabase();
 
-    let sql = `
+      let sql = `
       SELECT
         date(ue.timestamp) AS day,
         SUM(ue.input_tokens) AS input_tokens,
@@ -114,96 +147,153 @@ export function registerAnalyticsRoutes(app: FastifyInstance): void {
       JOIN sessions s ON s.id = ue.session_fk
       WHERE ${VISIBLE_SESSION_SQL_S}
     `;
-    const params: (string | number | null)[] = [];
+      const params: (string | number | null)[] = [];
 
-    if (cli) { sql += ` AND s.cli = ?`; params.push(cli); }
-    if (provider) { sql += ` AND LOWER(s.provider) = LOWER(?)`; params.push(provider); }
-    if (model) { sql += ` AND LOWER(COALESCE(s.model, 'unknown')) = LOWER(?)`; params.push(model); }
-    if (project) { sql += ` AND COALESCE(s.project_path, 'unknown') = ?`; params.push(project); }
-    if (dateFrom) { sql += ` AND ue.timestamp >= ?`; params.push(dateFrom); }
-    if (dateTo) { sql += ` AND ue.timestamp <= ?`; params.push(dateTo); }
-
-    sql += ` GROUP BY day ORDER BY day`;
-
-    const results = db.exec(sql, params);
-    const points: { date: string; inputTokens: number; outputTokens: number; cacheReadTokens: number; cacheWriteTokens: number }[] = [];
-
-    if (results.length > 0 && results[0].values) {
-      for (const r of results[0].values) {
-        points.push({
-          date: r[0] as string,
-          inputTokens: Number(r[1]) || 0,
-          outputTokens: Number(r[2]) || 0,
-          cacheReadTokens: Number(r[3]) || 0,
-          cacheWriteTokens: Number(r[4]) || 0,
-        });
+      if (cli) {
+        sql += ` AND s.cli = ?`;
+        params.push(cli);
       }
-    }
+      if (provider) {
+        sql += ` AND LOWER(s.provider) = LOWER(?)`;
+        params.push(provider);
+      }
+      if (model) {
+        sql += ` AND LOWER(COALESCE(s.model, 'unknown')) = LOWER(?)`;
+        params.push(model);
+      }
+      if (project) {
+        sql += ` AND COALESCE(s.project_path, 'unknown') = ?`;
+        params.push(project);
+      }
+      if (dateFrom) {
+        sql += ` AND ue.timestamp >= ?`;
+        params.push(dateFrom);
+      }
+      if (dateTo) {
+        sql += ` AND ue.timestamp <= ?`;
+        params.push(dateTo);
+      }
 
-    return { points };
+      sql += ` GROUP BY day ORDER BY day`;
+
+      const results = db.exec(sql, params);
+      const points: {
+        date: string;
+        inputTokens: number;
+        outputTokens: number;
+        cacheReadTokens: number;
+        cacheWriteTokens: number;
+      }[] = [];
+
+      if (results.length > 0 && results[0].values) {
+        for (const r of results[0].values) {
+          points.push({
+            date: r[0] as string,
+            inputTokens: Number(r[1]) || 0,
+            outputTokens: Number(r[2]) || 0,
+            cacheReadTokens: Number(r[3]) || 0,
+            cacheWriteTokens: Number(r[4]) || 0,
+          });
+        }
+      }
+
+      return { points };
     } catch (error) {
       reply.code(500);
-      return { error: { code: 'TOKENS_TIMELINE_FAILED', message: 'Failed to load token timeline', details: String(error) } };
+      return {
+        error: {
+          code: 'TOKENS_TIMELINE_FAILED',
+          message: 'Failed to load token timeline',
+          details: String(error),
+        },
+      };
     }
   });
 
   app.get('/api/analytics/breakdown', async (req, reply) => {
     try {
-    const q = req.query as Record<string, string>;
-    const dimension = q.dimension || 'cli';
-    const metric = q.metric || 'cost';
-    const cli = q.cli || null;
-    const provider = q.provider || null;
-    const model = q.model || null;
-    const project = q.project || null;
-    const dateFrom = q.dateFrom || null;
-    const dateTo = q.dateTo || null;
+      const q = req.query as Record<string, string>;
+      const dimension = q.dimension || 'cli';
+      const metric = q.metric || 'cost';
+      const cli = q.cli || null;
+      const provider = q.provider || null;
+      const model = q.model || null;
+      const project = q.project || null;
+      const dateFrom = q.dateFrom || null;
+      const dateTo = q.dateTo || null;
 
-    const db = getDatabase();
-    const dimMap: Record<string, string> = {
-      cli: 'cli',
-      provider: 'provider',
-      model: 'COALESCE(model, "unknown")',
-      project: 'COALESCE(project_path, "unknown")',
-    };
-    const dim = dimMap[dimension] || 'cli';
+      const db = getDatabase();
+      const dimMap: Record<string, string> = {
+        cli: 'cli',
+        provider: 'provider',
+        model: 'COALESCE(model, "unknown")',
+        project: 'COALESCE(project_path, "unknown")',
+      };
+      const dim = dimMap[dimension] || 'cli';
 
-    const metricCol = metric === 'sessions' ? 'COUNT(*)' :
-                      metric === 'tokens' ? 'COALESCE(SUM((SELECT SUM(input_tokens+output_tokens) FROM usage_events WHERE session_fk=sessions.id)), 0)' :
-                      'COALESCE(SUM(total_cost_usd), 0)';
+      const metricCol =
+        metric === 'sessions'
+          ? 'COUNT(*)'
+          : metric === 'tokens'
+            ? 'COALESCE(SUM((SELECT SUM(input_tokens+output_tokens) FROM usage_events WHERE session_fk=sessions.id)), 0)'
+            : 'COALESCE(SUM(total_cost_usd), 0)';
 
-    let sql = `SELECT ${dim} AS label, ${metricCol} AS value FROM sessions WHERE ${VISIBLE_SESSION_SQL}`;
-    const params: string[] = [];
-    if (cli) { sql += ` AND cli = ?`; params.push(cli); }
-    if (provider) { sql += ` AND LOWER(provider) = LOWER(?)`; params.push(provider); }
-    if (model) { sql += ` AND LOWER(COALESCE(model, 'unknown')) = LOWER(?)`; params.push(model); }
-    if (project) { sql += ` AND COALESCE(project_path, 'unknown') = ?`; params.push(project); }
-    if (dateFrom) { sql += ` AND started_at >= ?`; params.push(dateFrom); }
-    if (dateTo) { sql += ` AND started_at <= ?`; params.push(dateTo); }
-    sql += ` GROUP BY ${dim} ORDER BY value DESC`;
-
-    const results = db.exec(sql, params);
-    const breakdown: { label: string; value: number; percentage: number }[] = [];
-    let total = 0;
-
-    if (results.length > 0 && results[0].values) {
-      for (const r of results[0].values) {
-        breakdown.push({
-          label: (r[0] as string) || 'unknown',
-          value: Number(r[1]) || 0,
-          percentage: 0,
-        });
-        total += Number(r[1]) || 0;
+      let sql = `SELECT ${dim} AS label, ${metricCol} AS value FROM sessions WHERE ${VISIBLE_SESSION_SQL}`;
+      const params: string[] = [];
+      if (cli) {
+        sql += ` AND cli = ?`;
+        params.push(cli);
       }
-      for (const item of breakdown) {
-        item.percentage = total > 0 ? Math.round((item.value / total) * 10000) / 100 : 0;
+      if (provider) {
+        sql += ` AND LOWER(provider) = LOWER(?)`;
+        params.push(provider);
       }
-    }
+      if (model) {
+        sql += ` AND LOWER(COALESCE(model, 'unknown')) = LOWER(?)`;
+        params.push(model);
+      }
+      if (project) {
+        sql += ` AND COALESCE(project_path, 'unknown') = ?`;
+        params.push(project);
+      }
+      if (dateFrom) {
+        sql += ` AND started_at >= ?`;
+        params.push(dateFrom);
+      }
+      if (dateTo) {
+        sql += ` AND started_at <= ?`;
+        params.push(dateTo);
+      }
+      sql += ` GROUP BY ${dim} ORDER BY value DESC`;
 
-    return { breakdown };
+      const results = db.exec(sql, params);
+      const breakdown: { label: string; value: number; percentage: number }[] = [];
+      let total = 0;
+
+      if (results.length > 0 && results[0].values) {
+        for (const r of results[0].values) {
+          breakdown.push({
+            label: (r[0] as string) || 'unknown',
+            value: Number(r[1]) || 0,
+            percentage: 0,
+          });
+          total += Number(r[1]) || 0;
+        }
+        for (const item of breakdown) {
+          item.percentage = total > 0 ? Math.round((item.value / total) * 10000) / 100 : 0;
+        }
+      }
+
+      return { breakdown };
     } catch (error) {
       reply.code(500);
-      return { error: { code: 'BREAKDOWN_FAILED', message: 'Failed to load analytics breakdown', details: String(error) } };
+      return {
+        error: {
+          code: 'BREAKDOWN_FAILED',
+          message: 'Failed to load analytics breakdown',
+          details: String(error),
+        },
+      };
     }
   });
 
@@ -214,20 +304,45 @@ export function registerAnalyticsRoutes(app: FastifyInstance): void {
       const dateTo = q.dateTo || null;
       let where = `WHERE ${VISIBLE_SESSION_SQL}`;
       const params: string[] = [];
-      if (dateFrom) { where += ` AND started_at >= ?`; params.push(dateFrom); }
-      if (dateTo) { where += ` AND started_at <= ?`; params.push(dateTo); }
+      if (dateFrom) {
+        where += ` AND started_at >= ?`;
+        params.push(dateFrom);
+      }
+      if (dateTo) {
+        where += ` AND started_at <= ?`;
+        params.push(dateTo);
+      }
 
       const db = getDatabase();
-      const read = (sql: string) => (db.exec(sql, params)[0]?.values ?? []).map((row) => ({ label: String(row[0] ?? 'unknown'), value: String(row[0] ?? 'unknown'), count: Number(row[1]) || 0 }));
+      const read = (sql: string) =>
+        (db.exec(sql, params)[0]?.values ?? []).map((row) => ({
+          label: String(row[0] ?? 'unknown'),
+          value: String(row[0] ?? 'unknown'),
+          count: Number(row[1]) || 0,
+        }));
       return {
-        clis: read(`SELECT cli, COUNT(*) FROM sessions ${where} GROUP BY cli ORDER BY COUNT(*) DESC, cli ASC`),
-        providers: read(`SELECT COALESCE(provider, 'unknown'), COUNT(*) FROM sessions ${where} GROUP BY COALESCE(provider, 'unknown') ORDER BY COUNT(*) DESC`),
-        models: read(`SELECT COALESCE(model, 'unknown'), COUNT(*) FROM sessions ${where} GROUP BY COALESCE(model, 'unknown') ORDER BY COUNT(*) DESC LIMIT 100`),
-        projects: read(`SELECT COALESCE(project_path, 'unknown'), COUNT(*) FROM sessions ${where} GROUP BY COALESCE(project_path, 'unknown') ORDER BY COUNT(*) DESC LIMIT 100`),
+        clis: read(
+          `SELECT cli, COUNT(*) FROM sessions ${where} GROUP BY cli ORDER BY COUNT(*) DESC, cli ASC`,
+        ),
+        providers: read(
+          `SELECT COALESCE(provider, 'unknown'), COUNT(*) FROM sessions ${where} GROUP BY COALESCE(provider, 'unknown') ORDER BY COUNT(*) DESC`,
+        ),
+        models: read(
+          `SELECT COALESCE(model, 'unknown'), COUNT(*) FROM sessions ${where} GROUP BY COALESCE(model, 'unknown') ORDER BY COUNT(*) DESC LIMIT 100`,
+        ),
+        projects: read(
+          `SELECT COALESCE(project_path, 'unknown'), COUNT(*) FROM sessions ${where} GROUP BY COALESCE(project_path, 'unknown') ORDER BY COUNT(*) DESC LIMIT 100`,
+        ),
       };
     } catch (error) {
       reply.code(500);
-      return { error: { code: 'ANALYTICS_FILTER_OPTIONS_FAILED', message: 'Failed to load analytics filter options', details: String(error) } };
+      return {
+        error: {
+          code: 'ANALYTICS_FILTER_OPTIONS_FAILED',
+          message: 'Failed to load analytics filter options',
+          details: String(error),
+        },
+      };
     }
   });
 }

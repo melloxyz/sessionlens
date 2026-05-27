@@ -38,7 +38,12 @@ export function createAiderAdapter(): Adapter {
 
       const content = readFileSync(sessionPath, 'utf-8');
       const parsed = parseMarkdownHistory(content);
-      if (parsed.messages.length === 0 && parsed.prompts.length === 0 && parsed.responses.length === 0) return [];
+      if (
+        parsed.messages.length === 0 &&
+        parsed.prompts.length === 0 &&
+        parsed.responses.length === 0
+      )
+        return [];
 
       const projectPath = dirname(sessionPath);
       const startedAt = parsed.startedAt ?? new Date().toISOString();
@@ -46,22 +51,24 @@ export function createAiderAdapter(): Adapter {
       const sessionId = `aider-${hashString(sessionPath)}`;
       const confidence: SourceConfidence = parsed.hasStructuredMetadata ? 'MEDIUM' : 'LOW';
 
-      return [{
-        sessionId,
-        provider: parsed.provider ?? 'openai',
-        cli: 'aider' as CliProvider,
-        projectPath,
-        sourcePath: sessionPath,
-        model: parsed.model,
-        startedAt,
-        endedAt,
-        durationMs: null,
-        totalCostUsd: parsed.totalCostUsd,
-        sourceConfidence: confidence,
-        messages: parsed.messages,
-        usageEvents: parsed.usageEvents,
-        modelUsage: parsed.modelUsage,
-      }];
+      return [
+        {
+          sessionId,
+          provider: parsed.provider ?? 'openai',
+          cli: 'aider' as CliProvider,
+          projectPath,
+          sourcePath: sessionPath,
+          model: parsed.model,
+          startedAt,
+          endedAt,
+          durationMs: null,
+          totalCostUsd: parsed.totalCostUsd,
+          sourceConfidence: confidence,
+          messages: parsed.messages,
+          usageEvents: parsed.usageEvents,
+          modelUsage: parsed.modelUsage,
+        },
+      ];
     },
 
     normalize(raw: RawSession): RawSession {
@@ -178,18 +185,23 @@ function parseMarkdownHistory(content: string): {
     endedAt,
     totalCostUsd,
     usageEvents: [],
-    modelUsage: model && provider ? [{
-      provider,
-      model,
-      messageCount: messages.length,
-      inputTokens: 0,
-      outputTokens: 0,
-      reasoningTokens: 0,
-      cacheReadTokens: 0,
-      cacheWriteTokens: 0,
-      toolCallsCount: 0,
-      totalCostUsd: totalCostUsd ?? 0,
-    }] : [],
+    modelUsage:
+      model && provider
+        ? [
+            {
+              provider,
+              model,
+              messageCount: messages.length,
+              inputTokens: 0,
+              outputTokens: 0,
+              reasoningTokens: 0,
+              cacheReadTokens: 0,
+              cacheWriteTokens: 0,
+              toolCallsCount: 0,
+              totalCostUsd: totalCostUsd ?? 0,
+            },
+          ]
+        : [],
     hasStructuredMetadata,
   };
 }
@@ -213,7 +225,11 @@ function splitBlocks(lines: string[]): string[] {
 
 function detectRole(block: string): RawMessage['role'] | null {
   if (/^#+\s*user/i.test(block) || /\buser\b/i.test(block.split('\n')[0] ?? '')) return 'user';
-  if (/^#+\s*(assistant|response|ai)/i.test(block) || /\bassistant\b/i.test(block.split('\n')[0] ?? '')) return 'assistant';
+  if (
+    /^#+\s*(assistant|response|ai)/i.test(block) ||
+    /\bassistant\b/i.test(block.split('\n')[0] ?? '')
+  )
+    return 'assistant';
   if (/^#+\s*system/i.test(block)) return 'system';
   return null;
 }

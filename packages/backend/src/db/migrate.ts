@@ -28,7 +28,14 @@ export function runMigrations(): void {
     )
   `);
 
-  const migrations = ['0000_init', '0001_session_model_usage', '0002_expand_cli_check', '0003_cost_source_hidden_projects', '0004_pricing_aliases', '0005_app_settings'];
+  const migrations = [
+    '0000_init',
+    '0001_session_model_usage',
+    '0002_expand_cli_check',
+    '0003_cost_source_hidden_projects',
+    '0004_pricing_aliases',
+    '0005_app_settings',
+  ];
 
   for (const name of migrations) {
     const result = db.exec(`SELECT name FROM __migrations WHERE name = ?`, [name]);
@@ -59,7 +66,9 @@ function ensureMigrationSatisfied(name: string): boolean {
   if (name === '0003_cost_source_hidden_projects') {
     const hasCostSource = columnExists('sessions', 'cost_source');
     if (!hasCostSource) {
-      db.run(`ALTER TABLE sessions ADD COLUMN cost_source TEXT NOT NULL DEFAULT 'unknown' CHECK(cost_source IN ('actual', 'estimated', 'unknown'))`);
+      db.run(
+        `ALTER TABLE sessions ADD COLUMN cost_source TEXT NOT NULL DEFAULT 'unknown' CHECK(cost_source IN ('actual', 'estimated', 'unknown'))`,
+      );
     }
     db.run(`
       CREATE TABLE IF NOT EXISTS hidden_projects (

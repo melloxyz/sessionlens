@@ -2,9 +2,23 @@ import 'dotenv/config';
 import Fastify from 'fastify';
 import cors from '@fastify/cors';
 import { initDatabase, runMigrations, seedModels } from './db/index.js';
-import { createCodexAdapter, createClaudeAdapter, createOpencodeAdapter, createGeminiAdapter, createKimiAdapter, createAiderAdapter, createQwenAdapter, createAntigravityAdapter, registry } from './adapters/index.js';
+import {
+  createCodexAdapter,
+  createClaudeAdapter,
+  createOpencodeAdapter,
+  createGeminiAdapter,
+  createKimiAdapter,
+  createAiderAdapter,
+  createQwenAdapter,
+  createAntigravityAdapter,
+  registry,
+} from './adapters/index.js';
 import { runIngestion, getLastStatus } from './ingestion/engine.js';
-import { getAutoIngestionStatus, setAutoIngestionEnabled, startAutoIngestion } from './ingestion/watcher.js';
+import {
+  getAutoIngestionStatus,
+  setAutoIngestionEnabled,
+  startAutoIngestion,
+} from './ingestion/watcher.js';
 import { registerOverviewRoutes } from './routes/overview.js';
 import { registerAnalyticsRoutes } from './routes/analytics.js';
 import { registerSessionRoutes } from './routes/sessions.js';
@@ -42,9 +56,14 @@ async function main() {
 
     app.get('/api/ingest/status', async () => {
       const status = getLastStatus();
-      if (!status) return { message: 'No ingestion run yet', autoIngestion: getAutoIngestionStatus() };
+      if (!status)
+        return { message: 'No ingestion run yet', autoIngestion: getAutoIngestionStatus() };
       return status.errors.length > 0
-        ? { ...status, autoIngestion: getAutoIngestionStatus(), error: { code: 'INGESTION_WARNINGS', message: 'Ingestion completed with warnings' } }
+        ? {
+            ...status,
+            autoIngestion: getAutoIngestionStatus(),
+            error: { code: 'INGESTION_WARNINGS', message: 'Ingestion completed with warnings' },
+          }
         : { ...status, autoIngestion: getAutoIngestionStatus() };
     });
 
@@ -53,17 +72,21 @@ async function main() {
     app.post('/api/ingest/auto', async (req, reply) => {
       const body = req.body as { enabled?: unknown };
       if (typeof body?.enabled !== 'boolean') {
-        return reply.status(400).send({ error: { code: 'INVALID_AUTO_INGESTION_SETTING', message: 'enabled must be a boolean' } });
+        return reply.status(400).send({
+          error: { code: 'INVALID_AUTO_INGESTION_SETTING', message: 'enabled must be a boolean' },
+        });
       }
       return setAutoIngestionEnabled(body.enabled);
     });
 
     app.get('/api/integrations/status', async () => {
       const adapters = registry.getAll();
-      const resolved = await Promise.all(adapters.map(async (adapter) => ({
-        cli: adapter.cli,
-        status: await adapter.detect() ? 'available' : 'missing',
-      })));
+      const resolved = await Promise.all(
+        adapters.map(async (adapter) => ({
+          cli: adapter.cli,
+          status: (await adapter.detect()) ? 'available' : 'missing',
+        })),
+      );
       return {
         integrations: resolved,
       };

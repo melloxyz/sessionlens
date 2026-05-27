@@ -38,10 +38,15 @@ export function createKimiAdapter(): Adapter {
       if (!existsSync(sessionPath)) return [];
 
       const log = readFileSync(sessionPath, 'utf-8');
-      const lines = log.split(/\r?\n/).map((line) => line.trim()).filter(Boolean);
+      const lines = log
+        .split(/\r?\n/)
+        .map((line) => line.trim())
+        .filter(Boolean);
       if (lines.length === 0) return [];
 
-      const sessionLine = lines.find((line) => line.includes('new_session') && line.includes('working directory'));
+      const sessionLine = lines.find(
+        (line) => line.includes('new_session') && line.includes('working directory'),
+      );
       if (!sessionLine) return [];
 
       const workingDirMatch = sessionLine.match(/working directory:\s*(.+)$/i);
@@ -51,21 +56,23 @@ export function createKimiAdapter(): Adapter {
       const startedAt = extractTimestamp(sessionLine) ?? new Date().toISOString();
       const sessionId = `kimi-log-${hashSessionPath(sessionPath)}`;
 
-      return [{
-        sessionId,
-        provider: 'moonshot',
-        cli: 'kimi' as CliProvider,
-        projectPath: workingDir,
-        sourcePath: sessionPath,
-        model: null,
-        startedAt,
-        endedAt: startedAt,
-        durationMs: 0,
-        totalCostUsd: null,
-        sourceConfidence: authFailed ? 'LOW' : 'MEDIUM',
-        messages: [],
-        usageEvents: [],
-      }];
+      return [
+        {
+          sessionId,
+          provider: 'moonshot',
+          cli: 'kimi' as CliProvider,
+          projectPath: workingDir,
+          sourcePath: sessionPath,
+          model: null,
+          startedAt,
+          endedAt: startedAt,
+          durationMs: 0,
+          totalCostUsd: null,
+          sourceConfidence: authFailed ? 'LOW' : 'MEDIUM',
+          messages: [],
+          usageEvents: [],
+        },
+      ];
     },
 
     normalize(raw: RawSession): RawSession {
