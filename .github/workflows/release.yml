@@ -50,7 +50,7 @@ jobs:
             [ -z "$HASH" ] && continue
             SHORT="${HASH:0:7}"
 
-            SEGMENTS=$(echo "$MSG" | sed -E "s/(${ALL_TYPES})\s*(\([^)]*\))?\s*:/\n&/gi")
+            SEGMENTS=$(echo "$MSG" | perl -CSD -pe "s/(?=(?:^|\s)(?:${ALL_TYPES})\s*(?:\([^)]*\))?\s*:)/\n/gi")
 
             MATCHES=$(echo "$SEGMENTS" | grep -ciE "(${ALL_TYPES})\s*(\([^)]*\))?\s*:")
 
