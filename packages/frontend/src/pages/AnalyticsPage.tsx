@@ -29,12 +29,15 @@ import { BrandBadge } from '../components/brand/BrandMark.js';
 import { Badge } from '../components/ui/Badge.js';
 import { Button } from '../components/ui/Button.js';
 import { Card, CardContent, CardHeader, CardTitle } from '../components/ui/Card.js';
+import { DataPanel } from '../components/ui/DataPanel.js';
 import { EmptyState } from '../components/ui/EmptyState.js';
 import { ErrorState } from '../components/ui/ErrorState.js';
+import { MetricTile } from '../components/ui/MetricTile.js';
+import { SectionHeader as SharedSectionHeader } from '../components/ui/SectionHeader.js';
 import { Select } from '../components/ui/Select.js';
 import { useI18n } from '../components/i18n/LanguageProvider.js';
 
-const COLORS = ['#6366f1', '#818cf8', '#a78bfa', '#22c55e', '#eab308', '#ef4444', '#ec4899'];
+const COLORS = ['#0a84ff', '#64d2ff', '#30d158', '#ff9f0a', '#ff453a', '#9a9898', '#007aff'];
 
 interface Insight {
   id: string;
@@ -187,109 +190,109 @@ export function AnalyticsPage() {
         />
       )}
 
-      <Card>
-        <CardContent className="space-y-4 p-4">
-          <div className="flex flex-wrap items-start justify-between gap-3">
-            <div>
-              <div className="text-sm font-semibold text-foreground">{t('analytics.filters')}</div>
-              <p className="mt-1 text-xs text-subtle-foreground">
-                {t('analytics.summaryDescription')}
-              </p>
+      <DataPanel contentClassName="space-y-4 p-4">
+        <div className="flex flex-wrap items-start justify-between gap-3">
+          <div>
+            <div className="font-mono text-sm font-semibold text-foreground">
+              {t('analytics.filters')}
             </div>
-            {(cliFilter || providerFilter || modelFilter || projectFilter) && (
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => {
-                  setCliFilter('');
-                  setProviderFilter('');
-                  setModelFilter('');
-                  setProjectFilter('');
-                }}
-              >
-                {t('analytics.clearFilters')}
-              </Button>
-            )}
+            <p className="mt-1 text-xs text-subtle-foreground">
+              {t('analytics.summaryDescription')}
+            </p>
           </div>
-          <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-6">
-            <FilterField label={t('analytics.groupBy')}>
-              <Select
-                options={[
-                  { label: t('analytics.byModel'), value: 'model' },
-                  { label: t('analytics.byProvider'), value: 'provider' },
-                  { label: t('analytics.byCli'), value: 'cli' },
-                  { label: t('analytics.byProject'), value: 'project' },
-                ]}
-                value={dimension}
-                onChange={(e) => setDimension(e.target.value)}
-              />
-            </FilterField>
-            <FilterField label={t('analytics.metric')}>
-              <Select
-                options={[
-                  { label: t('common.cost'), value: 'cost' },
-                  { label: t('common.sessions'), value: 'sessions' },
-                  { label: t('common.tokens'), value: 'tokens' },
-                ]}
-                value={metric}
-                onChange={(e) => setMetric(e.target.value)}
-              />
-            </FilterField>
-            <FilterField label="CLI">
-              <Select
-                value={cliFilter}
-                onChange={(e) => setCliFilter(e.target.value)}
-                options={[
-                  { label: t('analytics.allClis'), value: '' },
-                  ...(options?.clis ?? []).map((item) => ({
-                    label: `${item.label} (${item.count})`,
-                    value: item.value,
-                  })),
-                ]}
-              />
-            </FilterField>
-            <FilterField label={t('common.provider')}>
-              <Select
-                value={providerFilter}
-                onChange={(e) => setProviderFilter(e.target.value)}
-                options={[
-                  { label: t('analytics.allProviders'), value: '' },
-                  ...(options?.providers ?? []).map((item) => ({
-                    label: `${item.label} (${item.count})`,
-                    value: item.value,
-                  })),
-                ]}
-              />
-            </FilterField>
-            <FilterField label={t('common.model')}>
-              <Select
-                value={modelFilter}
-                onChange={(e) => setModelFilter(e.target.value)}
-                options={[
-                  { label: t('analytics.allModels'), value: '' },
-                  ...(options?.models ?? []).map((item) => ({
-                    label: `${item.label} (${item.count})`,
-                    value: item.value,
-                  })),
-                ]}
-              />
-            </FilterField>
-            <FilterField label={t('common.project')}>
-              <Select
-                value={projectFilter}
-                onChange={(e) => setProjectFilter(e.target.value)}
-                options={[
-                  { label: t('analytics.allProjects'), value: '' },
-                  ...(options?.projects ?? []).map((item) => ({
-                    label: `${compactPath(item.label)} (${item.count})`,
-                    value: item.value,
-                  })),
-                ]}
-              />
-            </FilterField>
-          </div>
-        </CardContent>
-      </Card>
+          {(cliFilter || providerFilter || modelFilter || projectFilter) && (
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => {
+                setCliFilter('');
+                setProviderFilter('');
+                setModelFilter('');
+                setProjectFilter('');
+              }}
+            >
+              {t('analytics.clearFilters')}
+            </Button>
+          )}
+        </div>
+        <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-6">
+          <FilterField label={t('analytics.groupBy')}>
+            <Select
+              options={[
+                { label: t('analytics.byModel'), value: 'model' },
+                { label: t('analytics.byProvider'), value: 'provider' },
+                { label: t('analytics.byCli'), value: 'cli' },
+                { label: t('analytics.byProject'), value: 'project' },
+              ]}
+              value={dimension}
+              onChange={(e) => setDimension(e.target.value)}
+            />
+          </FilterField>
+          <FilterField label={t('analytics.metric')}>
+            <Select
+              options={[
+                { label: t('common.cost'), value: 'cost' },
+                { label: t('common.sessions'), value: 'sessions' },
+                { label: t('common.tokens'), value: 'tokens' },
+              ]}
+              value={metric}
+              onChange={(e) => setMetric(e.target.value)}
+            />
+          </FilterField>
+          <FilterField label="CLI">
+            <Select
+              value={cliFilter}
+              onChange={(e) => setCliFilter(e.target.value)}
+              options={[
+                { label: t('analytics.allClis'), value: '' },
+                ...(options?.clis ?? []).map((item) => ({
+                  label: `${item.label} (${item.count})`,
+                  value: item.value,
+                })),
+              ]}
+            />
+          </FilterField>
+          <FilterField label={t('common.provider')}>
+            <Select
+              value={providerFilter}
+              onChange={(e) => setProviderFilter(e.target.value)}
+              options={[
+                { label: t('analytics.allProviders'), value: '' },
+                ...(options?.providers ?? []).map((item) => ({
+                  label: `${item.label} (${item.count})`,
+                  value: item.value,
+                })),
+              ]}
+            />
+          </FilterField>
+          <FilterField label={t('common.model')}>
+            <Select
+              value={modelFilter}
+              onChange={(e) => setModelFilter(e.target.value)}
+              options={[
+                { label: t('analytics.allModels'), value: '' },
+                ...(options?.models ?? []).map((item) => ({
+                  label: `${item.label} (${item.count})`,
+                  value: item.value,
+                })),
+              ]}
+            />
+          </FilterField>
+          <FilterField label={t('common.project')}>
+            <Select
+              value={projectFilter}
+              onChange={(e) => setProjectFilter(e.target.value)}
+              options={[
+                { label: t('analytics.allProjects'), value: '' },
+                ...(options?.projects ?? []).map((item) => ({
+                  label: `${compactPath(item.label)} (${item.count})`,
+                  value: item.value,
+                })),
+              ]}
+            />
+          </FilterField>
+        </div>
+      </DataPanel>
 
       <SectionHeader
         title={t('analytics.summaryTitle')}
@@ -448,8 +451,8 @@ export function AnalyticsPage() {
               <AreaChart data={spendData?.points ?? report?.trend ?? []}>
                 <defs>
                   <linearGradient id="spendGradient" x1="0" y1="0" x2="0" y2="1">
-                    <stop offset="5%" stopColor="#6366f1" stopOpacity={0.35} />
-                    <stop offset="95%" stopColor="#6366f1" stopOpacity={0.02} />
+                    <stop offset="5%" stopColor="var(--accent)" stopOpacity={0.35} />
+                    <stop offset="95%" stopColor="var(--accent)" stopOpacity={0.02} />
                   </linearGradient>
                 </defs>
                 <CartesianGrid stroke="var(--border)" vertical={false} />
@@ -472,10 +475,10 @@ export function AnalyticsPage() {
                 <Area
                   type="monotone"
                   dataKey="spend"
-                  stroke="#6366f1"
+                  stroke="var(--accent)"
                   fill="url(#spendGradient)"
                   strokeWidth={2.4}
-                  dot={{ r: 3, fill: '#6366f1' }}
+                  dot={{ r: 3, fill: 'var(--accent)' }}
                 />
               </AreaChart>
             </ResponsiveContainer>
@@ -511,16 +514,16 @@ export function AnalyticsPage() {
                 <Area
                   type="monotone"
                   dataKey="inputTokens"
-                  stroke="#818cf8"
-                  fill="rgba(129,140,248,0.1)"
+                  stroke="var(--accent)"
+                  fill="var(--accent-soft)"
                   strokeWidth={2}
                   name={t('common.input')}
                 />
                 <Area
                   type="monotone"
                   dataKey="outputTokens"
-                  stroke="#22c55e"
-                  fill="rgba(34,197,94,0.1)"
+                  stroke="var(--success)"
+                  fill="var(--success-soft)"
                   strokeWidth={2}
                   name={t('common.output')}
                 />
@@ -573,11 +576,13 @@ export function AnalyticsPage() {
               {breakdown.map((d, i) => (
                 <div key={d.label} className="flex items-center gap-2">
                   <div
-                    className="h-2.5 w-2.5 shrink-0 rounded-full"
+                    className="h-2.5 w-2.5 shrink-0 rounded-sm"
                     style={{ background: COLORS[i % COLORS.length] }}
                   />
                   <span className="max-w-[120px] truncate text-subtle-foreground">{d.label}</span>
-                  <span className="ml-auto font-medium text-foreground">{d.percentage}%</span>
+                  <span className="ml-auto font-mono font-medium text-foreground">
+                    {d.percentage}%
+                  </span>
                 </div>
               ))}
             </div>
@@ -613,7 +618,7 @@ export function AnalyticsPage() {
                   axisLine={false}
                 />
                 <Tooltip contentStyle={tooltipStyle} />
-                <Bar dataKey="value" fill="#6366f1" radius={[0, 4, 4, 0]} />
+                <Bar dataKey="value" fill="var(--accent)" radius={[0, 4, 4, 0]} />
               </BarChart>
             </ResponsiveContainer>
           </CardContent>
@@ -652,7 +657,7 @@ export function AnalyticsPage() {
               value={t('analytics.pendingSource')}
               muted
             />
-            <div className="rounded-2xl border border-dashed border-border p-4 text-xs text-subtle-foreground">
+            <div className="rounded-lg border border-dashed border-border p-4 font-mono text-xs text-subtle-foreground">
               {productivity?.notes?.[0] ?? t('analytics.filesNote')}
             </div>
           </CardContent>
@@ -672,11 +677,11 @@ export function AnalyticsPage() {
               productivity!.topToolCallSessions.map((session) => (
                 <div
                   key={session.sessionId}
-                  className="rounded-2xl border border-border bg-surface-elevated p-4 text-sm"
+                  className="rounded-lg border border-border bg-surface-elevated p-4 text-sm"
                 >
                   <div className="flex items-start justify-between gap-3">
                     <div className="min-w-0">
-                      <div className="font-medium text-foreground">
+                      <div className="font-mono text-sm font-medium text-foreground">
                         {session.sessionId.slice(0, 12)}
                       </div>
                       <div className="mt-1 flex flex-wrap items-center gap-1.5">
@@ -735,13 +740,15 @@ export function AnalyticsPage() {
               modelUsage.slice(0, 8).map((item) => (
                 <div
                   key={`${item.provider}/${item.model}`}
-                  className="rounded-2xl border border-border bg-surface-elevated p-4 text-sm"
+                  className="rounded-lg border border-border bg-surface-elevated p-4 text-sm"
                 >
                   <div className="flex items-start justify-between gap-3">
                     <div className="min-w-0">
                       <div className="flex flex-wrap items-center gap-2">
                         <BrandBadge value={item.provider} kind="provider" />
-                        <span className="font-medium text-foreground">{item.model}</span>
+                        <span className="font-mono text-sm font-medium text-foreground">
+                          {item.model}
+                        </span>
                       </div>
                       <div className="text-xs text-subtle-foreground">
                         {item.messageCount} {t('common.messages').toLowerCase()} ·{' '}
@@ -784,13 +791,13 @@ export function AnalyticsPage() {
             </div>
           </CardHeader>
           <CardContent className="space-y-3 text-sm text-subtle-foreground">
-            <div className="rounded-2xl border border-border bg-surface-elevated p-4">
+            <div className="rounded-lg border border-border bg-surface-elevated p-4">
               {t('analytics.opencodeNote')}
             </div>
-            <div className="rounded-2xl border border-border bg-surface-elevated p-4">
+            <div className="rounded-lg border border-border bg-surface-elevated p-4">
               {t('analytics.singleModelNote')}
             </div>
-            <div className="rounded-2xl border border-border bg-surface-elevated p-4">
+            <div className="rounded-lg border border-border bg-surface-elevated p-4">
               {t('analytics.filesDeferredNote')}
             </div>
           </CardContent>
@@ -801,12 +808,7 @@ export function AnalyticsPage() {
 }
 
 function SectionHeader({ title, description }: { title: string; description: string }) {
-  return (
-    <div>
-      <h2 className="text-sm font-semibold text-foreground">{title}</h2>
-      <p className="mt-1 text-xs text-subtle-foreground">{description}</p>
-    </div>
-  );
+  return <SharedSectionHeader title={title} description={description} />;
 }
 
 function FilterField({ label, children }: { label: string; children: ReactNode }) {
@@ -833,34 +835,12 @@ function SummaryCard({
   sub: string;
   tone: 'success' | 'info' | 'warning' | 'danger';
 }) {
-  const toneMap = {
-    success: 'bg-success-soft text-success',
-    info: 'bg-info-soft text-info',
-    warning: 'bg-warning-soft text-warning',
-    danger: 'bg-danger-soft text-danger',
-  }[tone];
-
-  return (
-    <Card>
-      <CardContent className="flex items-center gap-3 p-4">
-        <div className={`grid h-10 w-10 shrink-0 place-items-center rounded-2xl ${toneMap}`}>
-          <Icon className="h-4.5 w-4.5" />
-        </div>
-        <div className="min-w-0">
-          <p className="text-[11px] font-medium uppercase tracking-[0.14em] text-subtle-foreground">
-            {label}
-          </p>
-          <p className="mt-1 text-base font-semibold text-foreground">{value}</p>
-          <p className="text-xs text-subtle-foreground">{sub}</p>
-        </div>
-      </CardContent>
-    </Card>
-  );
+  return <MetricTile icon={Icon} label={label} value={value} meta={sub} tone={tone} />;
 }
 
 function InsightRow({ item, label }: { item: Insight; label: string }) {
   return (
-    <div className="rounded-2xl border border-border bg-surface-elevated p-4">
+    <div className="rounded-lg border border-border bg-surface-elevated p-4">
       <div className="flex items-start justify-between gap-3">
         <div className="min-w-0">
           <div className="mb-2 flex items-center gap-2">
@@ -877,11 +857,11 @@ function InsightRow({ item, label }: { item: Insight; label: string }) {
             </Badge>
             <span className="text-xs text-subtle-foreground">{label}</span>
           </div>
-          <div className="font-medium text-foreground">{item.title}</div>
+          <div className="font-mono text-sm font-medium text-foreground">{item.title}</div>
           <p className="mt-1 text-sm text-subtle-foreground">{item.description}</p>
         </div>
         <div className="flex shrink-0 items-center gap-2 text-xs text-muted-foreground">
-          <span className="font-medium text-foreground">{item.value}</span>
+          <span className="font-mono font-medium text-foreground">{item.value}</span>
           <ChevronRight className="h-4 w-4" />
         </div>
       </div>
@@ -891,7 +871,7 @@ function InsightRow({ item, label }: { item: Insight; label: string }) {
 
 function AnomalyRow({ item, label }: { item: Anomaly; label: string }) {
   return (
-    <div className="rounded-2xl border border-border bg-surface-elevated p-4">
+    <div className="rounded-lg border border-border bg-surface-elevated p-4">
       <div className="flex items-start justify-between gap-3">
         <div className="min-w-0">
           <div className="mb-2 flex items-center gap-2">
@@ -908,11 +888,11 @@ function AnomalyRow({ item, label }: { item: Anomaly; label: string }) {
             </Badge>
             <span className="text-xs text-subtle-foreground">{label}</span>
           </div>
-          <div className="font-medium text-foreground">{item.title}</div>
+          <div className="font-mono text-sm font-medium text-foreground">{item.title}</div>
           <p className="mt-1 text-sm text-subtle-foreground">{item.description}</p>
         </div>
         <div className="flex shrink-0 items-center gap-2 text-xs text-muted-foreground">
-          <span className="font-medium text-foreground">{item.value}</span>
+          <span className="font-mono font-medium text-foreground">{item.value}</span>
           <CircleAlert className="h-4 w-4" />
         </div>
       </div>
@@ -922,9 +902,11 @@ function AnomalyRow({ item, label }: { item: Anomaly; label: string }) {
 
 function MetricLine({ label, value, muted }: { label: string; value: string; muted?: boolean }) {
   return (
-    <div className="flex items-center justify-between gap-3 rounded-2xl border border-border bg-surface-elevated px-4 py-3 text-sm">
+    <div className="flex items-center justify-between gap-3 rounded-lg border border-border bg-surface-elevated px-4 py-3 text-sm">
       <span className={muted ? 'text-subtle-foreground' : 'text-foreground'}>{label}</span>
-      <span className={`font-medium ${muted ? 'text-subtle-foreground' : 'text-foreground'}`}>
+      <span
+        className={`font-mono font-medium ${muted ? 'text-subtle-foreground' : 'text-foreground'}`}
+      >
         {value}
       </span>
     </div>
@@ -933,9 +915,11 @@ function MetricLine({ label, value, muted }: { label: string; value: string; mut
 
 function MetricChip({ label, value }: { label: string; value: string }) {
   return (
-    <div className="rounded-xl border border-border bg-surface p-3">
-      <div className="text-[11px] uppercase tracking-[0.12em] text-subtle-foreground">{label}</div>
-      <div className="mt-1 font-medium text-foreground">{value}</div>
+    <div className="rounded-md border border-border bg-surface p-3">
+      <div className="font-mono text-[10px] uppercase tracking-[0.12em] text-subtle-foreground">
+        {label}
+      </div>
+      <div className="mt-1 font-mono font-medium text-foreground">{value}</div>
     </div>
   );
 }
