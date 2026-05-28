@@ -18,6 +18,7 @@ import { Badge } from '../components/ui/Badge.js';
 import { Button } from '../components/ui/Button.js';
 import { DataPanel } from '../components/ui/DataPanel.js';
 import { ErrorState } from '../components/ui/ErrorState.js';
+import { Skeleton } from '../components/ui/Skeleton.js';
 import type { IntegrationStatusItem } from '../components/layout/IntegrationStatus.js';
 import { useApi } from '../hooks/useApi.js';
 import { formatCurrency, formatDateTime } from '../lib/format.js';
@@ -60,26 +61,28 @@ export function SettingsPage() {
   const [autoMutationError, setAutoMutationError] = useState<string | null>(null);
   const {
     data: overview,
+    loading: overviewLoading,
     validating: overviewValidating,
     error: overviewError,
     refetch: refetchOverview,
   } = useApi<Overview>('/api/overview');
   const {
     data: ingestStatus,
+    loading: ingestLoading,
     validating: ingestValidating,
     error: ingestError,
     refetch: refetchIngest,
   } = useApi<IngestionStatus>('/api/ingest/status');
   const {
     data: autoIngestion,
+    loading: autoLoading,
     validating: autoValidating,
     error: autoError,
     refetch: refetchAuto,
   } = useApi<AutoIngestionStatus>('/api/ingest/auto');
-  const { data: integrations } = useApi<{ integrations: IntegrationStatusItem[] }>(
-    '/api/integrations/status',
-    { initialData: { integrations: [] } },
-  );
+  const { data: integrations, loading: integrationsLoading } = useApi<{
+    integrations: IntegrationStatusItem[];
+  }>('/api/integrations/status', { initialData: { integrations: [] } });
 
   async function runIngestion() {
     setIngestionRunning(true);
@@ -210,14 +213,17 @@ export function SettingsPage() {
                 <StatusTile
                   label={t('settings.totalSessions')}
                   value={String(ingestStatus?.totalSessions ?? overview?.sessionCount ?? 0)}
+                  loading={ingestLoading && !ingestStatus && overviewLoading && !overview}
                 />
                 <StatusTile
                   label={t('settings.new')}
                   value={String(ingestStatus?.newSessions ?? 0)}
+                  loading={ingestLoading && !ingestStatus}
                 />
                 <StatusTile
                   label={t('settings.updated')}
                   value={String(ingestStatus?.updatedSessions ?? 0)}
+                  loading={ingestLoading && !ingestStatus}
                 />
               </div>
               <div className="rounded-lg border border-border bg-surface-elevated p-4">
@@ -232,7 +238,11 @@ export function SettingsPage() {
                           {t('settings.autoIngestion')}
                         </div>
                         <Badge variant={autoIngestion?.enabled ? 'success' : 'neutral'}>
-                          {autoIngestion?.enabled ? t('settings.enabled') : t('settings.disabled')}
+                          {autoLoading && !autoIngestion
+                            ? t('common.loading')
+                            : autoIngestion?.enabled
+                              ? t('settings.enabled')
+                              : t('settings.disabled')}
                         </Badge>
                         {autoIngestion?.running && (
                           <Badge variant="default">{t('settings.running')}</Badge>
@@ -353,14 +363,20 @@ export function SettingsPage() {
               onRetry={refetchOverview}
             />
           )}
-          <SummaryRow label={t('common.sessions')} value={String(overview?.sessionCount ?? 0)} />
+          <SummaryRow
+            label={t('common.sessions')}
+            value={String(overview?.sessionCount ?? 0)}
+            loading={overviewLoading && !overview}
+          />
           <SummaryRow
             label={t('settings.totalSpend')}
             value={formatCurrency(overview?.totalSpend)}
+            loading={overviewLoading && !overview}
           />
           <SummaryRow
             label={t('settings.topCli')}
             value={overview?.mostUsedCli ? getBrandMeta(overview.mostUsedCli).label : '—'}
+            loading={overviewLoading && !overview}
           />
         </DataPanel>
 
@@ -375,6 +391,7 @@ export function SettingsPage() {
             <SummaryRow
               label={t('settings.sessionsIndexed')}
               value={String(overview?.sessionCount ?? 0)}
+              loading={overviewLoading && !overview}
             />
             <SummaryRow label={t('settings.storage')} value={t('settings.localFile')} />
           </div>
@@ -389,22 +406,35 @@ export function SettingsPage() {
           }
           contentClassName="space-y-3"
         >
-          {(integrations?.integrations ?? []).map((item) => (
-            <div
-              key={item.cli}
-              className="flex items-center justify-between rounded-lg border border-border bg-surface-muted p-3"
-            >
-              <div className="flex items-center gap-3">
-                <BrandMark value={item.cli} size="sm" />
-                <span className="text-sm font-medium text-foreground">
-                  {getBrandMeta(item.cli).label}
-                </span>
-              </div>
-              <Badge variant={item.status === 'available' ? 'success' : 'neutral'}>
-                {item.status === 'available' ? t('common.detected') : t('common.missing')}
-              </Badge>
-            </div>
-          ))}
+          {integrationsLoading && !integrations
+            ? Array.from({ length: 5 }).map((_, index) => (
+                <div
+                  key={index}
+                  className="flex items-center justify-between rounded-lg border border-border bg-surface-muted p-3"
+                >
+                  <div className="flex items-center gap-3">
+                    <Skeleton className="h-8 w-8 rounded-md" />
+                    <Skeleton className="h-4 w-24" />
+                  </div>
+                  <Skeleton className="h-6 w-16" />
+                </div>
+              ))
+            : (integrations?.integrations ?? []).map((item) => (
+                <div
+                  key={item.cli}
+                  className="flex items-center justify-between rounded-lg border border-border bg-surface-muted p-3"
+                >
+                  <div className="flex items-center gap-3">
+                    <BrandMark value={item.cli} size="sm" />
+                    <span className="text-sm font-medium text-foreground">
+                      {getBrandMeta(item.cli).label}
+                    </span>
+                  </div>
+                  <Badge variant={item.status === 'available' ? 'success' : 'neutral'}>
+                    {item.status === 'available' ? t('common.detected') : t('common.missing')}
+                  </Badge>
+                </div>
+              ))}
         </DataPanel>
       </aside>
     </div>
@@ -489,24 +519,48 @@ function PrivacyItem({
   );
 }
 
-function StatusTile({ label, value }: { label: string; value: string }) {
+function StatusTile({
+  label,
+  value,
+  loading,
+}: {
+  label: string;
+  value: string;
+  loading?: boolean;
+}) {
   return (
     <div className="rounded-lg border border-border bg-surface-muted p-4">
       <div className="font-mono text-[10px] uppercase tracking-[0.14em] text-subtle-foreground">
         {label}
       </div>
-      <div className="mt-1 font-mono text-2xl font-semibold tracking-[-0.05em] text-foreground">
-        {value}
-      </div>
+      {loading ? (
+        <Skeleton className="mt-2 h-8 w-20" />
+      ) : (
+        <div className="mt-1 font-mono text-2xl font-semibold tracking-[-0.05em] text-foreground">
+          {value}
+        </div>
+      )}
     </div>
   );
 }
 
-function SummaryRow({ label, value }: { label: string; value: string }) {
+function SummaryRow({
+  label,
+  value,
+  loading,
+}: {
+  label: string;
+  value: string;
+  loading?: boolean;
+}) {
   return (
     <div className="flex justify-between gap-4 text-sm">
       <span className="text-muted-foreground">{label}</span>
-      <span className="text-right font-mono font-medium text-foreground">{value}</span>
+      {loading ? (
+        <Skeleton className="h-4 w-20" />
+      ) : (
+        <span className="text-right font-mono font-medium text-foreground">{value}</span>
+      )}
     </div>
   );
 }

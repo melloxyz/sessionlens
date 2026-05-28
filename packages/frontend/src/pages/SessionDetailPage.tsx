@@ -20,7 +20,7 @@ import { MetricTile } from '../components/ui/MetricTile.js';
 import { TokenUsageBar } from '../components/session/TokenUsageBar.js';
 import { EmptyState } from '../components/ui/EmptyState.js';
 import { ErrorState } from '../components/ui/ErrorState.js';
-import { LoadingState } from '../components/ui/LoadingState.js';
+import { DetailPageSkeleton } from '../components/ui/LoadingState.js';
 import { useI18n } from '../components/i18n/LanguageProvider.js';
 import { useApi } from '../hooks/useApi.js';
 import {
@@ -98,7 +98,7 @@ export function SessionDetailPage() {
     refetch,
   } = useApi<SessionDetail>(id ? `/api/sessions/${id}` : null, { immediate: Boolean(id) });
 
-  if (loading && !session) return <LoadingState />;
+  if (loading && !session) return <DetailPageSkeleton />;
 
   if (error) {
     return (

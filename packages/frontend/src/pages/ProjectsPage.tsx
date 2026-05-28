@@ -113,24 +113,28 @@ export function ProjectsPage() {
           label={t('projects.summary.visible')}
           value={String(summary.visible)}
           tone="info"
+          loading={isInitialLoading}
         />
         <MetricTile
           icon={HardDrive}
           label={t('projects.summary.available')}
           value={String(summary.available)}
           tone="success"
+          loading={isInitialLoading}
         />
         <MetricTile
           icon={HardDrive}
           label={t('projects.summary.missing')}
           value={String(summary.missing)}
           tone="warning"
+          loading={isInitialLoading}
         />
         <MetricTile
           icon={SlidersHorizontal}
           label={t('projects.summary.spend')}
           value={formatCurrency(summary.spend)}
           tone="info"
+          loading={isInitialLoading}
         />
       </div>
 

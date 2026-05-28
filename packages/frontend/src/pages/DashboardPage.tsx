@@ -38,6 +38,12 @@ import {
 import { TokenUsageBar } from '../components/session/TokenUsageBar.js';
 import { EmptyState } from '../components/ui/EmptyState.js';
 import { ErrorState } from '../components/ui/ErrorState.js';
+import {
+  ChartSkeleton,
+  DonutSkeleton,
+  PanelSkeleton,
+  TableSkeletonRows,
+} from '../components/ui/LoadingState.js';
 import { useDateRange } from '../components/filters/DateRangeProvider.js';
 import { useI18n } from '../components/i18n/LanguageProvider.js';
 import { useApi } from '../hooks/useApi.js';
@@ -117,6 +123,7 @@ export function DashboardPage() {
   } = useApi<Overview>(`/api/overview${queryPrefix}`);
   const {
     data: spendData,
+    loading: spendLoading,
     validating: spendValidating,
     error: spendError,
   } = useApi<{
@@ -124,6 +131,7 @@ export function DashboardPage() {
   }>(`/api/analytics/spend-over-time${queryPrefix}`);
   const {
     data: tokenData,
+    loading: tokenLoading,
     validating: tokenValidating,
     error: tokenError,
   } = useApi<{
@@ -137,6 +145,7 @@ export function DashboardPage() {
   }>(`/api/analytics/tokens-over-time${queryPrefix}`);
   const {
     data: cliBreakdown,
+    loading: cliLoading,
     validating: cliValidating,
     error: cliError,
   } = useApi<{
@@ -144,6 +153,7 @@ export function DashboardPage() {
   }>(`/api/analytics/breakdown?dimension=cli&metric=cost${querySuffix}`);
   const {
     data: modelBreakdown,
+    loading: modelLoading,
     validating: modelValidating,
     error: modelError,
   } = useApi<{
@@ -151,6 +161,7 @@ export function DashboardPage() {
   }>(`/api/analytics/breakdown?dimension=model&metric=cost${querySuffix}`);
   const {
     data: recentSessions,
+    loading: recentSessionsLoading,
     validating: recentSessionsValidating,
     error: recentSessionsError,
   } = useApi<{
@@ -159,6 +170,7 @@ export function DashboardPage() {
   }>(`/api/sessions?limit=9&sortBy=started_at&sortOrder=desc${querySuffix}`);
   const {
     data: selectedSession,
+    loading: selectedSessionLoading,
     validating: selectedSessionValidating,
     error: selectedSessionError,
   } = useApi<SessionDetail>(selectedId ? `/api/sessions/${selectedId}` : null, {
@@ -241,7 +253,7 @@ export function DashboardPage() {
             label={t('dashboard.totalTokens')}
             value={formatTokens(totalTokens)}
             icon={Database}
-            loading={overviewLoading}
+            loading={tokenLoading && !tokenData}
             change={t('dashboard.allSources')}
             changeTone="info"
             sparkline
@@ -289,41 +301,45 @@ export function DashboardPage() {
             }
             contentClassName="pt-4"
           >
-            <ResponsiveContainer width="100%" height={280}>
-              <AreaChart data={spendPoints}>
-                <defs>
-                  <linearGradient id="spendGradient" x1="0" y1="0" x2="0" y2="1">
-                    <stop offset="5%" stopColor="var(--accent)" stopOpacity={0.35} />
-                    <stop offset="95%" stopColor="var(--accent)" stopOpacity={0.02} />
-                  </linearGradient>
-                </defs>
-                <CartesianGrid stroke="var(--border)" vertical={false} />
-                <XAxis
-                  dataKey="date"
-                  tick={{ fontSize: 11, fill: 'var(--subtle-foreground)' }}
-                  tickLine={false}
-                  axisLine={false}
-                />
-                <YAxis
-                  tick={{ fontSize: 11, fill: 'var(--subtle-foreground)' }}
-                  tickLine={false}
-                  axisLine={false}
-                  tickFormatter={(value: number) => `$${value.toFixed(0)}`}
-                />
-                <Tooltip
-                  contentStyle={tooltipStyle}
-                  formatter={(value: number) => [formatCurrency(value), t('common.cost')]}
-                />
-                <Area
-                  type="monotone"
-                  dataKey="spend"
-                  stroke="var(--accent)"
-                  fill="url(#spendGradient)"
-                  strokeWidth={2.4}
-                  dot={{ r: 3, fill: 'var(--accent)' }}
-                />
-              </AreaChart>
-            </ResponsiveContainer>
+            {spendLoading && !spendData ? (
+              <ChartSkeleton />
+            ) : (
+              <ResponsiveContainer width="100%" height={280}>
+                <AreaChart data={spendPoints}>
+                  <defs>
+                    <linearGradient id="spendGradient" x1="0" y1="0" x2="0" y2="1">
+                      <stop offset="5%" stopColor="var(--accent)" stopOpacity={0.35} />
+                      <stop offset="95%" stopColor="var(--accent)" stopOpacity={0.02} />
+                    </linearGradient>
+                  </defs>
+                  <CartesianGrid stroke="var(--border)" vertical={false} />
+                  <XAxis
+                    dataKey="date"
+                    tick={{ fontSize: 11, fill: 'var(--subtle-foreground)' }}
+                    tickLine={false}
+                    axisLine={false}
+                  />
+                  <YAxis
+                    tick={{ fontSize: 11, fill: 'var(--subtle-foreground)' }}
+                    tickLine={false}
+                    axisLine={false}
+                    tickFormatter={(value: number) => `$${value.toFixed(0)}`}
+                  />
+                  <Tooltip
+                    contentStyle={tooltipStyle}
+                    formatter={(value: number) => [formatCurrency(value), t('common.cost')]}
+                  />
+                  <Area
+                    type="monotone"
+                    dataKey="spend"
+                    stroke="var(--accent)"
+                    fill="url(#spendGradient)"
+                    strokeWidth={2.4}
+                    dot={{ r: 3, fill: 'var(--accent)' }}
+                  />
+                </AreaChart>
+              </ResponsiveContainer>
+            )}
           </DataPanel>
 
           <DonutCard
@@ -333,6 +349,7 @@ export function DashboardPage() {
             centerLabel={t('common.total')}
             emptyTitle={t('dashboard.noSpend.title')}
             emptyDescription={t('dashboard.noSpend.description')}
+            loading={cliLoading && !cliBreakdown}
             colorFor={(label, index) => CLI_COLORS[label] ?? chartColor(index)}
           />
           <DonutCard
@@ -342,6 +359,7 @@ export function DashboardPage() {
             centerLabel={t('dashboard.modelsLabel')}
             emptyTitle={t('dashboard.noSpend.title')}
             emptyDescription={t('dashboard.noSpend.description')}
+            loading={modelLoading && !modelBreakdown}
             colorFor={(_, index) => chartColor(index)}
           />
         </div>
@@ -381,60 +399,64 @@ export function DashboardPage() {
                 </DataTableRow>
               </DataTableHead>
               <DataTableBody>
-                {(recentSessions?.data ?? []).map((session) => (
-                  <DataTableRow
-                    key={session.id}
-                    onClick={() => navigate(`/sessions/${session.id}`)}
-                    onKeyDown={(event) => {
-                      if (event.key === 'Enter' || event.key === ' ') {
-                        event.preventDefault();
-                        navigate(`/sessions/${session.id}`);
-                      }
-                    }}
-                    tabIndex={0}
-                    role="button"
-                    aria-label={t('dashboard.openSession')}
-                    className="cursor-pointer"
-                  >
-                    <DataTableCell>
-                      <div className="flex items-center gap-3">
-                        <BrandMark value={session.cli} size="sm" />
-                        <div>
-                          <div className="font-mono text-sm font-medium text-foreground">
-                            {session.session_id.slice(0, 8)}
+                {recentSessionsLoading && !recentSessions ? (
+                  <TableSkeletonRows rows={8} columns={8} />
+                ) : (
+                  (recentSessions?.data ?? []).map((session) => (
+                    <DataTableRow
+                      key={session.id}
+                      onClick={() => navigate(`/sessions/${session.id}`)}
+                      onKeyDown={(event) => {
+                        if (event.key === 'Enter' || event.key === ' ') {
+                          event.preventDefault();
+                          navigate(`/sessions/${session.id}`);
+                        }
+                      }}
+                      tabIndex={0}
+                      role="button"
+                      aria-label={t('dashboard.openSession')}
+                      className="cursor-pointer"
+                    >
+                      <DataTableCell>
+                        <div className="flex items-center gap-3">
+                          <BrandMark value={session.cli} size="sm" />
+                          <div>
+                            <div className="font-mono text-sm font-medium text-foreground">
+                              {session.session_id.slice(0, 8)}
+                            </div>
+                            <div className="text-xs text-subtle-foreground">{session.provider}</div>
                           </div>
-                          <div className="text-xs text-subtle-foreground">{session.provider}</div>
                         </div>
-                      </div>
-                    </DataTableCell>
-                    <DataTableCell>
-                      <BrandBadge value={session.cli} />
-                    </DataTableCell>
-                    <DataTableCell className="font-mono text-xs text-muted-foreground">
-                      {session.model ?? t('common.unknown')}
-                    </DataTableCell>
-                    <DataTableCell className="max-w-[220px] truncate text-muted-foreground">
-                      {compactPath(session.project_path)}
-                    </DataTableCell>
-                    <DataTableCell className="text-right font-mono tabular-nums text-muted-foreground">
-                      {formatDuration(session.duration_ms)}
-                    </DataTableCell>
-                    <DataTableCell className="text-right font-mono tabular-nums font-medium text-foreground">
-                      <div>{formatCurrency(session.total_cost_usd)}</div>
-                      {session.cost_source === 'estimated' && (
-                        <div className="mt-1 text-[10px] uppercase tracking-[0.12em] text-warning">
-                          {t('common.estimated')}
-                        </div>
-                      )}
-                    </DataTableCell>
-                    <DataTableCell className="text-right text-muted-foreground">
-                      {formatRelativeTime(session.started_at)}
-                    </DataTableCell>
-                    <DataTableCell className="text-right">
-                      <MoreHorizontal className="h-4 w-4 text-subtle-foreground" />
-                    </DataTableCell>
-                  </DataTableRow>
-                ))}
+                      </DataTableCell>
+                      <DataTableCell>
+                        <BrandBadge value={session.cli} />
+                      </DataTableCell>
+                      <DataTableCell className="font-mono text-xs text-muted-foreground">
+                        {session.model ?? t('common.unknown')}
+                      </DataTableCell>
+                      <DataTableCell className="max-w-[220px] truncate text-muted-foreground">
+                        {compactPath(session.project_path)}
+                      </DataTableCell>
+                      <DataTableCell className="text-right font-mono tabular-nums text-muted-foreground">
+                        {formatDuration(session.duration_ms)}
+                      </DataTableCell>
+                      <DataTableCell className="text-right font-mono tabular-nums font-medium text-foreground">
+                        <div>{formatCurrency(session.total_cost_usd)}</div>
+                        {session.cost_source === 'estimated' && (
+                          <div className="mt-1 text-[10px] uppercase tracking-[0.12em] text-warning">
+                            {t('common.estimated')}
+                          </div>
+                        )}
+                      </DataTableCell>
+                      <DataTableCell className="text-right text-muted-foreground">
+                        {formatRelativeTime(session.started_at)}
+                      </DataTableCell>
+                      <DataTableCell className="text-right">
+                        <MoreHorizontal className="h-4 w-4 text-subtle-foreground" />
+                      </DataTableCell>
+                    </DataTableRow>
+                  ))
+                )}
               </DataTableBody>
             </DataTable>
           </DataTableContainer>
@@ -442,122 +464,128 @@ export function DashboardPage() {
       </section>
 
       <aside className="space-y-4">
-        <DataPanel className="h-full" contentClassName="space-y-5">
-          <div className="flex items-start gap-3">
-            <BrandMark value={selectedSession?.cli} size="lg" />
-            <div className="min-w-0 flex-1">
-              <div className="flex items-center justify-between gap-2">
-                <h2 className="truncate font-mono text-base font-semibold text-foreground">
-                  {selectedSession?.session_id?.slice(0, 8) ?? t('common.session')}
-                </h2>
-                <Badge
-                  variant={
-                    selectedSession?.source_confidence === 'HIGH'
-                      ? 'success'
-                      : selectedSession?.source_confidence === 'MEDIUM'
-                        ? 'default'
-                        : 'warning'
-                  }
-                >
-                  {selectedSession?.source_confidence
-                    ? t(`common.confidence.${selectedSession.source_confidence.toLowerCase()}`)
-                    : '—'}
-                </Badge>
+        {selectedSessionLoading && !selectedSession ? (
+          <PanelSkeleton className="h-full min-h-[520px]" />
+        ) : (
+          <DataPanel className="h-full" contentClassName="space-y-5">
+            <div className="flex items-start gap-3">
+              <BrandMark value={selectedSession?.cli} size="lg" />
+              <div className="min-w-0 flex-1">
+                <div className="flex items-center justify-between gap-2">
+                  <h2 className="truncate font-mono text-base font-semibold text-foreground">
+                    {selectedSession?.session_id?.slice(0, 8) ?? t('common.session')}
+                  </h2>
+                  <Badge
+                    variant={
+                      selectedSession?.source_confidence === 'HIGH'
+                        ? 'success'
+                        : selectedSession?.source_confidence === 'MEDIUM'
+                          ? 'default'
+                          : 'warning'
+                    }
+                  >
+                    {selectedSession?.source_confidence
+                      ? t(`common.confidence.${selectedSession.source_confidence.toLowerCase()}`)
+                      : '—'}
+                  </Badge>
+                </div>
+                <p className="mt-1 truncate text-sm text-muted-foreground">
+                  {getBrandMeta(selectedSession?.cli).label} ·{' '}
+                  {selectedSession?.model ?? t('common.unknown')}
+                </p>
               </div>
-              <p className="mt-1 truncate text-sm text-muted-foreground">
-                {getBrandMeta(selectedSession?.cli).label} ·{' '}
-                {selectedSession?.model ?? t('common.unknown')}
-              </p>
             </div>
-          </div>
 
-          {selectedSessionError ? (
-            <ErrorState
-              title={
-                selectedSessionError.status === 404 ? t('session.notFound') : t('session.unable')
-              }
-              message={selectedSessionError.message}
-              code={selectedSessionError.code}
-              details={selectedSessionError.details}
-              onRetry={() => selectedId && setSelectedId(selectedId)}
-            />
-          ) : (
-            <>
-              <div className="grid grid-cols-1 gap-2 rounded-lg border border-border bg-surface-muted p-2 text-center sm:grid-cols-3">
-                <MiniMetric
-                  label={t('common.cost')}
-                  value={formatCurrency(selectedSession?.total_cost_usd)}
-                />
-                <MiniMetric
-                  label={t('common.tokens')}
-                  value={formatTokens(selectedUsage.input + selectedUsage.output)}
-                />
-                <MiniMetric
-                  label={t('common.tools')}
-                  value={String(selectedSession?.tool_call_count ?? 0)}
-                />
-              </div>
-
-              <div className="grid grid-cols-1 gap-2 rounded-lg border border-border bg-surface-muted p-2 text-center sm:grid-cols-2">
-                <MiniMetric
-                  label={t('common.messages')}
-                  value={String(selectedSession?.message_count ?? 0)}
-                />
-                <MiniMetric
-                  label={t('common.duration')}
-                  value={formatDuration(selectedSession?.duration_ms)}
-                />
-              </div>
-
-              <div className="rounded-md border border-border p-4">
-                <div className="mb-4 font-mono text-sm font-semibold text-foreground">
-                  {t('session.tokenUsage')}
+            {selectedSessionError ? (
+              <ErrorState
+                title={
+                  selectedSessionError.status === 404 ? t('session.notFound') : t('session.unable')
+                }
+                message={selectedSessionError.message}
+                code={selectedSessionError.code}
+                details={selectedSessionError.details}
+                onRetry={() => selectedId && setSelectedId(selectedId)}
+              />
+            ) : (
+              <>
+                <div className="grid grid-cols-1 gap-2 rounded-lg border border-border bg-surface-muted p-2 text-center sm:grid-cols-3">
+                  <MiniMetric
+                    label={t('common.cost')}
+                    value={formatCurrency(selectedSession?.total_cost_usd)}
+                  />
+                  <MiniMetric
+                    label={t('common.tokens')}
+                    value={formatTokens(selectedUsage.input + selectedUsage.output)}
+                  />
+                  <MiniMetric
+                    label={t('common.tools')}
+                    value={String(selectedSession?.tool_call_count ?? 0)}
+                  />
                 </div>
-                <TokenUsageBar
-                  input={selectedUsage.input}
-                  output={selectedUsage.output}
-                  cacheRead={selectedUsage.cacheRead}
-                  cacheWrite={selectedUsage.cacheWrite}
-                />
-              </div>
 
-              <div className="rounded-md border border-border p-4 text-sm">
-                <div className="mb-4 font-mono text-sm font-semibold text-foreground">
-                  {t('session.metadata')}
+                <div className="grid grid-cols-1 gap-2 rounded-lg border border-border bg-surface-muted p-2 text-center sm:grid-cols-2">
+                  <MiniMetric
+                    label={t('common.messages')}
+                    value={String(selectedSession?.message_count ?? 0)}
+                  />
+                  <MiniMetric
+                    label={t('common.duration')}
+                    value={formatDuration(selectedSession?.duration_ms)}
+                  />
                 </div>
-                <InfoRow
-                  label={t('common.project')}
-                  value={basename(selectedSession?.project_path)}
-                />
-                <InfoRow label={t('common.provider')} value={selectedSession?.provider ?? '—'} />
-                <InfoRow
-                  label={t('common.model')}
-                  value={selectedSession?.model ?? t('common.unknown')}
-                />
-                <InfoRow
-                  label={t('common.started')}
-                  value={selectedSession?.started_at ? formatDate(selectedSession.started_at) : '—'}
-                />
-                <InfoRow
-                  label={t('common.ended')}
-                  value={selectedSession?.ended_at ? formatDate(selectedSession.ended_at) : '—'}
-                />
-                <InfoRow
-                  label={t('common.duration')}
-                  value={formatDuration(selectedSession?.duration_ms)}
-                />
-              </div>
-            </>
-          )}
 
-          {selectedId && (
-            <Link to={`/sessions/${selectedId}`}>
-              <Button variant="outline" className="w-full">
-                {t('dashboard.openSession')} <ArrowUpRight className="h-4 w-4" />
-              </Button>
-            </Link>
-          )}
-        </DataPanel>
+                <div className="rounded-md border border-border p-4">
+                  <div className="mb-4 font-mono text-sm font-semibold text-foreground">
+                    {t('session.tokenUsage')}
+                  </div>
+                  <TokenUsageBar
+                    input={selectedUsage.input}
+                    output={selectedUsage.output}
+                    cacheRead={selectedUsage.cacheRead}
+                    cacheWrite={selectedUsage.cacheWrite}
+                  />
+                </div>
+
+                <div className="rounded-md border border-border p-4 text-sm">
+                  <div className="mb-4 font-mono text-sm font-semibold text-foreground">
+                    {t('session.metadata')}
+                  </div>
+                  <InfoRow
+                    label={t('common.project')}
+                    value={basename(selectedSession?.project_path)}
+                  />
+                  <InfoRow label={t('common.provider')} value={selectedSession?.provider ?? '—'} />
+                  <InfoRow
+                    label={t('common.model')}
+                    value={selectedSession?.model ?? t('common.unknown')}
+                  />
+                  <InfoRow
+                    label={t('common.started')}
+                    value={
+                      selectedSession?.started_at ? formatDate(selectedSession.started_at) : '—'
+                    }
+                  />
+                  <InfoRow
+                    label={t('common.ended')}
+                    value={selectedSession?.ended_at ? formatDate(selectedSession.ended_at) : '—'}
+                  />
+                  <InfoRow
+                    label={t('common.duration')}
+                    value={formatDuration(selectedSession?.duration_ms)}
+                  />
+                </div>
+              </>
+            )}
+
+            {selectedId && (
+              <Link to={`/sessions/${selectedId}`}>
+                <Button variant="outline" className="w-full">
+                  {t('dashboard.openSession')} <ArrowUpRight className="h-4 w-4" />
+                </Button>
+              </Link>
+            )}
+          </DataPanel>
+        )}
       </aside>
     </div>
   );
@@ -570,6 +598,7 @@ function DonutCard({
   centerLabel,
   emptyTitle,
   emptyDescription,
+  loading,
   colorFor,
 }: {
   title: string;
@@ -578,6 +607,7 @@ function DonutCard({
   centerLabel: string;
   emptyTitle: string;
   emptyDescription: string;
+  loading?: boolean;
   colorFor: (label: string, index: number) => string;
 }) {
   const { t } = useI18n();
@@ -589,67 +619,75 @@ function DonutCard({
       description={t('dashboard.topContributors')}
       contentClassName="grid min-h-[292px] grid-rows-[160px_1fr] gap-4 pt-3"
     >
-      <div className="relative mx-auto h-40 w-40">
-        <ResponsiveContainer width="100%" height="100%">
-          <PieChart>
-            <Pie
-              data={data}
-              dataKey="value"
-              nameKey="label"
-              cx="50%"
-              cy="50%"
-              innerRadius={54}
-              outerRadius={76}
-              paddingAngle={2}
-              stroke="var(--surface)"
-              strokeWidth={2}
-            >
-              {data.map((item, index) => (
-                <Cell key={item.label} fill={colorFor(item.label, index)} />
-              ))}
-            </Pie>
-            <Tooltip
-              contentStyle={tooltipStyle}
-              formatter={(value: number) => [formatCurrency(value), t('common.cost')]}
-            />
-          </PieChart>
-        </ResponsiveContainer>
-        <div className="pointer-events-none absolute inset-0 grid place-items-center text-center">
-          <div>
-            <div className="font-mono text-sm font-semibold text-foreground">{center}</div>
-            <div className="font-mono text-[10px] uppercase tracking-[0.1em] text-subtle-foreground">
-              {centerLabel}
+      {loading ? (
+        <DonutSkeleton className="contents" />
+      ) : (
+        <>
+          <div className="relative mx-auto h-40 w-40">
+            <ResponsiveContainer width="100%" height="100%">
+              <PieChart>
+                <Pie
+                  data={data}
+                  dataKey="value"
+                  nameKey="label"
+                  cx="50%"
+                  cy="50%"
+                  innerRadius={54}
+                  outerRadius={76}
+                  paddingAngle={2}
+                  stroke="var(--surface)"
+                  strokeWidth={2}
+                >
+                  {data.map((item, index) => (
+                    <Cell key={item.label} fill={colorFor(item.label, index)} />
+                  ))}
+                </Pie>
+                <Tooltip
+                  contentStyle={tooltipStyle}
+                  formatter={(value: number) => [formatCurrency(value), t('common.cost')]}
+                />
+              </PieChart>
+            </ResponsiveContainer>
+            <div className="pointer-events-none absolute inset-0 grid place-items-center text-center">
+              <div>
+                <div className="font-mono text-sm font-semibold text-foreground">{center}</div>
+                <div className="font-mono text-[10px] uppercase tracking-[0.1em] text-subtle-foreground">
+                  {centerLabel}
+                </div>
+              </div>
             </div>
           </div>
-        </div>
-      </div>
-      <div className="space-y-2.5">
-        {data.map((item, index) => (
-          <div
-            key={item.label}
-            className="grid grid-cols-[minmax(0,1fr)_auto] items-start gap-3 text-xs"
-          >
-            <div className="flex min-w-0 items-start gap-2">
-              <span
-                className="h-2.5 w-2.5 shrink-0 rounded-sm"
-                style={{ background: colorFor(item.label, index) }}
-              />
-              <span className="break-words leading-snug text-muted-foreground">{item.label}</span>
-            </div>
-            <div className="flex shrink-0 items-center gap-3 tabular-nums">
-              <span className="hidden text-subtle-foreground 2xl:inline">
-                {formatCurrency(item.value)}
-              </span>
-              <span className="min-w-12 text-right font-mono font-semibold text-foreground">
-                {item.percentage}%
-              </span>
-            </div>
+          <div className="space-y-2.5">
+            {data.map((item, index) => (
+              <div
+                key={item.label}
+                className="grid grid-cols-[minmax(0,1fr)_auto] items-start gap-3 text-xs"
+              >
+                <div className="flex min-w-0 items-start gap-2">
+                  <span
+                    className="h-2.5 w-2.5 shrink-0 rounded-sm"
+                    style={{ background: colorFor(item.label, index) }}
+                  />
+                  <span className="break-words leading-snug text-muted-foreground">
+                    {item.label}
+                  </span>
+                </div>
+                <div className="flex shrink-0 items-center gap-3 tabular-nums">
+                  <span className="hidden text-subtle-foreground 2xl:inline">
+                    {formatCurrency(item.value)}
+                  </span>
+                  <span className="min-w-12 text-right font-mono font-semibold text-foreground">
+                    {item.percentage}%
+                  </span>
+                </div>
+              </div>
+            ))}
+            {data.length === 0 && (
+              <EmptyState title={emptyTitle} description={emptyDescription} className="p-4" />
+            )}
           </div>
-        ))}
-        {data.length === 0 && (
-          <EmptyState title={emptyTitle} description={emptyDescription} className="p-4" />
-        )}
-      </div>
+        </>
+      )}
     </DataPanel>
   );
 }

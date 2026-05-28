@@ -34,6 +34,7 @@ import { DataPanel } from '../components/ui/DataPanel.js';
 import { EmptyState } from '../components/ui/EmptyState.js';
 import { ErrorState } from '../components/ui/ErrorState.js';
 import { MetricTile } from '../components/ui/MetricTile.js';
+import { ChartSkeleton, DonutSkeleton } from '../components/ui/LoadingState.js';
 import { SectionHeader as SharedSectionHeader } from '../components/ui/SectionHeader.js';
 import { Select } from '../components/ui/Select.js';
 import { useI18n } from '../components/i18n/LanguageProvider.js';
@@ -146,11 +147,13 @@ export function AnalyticsPage() {
   );
   const {
     data: report,
+    loading: reportLoading,
     validating: reportValidating,
     error: reportError,
   } = useApi<AnalyticsReport>(`/api/analytics/report${filteredPrefix}`);
   const {
     data: spendData,
+    loading: spendLoading,
     validating: spendValidating,
     error: spendError,
   } = useApi<{
@@ -158,6 +161,7 @@ export function AnalyticsPage() {
   }>(`/api/analytics/spend-over-time?granularity=week${filteredSuffix}`);
   const {
     data: tokenData,
+    loading: tokenLoading,
     validating: tokenValidating,
     error: tokenError,
   } = useApi<{
@@ -165,6 +169,7 @@ export function AnalyticsPage() {
   }>(`/api/analytics/tokens-over-time${filteredPrefix}`);
   const {
     data: breakdownData,
+    loading: breakdownLoading,
     validating: breakdownValidating,
     error: breakdownError,
   } = useApi<{
@@ -324,6 +329,7 @@ export function AnalyticsPage() {
               : t('analytics.notEnoughData')
           }
           tone="success"
+          loading={reportLoading && !report}
         />
         <SummaryCard
           icon={Gauge}
@@ -331,6 +337,7 @@ export function AnalyticsPage() {
           value={formatCurrency(report?.summary.baselineDailySpend)}
           sub={t('analytics.movingBaseline')}
           tone="info"
+          loading={reportLoading && !report}
         />
         <SummaryCard
           icon={Sparkles}
@@ -338,6 +345,7 @@ export function AnalyticsPage() {
           value={String(insights.length)}
           sub={t('analytics.actionableFindings')}
           tone="warning"
+          loading={reportLoading && !report}
         />
         <SummaryCard
           icon={AlertTriangle}
@@ -345,6 +353,7 @@ export function AnalyticsPage() {
           value={String(anomalies.length)}
           sub={t('analytics.outliers')}
           tone="danger"
+          loading={reportLoading && !report}
         />
       </div>
 
@@ -355,6 +364,7 @@ export function AnalyticsPage() {
           value={String(productivity?.totalToolCalls ?? 0)}
           sub={t('analytics.totalAcrossSessions')}
           tone="info"
+          loading={reportLoading && !report}
         />
         <SummaryCard
           icon={Gauge}
@@ -362,6 +372,7 @@ export function AnalyticsPage() {
           value={(productivity?.avgToolCallsPerSession ?? 0).toFixed(1)}
           sub={t('analytics.averageDensity')}
           tone="success"
+          loading={reportLoading && !report}
         />
         <SummaryCard
           icon={TrendingUp}
@@ -369,6 +380,7 @@ export function AnalyticsPage() {
           value={formatTokens(productivity?.avgTokensPerToolCall)}
           sub={t('analytics.efficiencyIndicator')}
           tone="warning"
+          loading={reportLoading && !report}
         />
         <SummaryCard
           icon={AlertTriangle}
@@ -380,6 +392,7 @@ export function AnalyticsPage() {
               : t('analytics.correlationUnavailable')
           }
           tone="danger"
+          loading={reportLoading && !report}
         />
       </div>
 
@@ -468,41 +481,45 @@ export function AnalyticsPage() {
             </div>
           </CardHeader>
           <CardContent>
-            <ResponsiveContainer width="100%" height={260}>
-              <AreaChart data={spendData?.points ?? report?.trend ?? []}>
-                <defs>
-                  <linearGradient id="spendGradient" x1="0" y1="0" x2="0" y2="1">
-                    <stop offset="5%" stopColor="var(--accent)" stopOpacity={0.35} />
-                    <stop offset="95%" stopColor="var(--accent)" stopOpacity={0.02} />
-                  </linearGradient>
-                </defs>
-                <CartesianGrid stroke="var(--border)" vertical={false} />
-                <XAxis
-                  dataKey="date"
-                  tick={{ fontSize: 11, fill: 'var(--subtle-foreground)' }}
-                  tickLine={false}
-                  axisLine={false}
-                />
-                <YAxis
-                  tick={{ fontSize: 11, fill: 'var(--subtle-foreground)' }}
-                  tickLine={false}
-                  axisLine={false}
-                  tickFormatter={(v: number) => `$${v.toFixed(0)}`}
-                />
-                <Tooltip
-                  contentStyle={tooltipStyle}
-                  formatter={(value: number) => [formatCurrency(value), t('common.cost')]}
-                />
-                <Area
-                  type="monotone"
-                  dataKey="spend"
-                  stroke="var(--accent)"
-                  fill="url(#spendGradient)"
-                  strokeWidth={2.4}
-                  dot={{ r: 3, fill: 'var(--accent)' }}
-                />
-              </AreaChart>
-            </ResponsiveContainer>
+            {spendLoading && !spendData && !report ? (
+              <ChartSkeleton className="h-[260px]" />
+            ) : (
+              <ResponsiveContainer width="100%" height={260}>
+                <AreaChart data={spendData?.points ?? report?.trend ?? []}>
+                  <defs>
+                    <linearGradient id="spendGradient" x1="0" y1="0" x2="0" y2="1">
+                      <stop offset="5%" stopColor="var(--accent)" stopOpacity={0.35} />
+                      <stop offset="95%" stopColor="var(--accent)" stopOpacity={0.02} />
+                    </linearGradient>
+                  </defs>
+                  <CartesianGrid stroke="var(--border)" vertical={false} />
+                  <XAxis
+                    dataKey="date"
+                    tick={{ fontSize: 11, fill: 'var(--subtle-foreground)' }}
+                    tickLine={false}
+                    axisLine={false}
+                  />
+                  <YAxis
+                    tick={{ fontSize: 11, fill: 'var(--subtle-foreground)' }}
+                    tickLine={false}
+                    axisLine={false}
+                    tickFormatter={(v: number) => `$${v.toFixed(0)}`}
+                  />
+                  <Tooltip
+                    contentStyle={tooltipStyle}
+                    formatter={(value: number) => [formatCurrency(value), t('common.cost')]}
+                  />
+                  <Area
+                    type="monotone"
+                    dataKey="spend"
+                    stroke="var(--accent)"
+                    fill="url(#spendGradient)"
+                    strokeWidth={2.4}
+                    dot={{ r: 3, fill: 'var(--accent)' }}
+                  />
+                </AreaChart>
+              </ResponsiveContainer>
+            )}
           </CardContent>
         </Card>
 
@@ -516,40 +533,44 @@ export function AnalyticsPage() {
             </div>
           </CardHeader>
           <CardContent>
-            <ResponsiveContainer width="100%" height={260}>
-              <AreaChart data={tokenData?.points ?? []}>
-                <CartesianGrid stroke="var(--border)" vertical={false} />
-                <XAxis
-                  dataKey="date"
-                  tick={{ fontSize: 11, fill: 'var(--subtle-foreground)' }}
-                  tickLine={false}
-                  axisLine={false}
-                />
-                <YAxis
-                  tick={{ fontSize: 11, fill: 'var(--subtle-foreground)' }}
-                  tickLine={false}
-                  axisLine={false}
-                  tickFormatter={(v: number) => formatTokens(v)}
-                />
-                <Tooltip contentStyle={tooltipStyle} />
-                <Area
-                  type="monotone"
-                  dataKey="inputTokens"
-                  stroke="var(--accent)"
-                  fill="var(--accent-soft)"
-                  strokeWidth={2}
-                  name={t('common.input')}
-                />
-                <Area
-                  type="monotone"
-                  dataKey="outputTokens"
-                  stroke="var(--success)"
-                  fill="var(--success-soft)"
-                  strokeWidth={2}
-                  name={t('common.output')}
-                />
-              </AreaChart>
-            </ResponsiveContainer>
+            {tokenLoading && !tokenData ? (
+              <ChartSkeleton className="h-[260px]" />
+            ) : (
+              <ResponsiveContainer width="100%" height={260}>
+                <AreaChart data={tokenData?.points ?? []}>
+                  <CartesianGrid stroke="var(--border)" vertical={false} />
+                  <XAxis
+                    dataKey="date"
+                    tick={{ fontSize: 11, fill: 'var(--subtle-foreground)' }}
+                    tickLine={false}
+                    axisLine={false}
+                  />
+                  <YAxis
+                    tick={{ fontSize: 11, fill: 'var(--subtle-foreground)' }}
+                    tickLine={false}
+                    axisLine={false}
+                    tickFormatter={(v: number) => formatTokens(v)}
+                  />
+                  <Tooltip contentStyle={tooltipStyle} />
+                  <Area
+                    type="monotone"
+                    dataKey="inputTokens"
+                    stroke="var(--accent)"
+                    fill="var(--accent-soft)"
+                    strokeWidth={2}
+                    name={t('common.input')}
+                  />
+                  <Area
+                    type="monotone"
+                    dataKey="outputTokens"
+                    stroke="var(--success)"
+                    fill="var(--success-soft)"
+                    strokeWidth={2}
+                    name={t('common.output')}
+                  />
+                </AreaChart>
+              </ResponsiveContainer>
+            )}
           </CardContent>
         </Card>
       </div>
@@ -569,46 +590,54 @@ export function AnalyticsPage() {
             </div>
           </CardHeader>
           <CardContent className="flex flex-col gap-6 lg:flex-row lg:items-center">
-            <div className="mx-auto h-48 w-full max-w-[260px] lg:h-[220px] lg:flex-[0_0_45%] lg:max-w-none">
-              <ResponsiveContainer width="100%" height="100%">
-                <PieChart>
-                  <Pie
-                    data={breakdown}
-                    dataKey="value"
-                    nameKey="label"
-                    cx="50%"
-                    cy="50%"
-                    outerRadius={90}
-                    innerRadius={55}
-                  >
-                    {breakdown.map((_, i) => (
-                      <Cell key={i} fill={chartColor(i)} />
-                    ))}
-                  </Pie>
-                  <Tooltip
-                    contentStyle={tooltipStyle}
-                    formatter={(value: number) => [
-                      metric === 'cost' ? formatCurrency(value) : formatTokens(value),
-                      '',
-                    ]}
-                  />
-                </PieChart>
-              </ResponsiveContainer>
-            </div>
-            <div className="space-y-2 text-xs lg:min-w-[220px]">
-              {breakdown.map((d, i) => (
-                <div key={d.label} className="flex items-center gap-2">
-                  <div
-                    className="h-2.5 w-2.5 shrink-0 rounded-sm"
-                    style={{ background: chartColor(i) }}
-                  />
-                  <span className="max-w-[120px] truncate text-subtle-foreground">{d.label}</span>
-                  <span className="ml-auto font-mono font-medium text-foreground">
-                    {d.percentage}%
-                  </span>
+            {breakdownLoading && !breakdownData ? (
+              <DonutSkeleton className="w-full lg:flex-1" />
+            ) : (
+              <>
+                <div className="mx-auto h-48 w-full max-w-[260px] lg:h-[220px] lg:flex-[0_0_45%] lg:max-w-none">
+                  <ResponsiveContainer width="100%" height="100%">
+                    <PieChart>
+                      <Pie
+                        data={breakdown}
+                        dataKey="value"
+                        nameKey="label"
+                        cx="50%"
+                        cy="50%"
+                        outerRadius={90}
+                        innerRadius={55}
+                      >
+                        {breakdown.map((_, i) => (
+                          <Cell key={i} fill={chartColor(i)} />
+                        ))}
+                      </Pie>
+                      <Tooltip
+                        contentStyle={tooltipStyle}
+                        formatter={(value: number) => [
+                          metric === 'cost' ? formatCurrency(value) : formatTokens(value),
+                          '',
+                        ]}
+                      />
+                    </PieChart>
+                  </ResponsiveContainer>
                 </div>
-              ))}
-            </div>
+                <div className="space-y-2 text-xs lg:min-w-[220px]">
+                  {breakdown.map((d, i) => (
+                    <div key={d.label} className="flex items-center gap-2">
+                      <div
+                        className="h-2.5 w-2.5 shrink-0 rounded-sm"
+                        style={{ background: chartColor(i) }}
+                      />
+                      <span className="max-w-[120px] truncate text-subtle-foreground">
+                        {d.label}
+                      </span>
+                      <span className="ml-auto font-mono font-medium text-foreground">
+                        {d.percentage}%
+                      </span>
+                    </div>
+                  ))}
+                </div>
+              </>
+            )}
           </CardContent>
         </Card>
 
@@ -622,28 +651,34 @@ export function AnalyticsPage() {
             </div>
           </CardHeader>
           <CardContent>
-            <ResponsiveContainer width="100%" height={260}>
-              <BarChart data={breakdown.slice(0, 8)} layout="vertical" margin={{ left: 72 }}>
-                <CartesianGrid stroke="var(--border)" vertical={false} />
-                <XAxis
-                  type="number"
-                  tick={{ fontSize: 11, fill: 'var(--subtle-foreground)' }}
-                  tickLine={false}
-                  axisLine={false}
-                  tickFormatter={(v: number) => (metric === 'cost' ? formatCurrency(v) : String(v))}
-                />
-                <YAxis
-                  type="category"
-                  dataKey="label"
-                  tick={{ fontSize: 11, fill: 'var(--subtle-foreground)' }}
-                  width={72}
-                  tickLine={false}
-                  axisLine={false}
-                />
-                <Tooltip contentStyle={tooltipStyle} />
-                <Bar dataKey="value" fill="var(--accent)" radius={[0, 4, 4, 0]} />
-              </BarChart>
-            </ResponsiveContainer>
+            {breakdownLoading && !breakdownData ? (
+              <ChartSkeleton className="h-[260px]" />
+            ) : (
+              <ResponsiveContainer width="100%" height={260}>
+                <BarChart data={breakdown.slice(0, 8)} layout="vertical" margin={{ left: 72 }}>
+                  <CartesianGrid stroke="var(--border)" vertical={false} />
+                  <XAxis
+                    type="number"
+                    tick={{ fontSize: 11, fill: 'var(--subtle-foreground)' }}
+                    tickLine={false}
+                    axisLine={false}
+                    tickFormatter={(v: number) =>
+                      metric === 'cost' ? formatCurrency(v) : String(v)
+                    }
+                  />
+                  <YAxis
+                    type="category"
+                    dataKey="label"
+                    tick={{ fontSize: 11, fill: 'var(--subtle-foreground)' }}
+                    width={72}
+                    tickLine={false}
+                    axisLine={false}
+                  />
+                  <Tooltip contentStyle={tooltipStyle} />
+                  <Bar dataKey="value" fill="var(--accent)" radius={[0, 4, 4, 0]} />
+                </BarChart>
+              </ResponsiveContainer>
+            )}
           </CardContent>
         </Card>
       </div>
@@ -851,14 +886,18 @@ function SummaryCard({
   value,
   sub,
   tone,
+  loading,
 }: {
   icon: LucideIcon;
   label: string;
   value: string;
   sub: string;
   tone: 'success' | 'info' | 'warning' | 'danger';
+  loading?: boolean;
 }) {
-  return <MetricTile icon={Icon} label={label} value={value} meta={sub} tone={tone} />;
+  return (
+    <MetricTile icon={Icon} label={label} value={value} meta={sub} tone={tone} loading={loading} />
+  );
 }
 
 function InsightRow({ item, label }: { item: Insight; label: string }) {

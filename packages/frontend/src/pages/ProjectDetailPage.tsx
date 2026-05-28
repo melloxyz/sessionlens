@@ -43,7 +43,7 @@ import {
 } from '../components/ui/DataTable.js';
 import { EmptyState } from '../components/ui/EmptyState.js';
 import { ErrorState } from '../components/ui/ErrorState.js';
-import { LoadingState } from '../components/ui/LoadingState.js';
+import { DetailPageSkeleton } from '../components/ui/LoadingState.js';
 import { MetricTile } from '../components/ui/MetricTile.js';
 import { useI18n } from '../components/i18n/LanguageProvider.js';
 
@@ -85,7 +85,7 @@ export function ProjectDetailPage() {
     return { last, topModel: topModel ?? '—', topProvider: topProvider ?? '—' };
   }, [data]);
 
-  if (loading && !data) return <LoadingState />;
+  if (loading && !data) return <DetailPageSkeleton />;
   if (error)
     return (
       <div className="p-4 lg:p-6">

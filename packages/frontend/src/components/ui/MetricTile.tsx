@@ -61,14 +61,14 @@ export function MetricTile({
           )}
         </div>
 
-        {meta && (
+        {(meta || loading) && (
           <div
             className={cn(
               'relative z-10 mt-5 w-fit rounded border px-2 py-1 font-mono text-[10px] font-medium uppercase leading-none tracking-[0.08em]',
               toneMap[tone],
             )}
           >
-            {meta}
+            {loading ? <Skeleton className="h-3 w-20 border-current/20 bg-current/10" /> : meta}
           </div>
         )}
         {sparkline && (
