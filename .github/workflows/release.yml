@@ -2,139 +2,17 @@ name: Release
 
 on:
   push:
-    tags:
-      - 'v*'
+    branches:
+      - master
 
 permissions:
   contents: write
+  pull-requests: write
 
 jobs:
   release:
-    name: Create Release
     runs-on: ubuntu-latest
-
     steps:
-      - name: Checkout
-        uses: actions/checkout@v4
+      - uses: google-github-actions/release-please-action@v4
         with:
-          fetch-depth: 0
-
-      - name: Get previous tag
-        id: prev-tag
-        run: |
-          PREV_TAG=$(git describe --tags --abbrev=0 HEAD^ 2>/dev/null || echo "")
-          echo "prev_tag=$PREV_TAG" >> $GITHUB_OUTPUT
-
-      - name: Generate changelog
-        id: changelog
-        run: |
-          PREV_TAG="${{ steps.prev-tag.outputs.prev_tag }}"
-          OUTFILE=$(mktemp)
-
-          if [ -n "$PREV_TAG" ]; then
-            COMMITS=$(git log "$PREV_TAG"..HEAD --pretty=format:"%h|%s" --no-merges)
-          else
-            COMMITS=$(git log --pretty=format:"%h|%s" --no-merges -20)
-          fi
-
-          FEATS=""
-          FIXES=""
-          CHORES=""
-          DOCS=""
-          REFACTORS=""
-          OTHER=""
-
-          ALL_TYPES='feat|fix|chore|docs|refactor|refatoração|refacção|refactoração|correção|corrigir|ajustar|ajuste|atualizar|atualização|melhorar|melhoria|perf|test|ci|build|style|estilo|teste|documentação|tarefa|manutenção|limpeza|limpar'
-
-          while IFS='|' read -r HASH MSG; do
-            [ -z "$HASH" ] && continue
-            SHORT="${HASH:0:7}"
-
-            SEGMENTS=$(echo "$MSG" | perl -CSD -pe "s/(?=(?:^|\s)(?:${ALL_TYPES})\s*(?:\([^)]*\))?\s*:)/\n/gi")
-
-            MATCHES=$(echo "$SEGMENTS" | grep -ciE "(${ALL_TYPES})\s*(\([^)]*\))?\s*:")
-
-            if [ "${MATCHES:-0}" -eq 0 ]; then
-              OTHER="${OTHER}- ${MSG} (\`${SHORT}\`)"$'\n'
-              continue
-            fi
-
-            while IFS= read -r SEGMENT; do
-              [ -z "$SEGMENT" ] && continue
-              SEGMENT=$(echo "$SEGMENT" | sed 's/^[[:space:]]*//;s/[[:space:]]*$//')
-              SEGMENT_LOWER=$(echo "$SEGMENT" | tr '[:upper:]' '[:lower:]')
-              LINE="- ${SEGMENT} (\`${SHORT}\`)"
-
-              case "$SEGMENT_LOWER" in
-                feat*|funcionalidade*|funcional*|adicionar*|adiciona*|criar*|cria*|novo*|nova*|novos*|novas*)
-                  FEATS="${FEATS}${LINE}"$'\n' ;;
-                fix*|correção*|corrigir*|correçã*|ajustar*|ajuste*|corrige*)
-                  FIXES="${FIXES}${LINE}"$'\n' ;;
-                chore*|tarefa*|manutenção*|manutençã*|limpeza*|limpar*|organizar*|organizaçã*)
-                  CHORES="${CHORES}${LINE}"$'\n' ;;
-                docs*|documentação*|documentaçã*|doc*)
-                  DOCS="${DOCS}${LINE}"$'\n' ;;
-                refactor*|refatoração*|refatoraçã*|refacção*|refactoração*|reestruturar*)
-                  REFACTORS="${REFACTORS}${LINE}"$'\n' ;;
-                *)
-                  OTHER="${OTHER}${LINE}"$'\n' ;;
-              esac
-            done < <(echo "$SEGMENTS" | grep -iE "(${ALL_TYPES})\s*(\([^)]*\))?\s*:")
-          done <<< "$COMMITS"
-
-          {
-            echo "### Features"
-            echo ""
-            if [ -n "$FEATS" ]; then printf "%s" "$FEATS"; else echo "- Nenhuma"; fi
-            echo ""
-            echo "### Bug Fixes"
-            echo ""
-            if [ -n "$FIXES" ]; then printf "%s" "$FIXES"; else echo "- Nenhum"; fi
-            echo ""
-            echo "### Chores"
-            echo ""
-            if [ -n "$CHORES" ]; then printf "%s" "$CHORES"; else echo "- Nenhum"; fi
-            if [ -n "$DOCS" ]; then
-              echo ""
-              echo "### Documentation"
-              echo ""
-              printf "%s" "$DOCS"
-            fi
-            if [ -n "$REFACTORS" ]; then
-              echo ""
-              echo "### Refactors"
-              echo ""
-              printf "%s" "$REFACTORS"
-            fi
-            if [ -n "$OTHER" ]; then
-              echo ""
-              echo "### Other Changes"
-              echo ""
-              printf "%s" "$OTHER"
-            fi
-          } > "$OUTFILE"
-
-          {
-            echo "changelog<<CHANGELOG_EOF"
-            cat "$OUTFILE"
-            echo "CHANGELOG_EOF"
-          } >> "$GITHUB_OUTPUT"
-
-      - name: Create GitHub Release
-        uses: softprops/action-gh-release@v2
-        with:
-          name: ${{ github.ref_name }}
-          body: |
-            ## ${{ github.ref_name }}
-
-            ${{ steps.changelog.outputs.changelog }}
-
-            ## Install
-
-            ```bash
-            git clone https://github.com/melloxyz/sessionless.git
-            cd sessionless
-            pnpm install
-            pnpm dev
-            ```
-          generate_release_notes: false
+          release-type: simple
