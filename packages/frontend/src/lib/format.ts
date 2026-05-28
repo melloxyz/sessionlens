@@ -1,3 +1,19 @@
+let currentLocale = 'en-US';
+
+const relativeStrings: Record<string, { now: string; min: string; hour: string; day: string }> = {
+  'en-US': { now: 'now', min: 'm ago', hour: 'h ago', day: 'd ago' },
+  'pt-BR': { now: 'agora', min: 'min atrás', hour: 'h atrás', day: 'd atrás' },
+};
+
+const durationStrings: Record<string, { hour: string; minute: string }> = {
+  'en-US': { hour: 'h', minute: 'm' },
+  'pt-BR': { hour: 'h', minute: 'min' },
+};
+
+export function setFormatLocale(locale: string) {
+  currentLocale = locale === 'pt-BR' ? 'pt-BR' : 'en-US';
+}
+
 export function formatCurrency(value: number | null | undefined): string {
   if (value == null) return '$0.00';
   if (value >= 1000) return `$${(value / 1000).toFixed(1)}k`;
@@ -13,22 +29,23 @@ export function formatTokens(value: number | null | undefined): string {
 
 export function formatDuration(ms: number | null | undefined): string {
   if (ms == null) return '—';
+  const s = durationStrings[currentLocale] ?? durationStrings['en-US'];
   const minutes = Math.floor(ms / 60000);
   const hours = Math.floor(minutes / 60);
-  if (hours > 0) return `${hours}h ${minutes % 60}m`;
-  return `${minutes}m`;
+  if (hours > 0) return `${hours}${s.hour} ${minutes % 60}${s.minute}`;
+  return `${minutes}${s.minute}`;
 }
 
 export function formatDate(iso: string | null | undefined): string {
   if (!iso) return '—';
   const d = new Date(iso);
-  return d.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+  return d.toLocaleDateString(currentLocale, { month: 'short', day: 'numeric', year: 'numeric' });
 }
 
 export function formatDateTime(iso: string | null | undefined): string {
   if (!iso) return '—';
   const d = new Date(iso);
-  return d.toLocaleDateString('en-US', {
+  return d.toLocaleDateString(currentLocale, {
     month: 'short',
     day: 'numeric',
     hour: '2-digit',
@@ -38,14 +55,15 @@ export function formatDateTime(iso: string | null | undefined): string {
 
 export function formatRelativeTime(iso: string | null | undefined): string {
   if (!iso) return '—';
+  const s = relativeStrings[currentLocale] ?? relativeStrings['en-US'];
   const diffMs = Date.now() - new Date(iso).getTime();
   const minutes = Math.max(0, Math.floor(diffMs / 60000));
-  if (minutes < 1) return 'now';
-  if (minutes < 60) return `${minutes}m ago`;
+  if (minutes < 1) return s.now;
+  if (minutes < 60) return `${minutes}${s.min}`;
   const hours = Math.floor(minutes / 60);
-  if (hours < 24) return `${hours}h ago`;
+  if (hours < 24) return `${hours}${s.hour}`;
   const days = Math.floor(hours / 24);
-  return `${days}d ago`;
+  return `${days}${s.day}`;
 }
 
 export function compactPath(path: string | null | undefined): string {

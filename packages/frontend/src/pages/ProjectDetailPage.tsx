@@ -401,7 +401,7 @@ function SessionRow({ session }: { session: Record<string, unknown> }) {
                 : 'warning'
           }
         >
-          {String(session.source_confidence)}
+          {t(`common.confidence.${String(session.source_confidence).toLowerCase()}`)}
         </Badge>
       </DataTableCell>
     </DataTableRow>

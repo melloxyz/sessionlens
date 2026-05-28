@@ -4,117 +4,28 @@ import { DataPanel } from '../components/ui/DataPanel.js';
 import { SectionHeader } from '../components/ui/SectionHeader.js';
 import { useI18n } from '../components/i18n/LanguageProvider.js';
 
-const latest = [
-  ['changelog.core', 'Background auto-ingestion with local filesystem watcher'],
-  ['changelog.analytics', 'Real analytics filters across report, charts and breakdowns'],
-  ['changelog.pricing', 'OpenRouter pricing sync with estimated cost backfill'],
+const latestKeys = ['changelog.latest.1', 'changelog.latest.2', 'changelog.latest.3'];
+const latestTags = ['changelog.core', 'changelog.analytics', 'changelog.pricing'];
+
+const releasedKeys = [
+  { key: 'changelog.released.0', tags: ['changelog.core', 'changelog.localFirst'] },
+  { key: 'changelog.released.1', tags: ['changelog.core', 'changelog.ui'] },
+  { key: 'changelog.released.2', tags: ['changelog.analytics', 'changelog.pricing'] },
+  { key: 'changelog.released.3', tags: ['changelog.pricing', 'changelog.localFirst'] },
+  { key: 'changelog.released.4', tags: ['changelog.core'] },
+  { key: 'changelog.released.5', tags: ['changelog.ui'] },
+  { key: 'changelog.released.6', tags: ['changelog.adapters'] },
+  { key: 'changelog.released.7', tags: ['changelog.analytics'] },
+  { key: 'changelog.released.8', tags: ['changelog.adapters'] },
+  { key: 'changelog.released.9', tags: ['changelog.core', 'changelog.localFirst'] },
 ];
 
-const released = [
-  {
-    version: 'v0.7.1',
-    title: 'Background ingestion',
-    tags: ['changelog.core', 'changelog.localFirst'],
-    items: [
-      'Filesystem watcher for supported local CLI data sources',
-      'Auto-ingestion toggle in Settings',
-      'Ingestion concurrency guard for sql.js',
-    ],
-  },
-  {
-    version: 'v0.7.0',
-    title: 'Sessionless foundation',
-    tags: ['changelog.core', 'changelog.ui'],
-    items: [
-      'Sessionless branding and package rename',
-      'Changelog and project status page',
-      'Windows-safe dev orchestration',
-    ],
-  },
-  {
-    version: 'v0.6.4',
-    title: 'Models and analytics filters',
-    tags: ['changelog.analytics', 'changelog.pricing'],
-    items: [
-      'Model catalog search and used-model ranking',
-      'Provider/model/project analytics filters',
-      'OpenRouter model pricing sync',
-    ],
-  },
-  {
-    version: 'v0.6.3',
-    title: 'Cost accuracy',
-    tags: ['changelog.pricing', 'changelog.localFirst'],
-    items: [
-      'actual / estimated / unknown cost sources',
-      'Token-based fallback cost estimation',
-      'Backfill for sessions previously showing $0.00',
-    ],
-  },
-  {
-    version: 'v0.6.2',
-    title: 'Project intelligence',
-    tags: ['changelog.core'],
-    items: [
-      'Hide projects without deleting local folders',
-      'Open project folder from session detail',
-      'Git commit timeline for existing repositories',
-    ],
-  },
-  {
-    version: 'v0.6.0',
-    title: 'UI polish',
-    tags: ['changelog.ui'],
-    items: [
-      'Premium OpenCode/Linear-style shell',
-      'Light and dark themes',
-      'English and Portuguese interface',
-    ],
-  },
-  {
-    version: 'v0.5.0',
-    title: 'CLI expansion',
-    tags: ['changelog.adapters'],
-    items: [
-      'Gemini, Kimi, Aider, Qwen and Antigravity adapters',
-      'Integration detection in sidebar',
-      'Adapter-isolated parsing',
-    ],
-  },
-  {
-    version: 'v0.4.0',
-    title: 'Advanced analytics',
-    tags: ['changelog.analytics'],
-    items: ['Insights Engine', 'Anomaly detection', 'Multi-model session usage'],
-  },
-  {
-    version: 'v0.3.0',
-    title: 'Multi-CLI core',
-    tags: ['changelog.adapters'],
-    items: [
-      'Codex, Claude and OpenCode support',
-      'Cross-provider normalization',
-      'Project refresh and usage aggregation',
-    ],
-  },
-  {
-    version: 'v0.1.0',
-    title: 'Local-first bootstrap',
-    tags: ['changelog.core', 'changelog.localFirst'],
-    items: ['pnpm monorepo', 'Fastify + Vite app shell', 'sql.js local SQLite database'],
-  },
+const inProgressKeys = [
+  'changelog.inProgress.1',
+  'changelog.inProgress.2',
+  'changelog.inProgress.3',
 ];
-
-const inProgress = [
-  'More robust adapter validation across local AI coding CLIs',
-  'Better explainability for estimated cost calculations',
-  'Restore hidden projects controls',
-];
-const planned = [
-  'Local budget limits and alerts',
-  'System tray integration',
-  'Optional Electron runtime',
-];
+const plannedKeys = ['changelog.planned.1', 'changelog.planned.2', 'changelog.planned.3'];
 
 export function ChangelogPage() {
   const { t } = useI18n();
@@ -154,10 +65,12 @@ export function ChangelogPage() {
           description={t('changelog.latest.description')}
         />
         <div className="grid gap-3 lg:grid-cols-3">
-          {latest.map(([tag, title]) => (
-            <DataPanel key={title} contentClassName="space-y-3 p-4">
-              <Badge variant="neutral">{t(tag)}</Badge>
-              <div className="font-mono text-sm font-medium text-foreground">{title}</div>
+          {latestKeys.map((key, i) => (
+            <DataPanel key={key} contentClassName="space-y-3 p-4">
+              <Badge variant="neutral">{t(latestTags[i])}</Badge>
+              <div className="font-mono text-sm font-medium text-foreground">
+                {t(`${key}.text`)}
+              </div>
             </DataPanel>
           ))}
         </div>
@@ -170,8 +83,8 @@ export function ChangelogPage() {
             description={t('changelog.released.description')}
           />
           <div className="space-y-4">
-            {released.map((entry) => (
-              <ReleaseCard key={entry.version} entry={entry} />
+            {releasedKeys.map((entry) => (
+              <ReleaseCard key={entry.key} entryKey={entry.key} tags={entry.tags} />
             ))}
           </div>
         </section>
@@ -181,14 +94,14 @@ export function ChangelogPage() {
             icon={Clock3}
             title={t('changelog.inProgress')}
             description={t('changelog.progress.description')}
-            items={inProgress}
+            itemKeys={inProgressKeys}
             tone="warning"
           />
           <RoadmapCard
             icon={Layers3}
             title={t('changelog.planned')}
             description={t('changelog.planned.description')}
-            items={planned}
+            itemKeys={plannedKeys}
             tone="info"
           />
           <DataPanel title={t('changelog.status.title')} contentClassName="space-y-3 text-sm">
@@ -209,21 +122,18 @@ function SectionTitle({ title, description }: { title: string; description: stri
   return <SectionHeader title={title} description={description} />;
 }
 
-function ReleaseCard({
-  entry,
-}: {
-  entry: { version: string; title: string; tags: string[]; items: string[] };
-}) {
+function ReleaseCard({ entryKey, tags }: { entryKey: string; tags: string[] }) {
   const { t } = useI18n();
+  const items = [1, 2, 3].map((n) => t(`${entryKey}.${n}`));
   return (
     <DataPanel contentClassName="grid gap-0 p-0 md:grid-cols-[160px_minmax(0,1fr)]">
       <div className="border-b border-border p-5 md:border-b-0 md:border-r">
         <div className="flex items-center gap-2 font-mono text-sm font-semibold text-foreground">
           <CheckCircle2 className="h-4 w-4 text-success" />
-          {entry.version}
+          {t(`${entryKey}.version`)}
         </div>
         <div className="mt-3 flex flex-wrap gap-1.5">
-          {entry.tags.map((tag) => (
+          {tags.map((tag) => (
             <Badge key={tag} variant="neutral">
               {t(tag)}
             </Badge>
@@ -231,9 +141,11 @@ function ReleaseCard({
         </div>
       </div>
       <div className="p-5">
-        <div className="font-mono text-sm font-semibold text-foreground">{entry.title}</div>
+        <div className="font-mono text-sm font-semibold text-foreground">
+          {t(`${entryKey}.title`)}
+        </div>
         <div className="mt-3 space-y-2">
-          {entry.items.map((item) => (
+          {items.map((item) => (
             <div key={item} className="flex gap-2 text-sm text-muted-foreground">
               <CircleDot className="mt-1 h-3 w-3 shrink-0 fill-accent text-accent" />
               <span>{item}</span>
@@ -249,15 +161,16 @@ function RoadmapCard({
   icon: Icon,
   title,
   description,
-  items,
+  itemKeys,
   tone,
 }: {
   icon: typeof Clock3;
   title: string;
   description: string;
-  items: string[];
+  itemKeys: string[];
   tone: 'warning' | 'info';
 }) {
+  const { t } = useI18n();
   const toneClass = tone === 'warning' ? 'bg-warning-soft text-warning' : 'bg-info-soft text-info';
   return (
     <DataPanel
@@ -270,12 +183,12 @@ function RoadmapCard({
         </div>
       }
     >
-      {items.map((item) => (
+      {itemKeys.map((key) => (
         <div
-          key={item}
+          key={key}
           className="rounded-md border border-border bg-surface-muted p-3 text-sm text-muted-foreground"
         >
-          {item}
+          {t(key)}
         </div>
       ))}
     </DataPanel>

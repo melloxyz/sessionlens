@@ -162,7 +162,7 @@ export function SessionDetailPage() {
                 : 'warning'
           }
         >
-          {session.source_confidence}
+          {t(`common.confidence.${session.source_confidence.toLowerCase()}`)}
         </Badge>
       </div>
 

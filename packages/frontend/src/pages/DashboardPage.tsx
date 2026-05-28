@@ -433,7 +433,9 @@ export function DashboardPage() {
                         : 'warning'
                   }
                 >
-                  {selectedSession?.source_confidence ?? '—'}
+                  {selectedSession?.source_confidence
+                    ? t(`common.confidence.${selectedSession.source_confidence.toLowerCase()}`)
+                    : '—'}
                 </Badge>
               </div>
               <p className="mt-1 truncate text-sm text-muted-foreground">
