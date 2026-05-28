@@ -93,11 +93,12 @@ export function SessionDetailPage() {
   const {
     data: session,
     loading,
+    validating,
     error,
     refetch,
   } = useApi<SessionDetail>(id ? `/api/sessions/${id}` : null, { immediate: Boolean(id) });
 
-  if (loading) return <LoadingState />;
+  if (loading && !session) return <LoadingState />;
 
   if (error) {
     return (
@@ -145,7 +146,7 @@ export function SessionDetailPage() {
   }
 
   return (
-    <div className="space-y-5 p-4 lg:p-6">
+    <div className="space-y-5 p-4 lg:p-6" aria-busy={validating}>
       <div className="flex flex-wrap items-center justify-between gap-3">
         <Link
           to="/sessions"

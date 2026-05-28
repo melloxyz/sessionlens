@@ -144,18 +144,34 @@ export function AnalyticsPage() {
     `/api/analytics/filter-options${queryPrefix}`,
     { initialData: { clis: [], providers: [], models: [], projects: [] } },
   );
-  const { data: report, error: reportError } = useApi<AnalyticsReport>(
-    `/api/analytics/report${filteredPrefix}`,
-  );
-  const { data: spendData, error: spendError } = useApi<{
+  const {
+    data: report,
+    validating: reportValidating,
+    error: reportError,
+  } = useApi<AnalyticsReport>(`/api/analytics/report${filteredPrefix}`);
+  const {
+    data: spendData,
+    validating: spendValidating,
+    error: spendError,
+  } = useApi<{
     points: { date: string; spend: number; tokens: number }[];
   }>(`/api/analytics/spend-over-time?granularity=week${filteredSuffix}`);
-  const { data: tokenData, error: tokenError } = useApi<{
+  const {
+    data: tokenData,
+    validating: tokenValidating,
+    error: tokenError,
+  } = useApi<{
     points: { date: string; inputTokens: number; outputTokens: number }[];
   }>(`/api/analytics/tokens-over-time${filteredPrefix}`);
-  const { data: breakdownData, error: breakdownError } = useApi<{
+  const {
+    data: breakdownData,
+    validating: breakdownValidating,
+    error: breakdownError,
+  } = useApi<{
     breakdown: { label: string; value: number; percentage: number }[];
   }>(`/api/analytics/breakdown?dimension=${dimension}&metric=${metric}${filteredSuffix}`);
+  const isValidating =
+    reportValidating || spendValidating || tokenValidating || breakdownValidating;
 
   const breakdown = useMemo(
     () => (breakdownData?.breakdown ?? []).filter((d) => d.value > 0),
@@ -167,7 +183,7 @@ export function AnalyticsPage() {
   const modelUsage = report?.modelUsageBreakdown ?? [];
 
   return (
-    <div className="space-y-5 p-4 lg:p-6">
+    <div className="space-y-5 p-4 lg:p-6" aria-busy={isValidating}>
       {(reportError || spendError || tokenError || breakdownError) && (
         <ErrorState
           title={t('analytics.failed')}
@@ -380,7 +396,13 @@ export function AnalyticsPage() {
                 {t('analytics.insightsDescription')}
               </p>
             </div>
-            <Badge variant="neutral">{report ? t('analytics.live') : t('common.loading')}</Badge>
+            <Badge variant="neutral">
+              {isValidating
+                ? t('common.loading')
+                : report
+                  ? t('analytics.live')
+                  : t('common.loading')}
+            </Badge>
           </CardHeader>
           <CardContent className="space-y-3">
             {insights.length > 0 ? (

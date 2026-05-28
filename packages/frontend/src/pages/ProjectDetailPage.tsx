@@ -71,7 +71,9 @@ interface ProjectDetailResponse {
 export function ProjectDetailPage() {
   const { t } = useI18n();
   const { id } = useParams<{ id: string }>();
-  const { data, loading, error, refetch } = useApi<ProjectDetailResponse>(`/api/projects/${id}`);
+  const { data, loading, validating, error, refetch } = useApi<ProjectDetailResponse>(
+    `/api/projects/${id}`,
+  );
 
   const derived = useMemo(() => {
     const sessions = data?.sessions ?? [];
@@ -83,7 +85,7 @@ export function ProjectDetailPage() {
     return { last, topModel: topModel ?? '—', topProvider: topProvider ?? '—' };
   }, [data]);
 
-  if (loading) return <LoadingState />;
+  if (loading && !data) return <LoadingState />;
   if (error)
     return (
       <div className="p-4 lg:p-6">
@@ -120,7 +122,7 @@ export function ProjectDetailPage() {
   }));
 
   return (
-    <div className="space-y-5 p-4 lg:p-6">
+    <div className="space-y-5 p-4 lg:p-6" aria-busy={validating}>
       <Link
         to="/projects"
         className="inline-flex items-center gap-1 rounded-sm text-sm text-muted-foreground transition-colors hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/25"

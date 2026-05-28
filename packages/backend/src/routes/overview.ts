@@ -42,31 +42,32 @@ export function registerOverviewRoutes(app: FastifyInstance): void {
         rangeClause += ' AND started_at <= ?';
         rangeParams.push(dateTo);
       }
-      const params = [
-        todayStr,
-        ...rangeParams,
-        weekStr,
-        ...rangeParams,
-        monthStr,
-        ...rangeParams,
-        ...rangeParams,
-        ...rangeParams,
-        ...rangeParams,
-        ...rangeParams,
-      ];
-
       const results = db.exec(
         `
         SELECT
-          (SELECT COALESCE(SUM(total_cost_usd), 0) FROM sessions WHERE ${VISIBLE_SESSION_SQL} AND started_at >= ?${rangeClause}) AS today_spend,
-          (SELECT COALESCE(SUM(total_cost_usd), 0) FROM sessions WHERE ${VISIBLE_SESSION_SQL} AND started_at >= ?${rangeClause}) AS weekly_spend,
-          (SELECT COALESCE(SUM(total_cost_usd), 0) FROM sessions WHERE ${VISIBLE_SESSION_SQL} AND started_at >= ?${rangeClause}) AS monthly_spend,
-          (SELECT COALESCE(SUM(total_cost_usd), 0) FROM sessions WHERE ${VISIBLE_SESSION_SQL}${rangeClause}) AS total_spend,
-          (SELECT COUNT(*) FROM sessions WHERE ${VISIBLE_SESSION_SQL}${rangeClause}) AS session_count,
-          (SELECT COALESCE(AVG(total_cost_usd), 0) FROM sessions WHERE ${VISIBLE_SESSION_SQL} AND total_cost_usd IS NOT NULL${rangeClause}) AS avg_cost,
-          (SELECT cli FROM sessions WHERE ${VISIBLE_SESSION_SQL}${rangeClause} GROUP BY cli ORDER BY COUNT(*) DESC LIMIT 1) AS most_used_cli
+          COALESCE(SUM(CASE WHEN started_at >= ? THEN COALESCE(total_cost_usd, 0) ELSE 0 END), 0) AS today_spend,
+          COALESCE(SUM(CASE WHEN started_at >= ? THEN COALESCE(total_cost_usd, 0) ELSE 0 END), 0) AS weekly_spend,
+          COALESCE(SUM(CASE WHEN started_at >= ? THEN COALESCE(total_cost_usd, 0) ELSE 0 END), 0) AS monthly_spend,
+          COALESCE(SUM(total_cost_usd), 0) AS total_spend,
+          COUNT(*) AS session_count,
+          COALESCE(AVG(total_cost_usd), 0) AS avg_cost,
+          COALESCE(SUM(COALESCE(duration_ms, 0)), 0) AS total_duration_ms,
+          COALESCE(SUM(COALESCE(message_count, 0)), 0) AS total_messages
+        FROM sessions
+        WHERE ${VISIBLE_SESSION_SQL}${rangeClause}
       `,
-        params,
+        [todayStr, weekStr, monthStr, ...rangeParams],
+      );
+      const mostUsedCliResult = db.exec(
+        `
+        SELECT cli
+        FROM sessions
+        WHERE ${VISIBLE_SESSION_SQL}${rangeClause}
+        GROUP BY cli
+        ORDER BY COUNT(*) DESC
+        LIMIT 1
+      `,
+        rangeParams,
       );
 
       if (results.length === 0 || !results[0].values) {
@@ -78,10 +79,13 @@ export function registerOverviewRoutes(app: FastifyInstance): void {
           sessionCount: 0,
           averageSessionCost: 0,
           mostUsedCli: null,
+          totalDurationMs: 0,
+          totalMessages: 0,
         };
       }
 
       const r = results[0].values[0];
+      const mostUsedCli = mostUsedCliResult[0]?.values?.[0]?.[0] as string | undefined;
       return {
         todaySpend: Number(r[0]) || 0,
         weeklySpend: Number(r[1]) || 0,
@@ -89,7 +93,9 @@ export function registerOverviewRoutes(app: FastifyInstance): void {
         totalSpend: Number(r[3]) || 0,
         sessionCount: Number(r[4]) || 0,
         averageSessionCost: Number(r[5]) || 0,
-        mostUsedCli: (r[6] as string) ?? null,
+        mostUsedCli: mostUsedCli ?? null,
+        totalDurationMs: Number(r[6]) || 0,
+        totalMessages: Number(r[7]) || 0,
       };
     } catch (error) {
       reply.code(500);

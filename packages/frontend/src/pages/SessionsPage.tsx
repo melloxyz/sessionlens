@@ -59,12 +59,13 @@ export function SessionsPage() {
   const [searchInput, setSearchInput] = useState(search);
 
   const apiUrl = `/api/sessions?page=${page}&limit=20&sortBy=${sortBy}&sortOrder=${sortOrder}${search ? `&search=${search}` : ''}${cli ? `&cli=${cli}` : ''}${queryString ? `&${queryString}` : ''}`;
-  const { data, loading, error, refetch } = useApi<{
+  const { data, loading, validating, error, refetch } = useApi<{
     data: SessionRow[];
     total: number;
     page: number;
     limit: number;
   }>(apiUrl);
+  const isInitialLoading = loading && !data;
   const totalPages = Math.max(1, Math.ceil((data?.total ?? 0) / 20));
 
   function updateParam(key: string, value: string, resetPage = true) {
@@ -127,7 +128,7 @@ export function SessionsPage() {
         </Button>
       </FilterBar>
 
-      <DataPanel contentClassName="p-0">
+      <DataPanel contentClassName="p-0" aria-busy={validating}>
         <DataTableContainer>
           <DataTable>
             <DataTableHead>
@@ -150,7 +151,7 @@ export function SessionsPage() {
               </DataTableRow>
             </DataTableHead>
             <DataTableBody>
-              {loading ? (
+              {isInitialLoading ? (
                 <TableSkeletonRows rows={8} columns={7} />
               ) : (
                 data?.data.map((session) => (
@@ -223,7 +224,7 @@ export function SessionsPage() {
           </DataTable>
         </DataTableContainer>
 
-        {!loading && !error && (data?.data.length ?? 0) === 0 && (
+        {!isInitialLoading && !error && (data?.data.length ?? 0) === 0 && (
           <div className="p-5">
             <EmptyState
               title={t('sessions.empty.title')}
@@ -237,6 +238,7 @@ export function SessionsPage() {
           <div className="text-xs text-subtle-foreground sm:text-left">
             {t('common.page')} {page} {t('common.of')} {totalPages} · {data?.total ?? 0}{' '}
             {t('common.sessions').toLowerCase()}
+            {validating && !isInitialLoading ? ` · ${t('common.loading')}` : ''}
           </div>
           <div className="flex w-full gap-2 sm:w-auto">
             <Button

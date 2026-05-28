@@ -57,13 +57,14 @@ export function ModelsPage() {
   if (usedOnly) query.set('usedOnly', 'true');
   if (sort) query.set('sort', sort);
 
-  const { data, loading, error, refetch } = useApi<{ data: ModelRow[] }>(
+  const { data, loading, validating, error, refetch } = useApi<{ data: ModelRow[] }>(
     `/api/models?${query.toString()}`,
   );
   const { data: providers } = useApi<ProvidersResponse>('/api/models/providers', {
     initialData: { providers: [] },
   });
   const models = data?.data ?? [];
+  const isInitialLoading = loading && !data;
   const usedModels = useMemo(() => models.filter((model) => model.is_used).slice(0, 8), [models]);
 
   async function syncOpenRouter() {
@@ -163,8 +164,9 @@ export function ModelsPage() {
       <DataPanel
         title={t('models.catalogTitle')}
         description={t('models.catalogDescription')}
-        action={<Badge variant="neutral">{models.length}</Badge>}
+        action={<Badge variant="neutral">{validating ? t('common.loading') : models.length}</Badge>}
         contentClassName="p-0"
+        aria-busy={validating}
       >
         <DataTableContainer>
           <DataTable>
@@ -187,7 +189,7 @@ export function ModelsPage() {
               </DataTableRow>
             </DataTableHead>
             <DataTableBody>
-              {loading ? (
+              {isInitialLoading ? (
                 <TableSkeletonRows rows={8} columns={6} />
               ) : (
                 models.map((model) => (
@@ -239,7 +241,7 @@ export function ModelsPage() {
             </DataTableBody>
           </DataTable>
         </DataTableContainer>
-        {!loading && models.length === 0 && (
+        {!isInitialLoading && models.length === 0 && (
           <div className="p-5">
             <EmptyState
               title={t('models.noPricing.title')}

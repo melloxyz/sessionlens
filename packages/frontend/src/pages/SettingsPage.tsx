@@ -60,16 +60,19 @@ export function SettingsPage() {
   const [autoMutationError, setAutoMutationError] = useState<string | null>(null);
   const {
     data: overview,
+    validating: overviewValidating,
     error: overviewError,
     refetch: refetchOverview,
   } = useApi<Overview>('/api/overview');
   const {
     data: ingestStatus,
+    validating: ingestValidating,
     error: ingestError,
     refetch: refetchIngest,
   } = useApi<IngestionStatus>('/api/ingest/status');
   const {
     data: autoIngestion,
+    validating: autoValidating,
     error: autoError,
     refetch: refetchAuto,
   } = useApi<AutoIngestionStatus>('/api/ingest/auto');
@@ -110,9 +113,13 @@ export function SettingsPage() {
   const detectedCount = (integrations?.integrations ?? []).filter(
     (item) => item.status === 'available',
   ).length;
+  const isValidating = overviewValidating || ingestValidating || autoValidating;
 
   return (
-    <div className="grid gap-5 p-4 lg:p-6 xl:grid-cols-[minmax(0,1fr)_380px]">
+    <div
+      className="grid gap-5 p-4 lg:p-6 xl:grid-cols-[minmax(0,1fr)_380px]"
+      aria-busy={isValidating}
+    >
       <section className="space-y-5">
         <DataPanel
           title={t('settings.appearance')}

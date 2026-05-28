@@ -41,7 +41,10 @@ export function ProjectsPage() {
   const [status, setStatus] = useState<StatusFilter>('all');
   const [sort, setSort] = useState<SortMode>('cost');
   const [hidingId, setHidingId] = useState<number | null>(null);
-  const { data, loading, error, refetch } = useApi<{ data: Project[] }>('/api/projects');
+  const { data, loading, validating, error, refetch } = useApi<{ data: Project[] }>(
+    '/api/projects',
+  );
+  const isInitialLoading = loading && !data;
 
   const allProjects = data?.data ?? [];
   const projects = useMemo(() => {
@@ -154,7 +157,9 @@ export function ProjectsPage() {
             />
             <div className="hidden items-center gap-2 rounded-md border border-border px-3 py-2 font-mono text-xs text-muted-foreground md:flex">
               <SlidersHorizontal className="h-4 w-4" />
-              {projects.length} {t('projects.shown')}
+              {validating && !isInitialLoading
+                ? t('common.loading')
+                : `${projects.length} ${t('projects.shown')}`}
             </div>
           </>
         }
@@ -198,7 +203,7 @@ export function ProjectsPage() {
           description={t('projects.all.description')}
         />
         <div className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-3">
-          {loading
+          {isInitialLoading
             ? Array.from({ length: 9 }).map((_, index) => <ProjectSkeleton key={index} />)
             : projects.map((project) => (
                 <ProjectCard
@@ -212,7 +217,7 @@ export function ProjectsPage() {
         </div>
       </section>
 
-      {!loading && projects.length === 0 && (
+      {!isInitialLoading && projects.length === 0 && (
         <EmptyState
           title={t('projects.empty.title')}
           description={t('projects.empty.description')}

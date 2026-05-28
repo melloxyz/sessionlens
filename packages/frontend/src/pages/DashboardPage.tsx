@@ -60,6 +60,8 @@ interface Overview {
   sessionCount: number;
   averageSessionCost: number;
   mostUsedCli: string | null;
+  totalDurationMs: number;
+  totalMessages: number;
 }
 
 interface SessionRow {
@@ -110,12 +112,21 @@ export function DashboardPage() {
   const {
     data: overview,
     loading: overviewLoading,
+    validating: overviewValidating,
     error: overviewError,
   } = useApi<Overview>(`/api/overview${queryPrefix}`);
-  const { data: spendData, error: spendError } = useApi<{
+  const {
+    data: spendData,
+    validating: spendValidating,
+    error: spendError,
+  } = useApi<{
     points: { date: string; spend: number; tokens: number; sessions: number }[];
   }>(`/api/analytics/spend-over-time${queryPrefix}`);
-  const { data: tokenData, error: tokenError } = useApi<{
+  const {
+    data: tokenData,
+    validating: tokenValidating,
+    error: tokenError,
+  } = useApi<{
     points: {
       date: string;
       inputTokens: number;
@@ -124,24 +135,35 @@ export function DashboardPage() {
       cacheWriteTokens?: number;
     }[];
   }>(`/api/analytics/tokens-over-time${queryPrefix}`);
-  const { data: cliBreakdown, error: cliError } = useApi<{
+  const {
+    data: cliBreakdown,
+    validating: cliValidating,
+    error: cliError,
+  } = useApi<{
     breakdown: { label: string; value: number; percentage: number }[];
   }>(`/api/analytics/breakdown?dimension=cli&metric=cost${querySuffix}`);
-  const { data: modelBreakdown, error: modelError } = useApi<{
+  const {
+    data: modelBreakdown,
+    validating: modelValidating,
+    error: modelError,
+  } = useApi<{
     breakdown: { label: string; value: number; percentage: number }[];
   }>(`/api/analytics/breakdown?dimension=model&metric=cost${querySuffix}`);
-  const { data: recentSessions, error: recentSessionsError } = useApi<{
+  const {
+    data: recentSessions,
+    validating: recentSessionsValidating,
+    error: recentSessionsError,
+  } = useApi<{
     data: SessionRow[];
     total: number;
   }>(`/api/sessions?limit=9&sortBy=started_at&sortOrder=desc${querySuffix}`);
-  const { data: allSessions, error: allSessionsError } = useApi<{
-    data: SessionRow[];
-    total: number;
-  }>(`/api/sessions?limit=500&sortBy=started_at&sortOrder=desc${querySuffix}`);
-  const { data: selectedSession, error: selectedSessionError } = useApi<SessionDetail>(
-    selectedId ? `/api/sessions/${selectedId}` : null,
-    { immediate: Boolean(selectedId) },
-  );
+  const {
+    data: selectedSession,
+    validating: selectedSessionValidating,
+    error: selectedSessionError,
+  } = useApi<SessionDetail>(selectedId ? `/api/sessions/${selectedId}` : null, {
+    immediate: Boolean(selectedId),
+  });
 
   useEffect(() => {
     if (!selectedId && recentSessions?.data?.[0]) setSelectedId(recentSessions.data[0].id);
@@ -155,14 +177,8 @@ export function DashboardPage() {
     (sum, point) => sum + point.inputTokens + point.outputTokens,
     0,
   );
-  const totalDurationMs = (allSessions?.data ?? []).reduce(
-    (sum, session) => sum + (session.duration_ms ?? 0),
-    0,
-  );
-  const totalMessages = (allSessions?.data ?? []).reduce(
-    (sum, session) => sum + (session.message_count ?? 0),
-    0,
-  );
+  const totalDurationMs = overview?.totalDurationMs ?? 0;
+  const totalMessages = overview?.totalMessages ?? 0;
 
   const selectedUsage = useMemo(() => {
     const events = selectedSession?.usageEvents ?? [];
@@ -184,11 +200,21 @@ export function DashboardPage() {
     cliError ||
     modelError ||
     recentSessionsError ||
-    allSessionsError ||
     selectedSessionError;
+  const isValidating =
+    overviewValidating ||
+    spendValidating ||
+    tokenValidating ||
+    cliValidating ||
+    modelValidating ||
+    recentSessionsValidating ||
+    selectedSessionValidating;
 
   return (
-    <div className="grid min-h-full grid-cols-1 gap-5 p-4 lg:p-6 xl:grid-cols-[minmax(0,1fr)_380px]">
+    <div
+      className="grid min-h-full grid-cols-1 gap-5 p-4 lg:p-6 xl:grid-cols-[minmax(0,1fr)_380px]"
+      aria-busy={isValidating}
+    >
       {anyError && (
         <section className="xl:col-span-2">
           <ErrorState
