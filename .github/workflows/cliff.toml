@@ -21,7 +21,7 @@ sort_commits = "oldest"
 
 [[commit_preprocessors]]
 pattern = '(feat|fix|chore|docs|refactor|perf|test|ci|build|style|revert)(\([^)]*\))?:'
-replace = '\n$0'
+replace = "\n$0"
 
 [[commit_parsers]]
 pattern = '^feat'
