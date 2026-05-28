@@ -44,28 +44,42 @@ jobs:
           REFACTORS=""
           OTHER=""
 
+          ALL_TYPES='feat|fix|chore|docs|refactor|refatoração|refacção|refactoração|correção|corrigir|ajustar|ajuste|atualizar|atualização|melhorar|melhoria|perf|test|ci|build|style|estilo|teste|documentação|tarefa|manutenção|limpeza|limpar'
+
           while IFS='|' read -r HASH MSG; do
             [ -z "$HASH" ] && continue
             SHORT="${HASH:0:7}"
-            LINE="- ${MSG} (\`${SHORT}\`)"
 
-            TYPES=$(echo "$MSG" | grep -oiE '(feat|fix|chore|docs|refactor|perf|test|ci|build|style)\s*(\([^)]*\))?\s*:' | tr '[:upper:]' '[:lower:]' | sort -u)
+            SEGMENTS=$(echo "$MSG" | sed -E "s/(${ALL_TYPES})\s*(\([^)]*\))?\s*:/\n&/gi")
 
-            if [ -z "$TYPES" ]; then
-              OTHER="${OTHER}${LINE}"$'\n'
+            MATCHES=$(echo "$SEGMENTS" | grep -ciE "(${ALL_TYPES})\s*(\([^)]*\))?\s*:")
+
+            if [ "${MATCHES:-0}" -eq 0 ]; then
+              OTHER="${OTHER}- ${MSG} (\`${SHORT}\`)"$'\n'
               continue
             fi
 
-            for TYPE in $TYPES; do
-              case "$TYPE" in
-                feat*)  FEATS="${FEATS}${LINE}"$'\n' ;;
-                fix*)   FIXES="${FIXES}${LINE}"$'\n' ;;
-                chore*) CHORES="${CHORES}${LINE}"$'\n' ;;
-                docs*)  DOCS="${DOCS}${LINE}"$'\n' ;;
-                refactor*) REFACTORS="${REFACTORS}${LINE}"$'\n' ;;
-                *) OTHER="${OTHER}${LINE}"$'\n' ;;
+            while IFS= read -r SEGMENT; do
+              [ -z "$SEGMENT" ] && continue
+              SEGMENT=$(echo "$SEGMENT" | sed 's/^[[:space:]]*//;s/[[:space:]]*$//')
+              SEGMENT_LOWER=$(echo "$SEGMENT" | tr '[:upper:]' '[:lower:]')
+              LINE="- ${SEGMENT} (\`${SHORT}\`)"
+
+              case "$SEGMENT_LOWER" in
+                feat*|funcionalidade*|funcional*|adicionar*|adiciona*|criar*|cria*|novo*|nova*|novos*|novas*)
+                  FEATS="${FEATS}${LINE}"$'\n' ;;
+                fix*|correção*|corrigir*|correçã*|ajustar*|ajuste*|corrige*)
+                  FIXES="${FIXES}${LINE}"$'\n' ;;
+                chore*|tarefa*|manutenção*|manutençã*|limpeza*|limpar*|organizar*|organizaçã*)
+                  CHORES="${CHORES}${LINE}"$'\n' ;;
+                docs*|documentação*|documentaçã*|doc*)
+                  DOCS="${DOCS}${LINE}"$'\n' ;;
+                refactor*|refatoração*|refatoraçã*|refacção*|refactoração*|reestruturar*)
+                  REFACTORS="${REFACTORS}${LINE}"$'\n' ;;
+                *)
+                  OTHER="${OTHER}${LINE}"$'\n' ;;
               esac
-            done
+            done < <(echo "$SEGMENTS" | grep -iE "(${ALL_TYPES})\s*(\([^)]*\))?\s*:")
           done <<< "$COMMITS"
 
           {
