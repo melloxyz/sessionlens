@@ -1,0 +1,61 @@
+[changelog]
+header = ""
+body = """
+{% if version %}## [{{ version }}] - {{ timestamp | date(format="%Y-%m-%d") }}{% else %}## [Unreleased]{% endif %}\n
+{% for commit in commits %}
+{% set scope = commit.scope %}
+{% if scope %}**{{ scope }}:** {% else %}{% endif %}{{ commit.message | trim }} ({{ commit.id | truncate(length=7, end="") }})\
+{% endfor %}\n
+"""
+footer = ""
+trim = true
+
+[git]
+conventional_commits = true
+filter_unconventional = true
+split_commits = true
+protect_breaking_commits = false
+filter_commits = false
+topo_order = false
+sort_commits = "oldest"
+
+[[commit_preprocessors]]
+pattern = '(feat|fix|chore|docs|refactor|perf|test|ci|build|style|revert)(\([^)]*\))?:'
+replace = '\n$0'
+
+[[commit_parsers]]
+pattern = '^feat'
+group = "Features"
+[[commit_parsers]]
+pattern = '^fix'
+group = "Bug Fixes"
+[[commit_parsers]]
+pattern = '^doc'
+group = "Documentation"
+[[commit_parsers]]
+pattern = '^perf'
+group = "Performance"
+[[commit_parsers]]
+pattern = '^refactor'
+group = "Refactors"
+[[commit_parsers]]
+pattern = '^style'
+group = "Styles"
+[[commit_parsers]]
+pattern = '^test'
+group = "Tests"
+[[commit_parsers]]
+pattern = '^build'
+group = "Build"
+[[commit_parsers]]
+pattern = '^ci'
+group = "CI"
+[[commit_parsers]]
+pattern = '^chore'
+group = "Chores"
+[[commit_parsers]]
+pattern = '^revert'
+group = "Reverts"
+[[commit_parsers]]
+pattern = '.*'
+group = "Other Changes"
