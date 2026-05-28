@@ -112,7 +112,7 @@ export function SessionsPage() {
           />
         }
       >
-        <div className="relative max-w-md flex-1">
+        <div className="relative w-full max-w-md flex-1 min-w-0">
           <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-subtle-foreground" />
           <Input
             value={searchInput}
@@ -231,14 +231,15 @@ export function SessionsPage() {
           </div>
         )}
 
-        <div className="flex items-center justify-between border-t border-border px-5 py-4">
-          <div className="text-xs text-subtle-foreground">
+        <div className="flex flex-col gap-3 border-t border-border px-4 py-4 sm:flex-row sm:items-center sm:justify-between sm:px-5">
+          <div className="text-xs text-subtle-foreground sm:text-left">
             Showing page {page} of {totalPages} · {data?.total ?? 0} sessions
           </div>
-          <div className="flex gap-2">
+          <div className="flex w-full gap-2 sm:w-auto">
             <Button
               variant="outline"
               size="sm"
+              className="flex-1 sm:flex-none"
               disabled={page <= 1}
               onClick={() => updateParam('page', String(page - 1), false)}
             >
@@ -247,6 +248,7 @@ export function SessionsPage() {
             <Button
               variant="outline"
               size="sm"
+              className="flex-1 sm:flex-none"
               disabled={page >= totalPages}
               onClick={() => updateParam('page', String(page + 1), false)}
             >

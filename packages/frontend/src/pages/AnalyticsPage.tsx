@@ -168,7 +168,7 @@ export function AnalyticsPage() {
   const modelUsage = report?.modelUsageBreakdown ?? [];
 
   return (
-    <div className="space-y-6 p-6">
+    <div className="space-y-6 p-4 lg:p-6">
       {(reportError || spendError || tokenError || breakdownError) && (
         <ErrorState
           title={t('analytics.failed')}
@@ -547,32 +547,34 @@ export function AnalyticsPage() {
               </p>
             </div>
           </CardHeader>
-          <CardContent className="flex items-center gap-6">
-            <ResponsiveContainer width="55%" height={220}>
-              <PieChart>
-                <Pie
-                  data={breakdown}
-                  dataKey="value"
-                  nameKey="label"
-                  cx="50%"
-                  cy="50%"
-                  outerRadius={90}
-                  innerRadius={55}
-                >
-                  {breakdown.map((_, i) => (
-                    <Cell key={i} fill={COLORS[i % COLORS.length]} />
-                  ))}
-                </Pie>
-                <Tooltip
-                  contentStyle={tooltipStyle}
-                  formatter={(value: number) => [
-                    metric === 'cost' ? formatCurrency(value) : formatTokens(value),
-                    '',
-                  ]}
-                />
-              </PieChart>
-            </ResponsiveContainer>
-            <div className="space-y-2 text-xs">
+          <CardContent className="flex flex-col gap-6 lg:flex-row lg:items-center">
+            <div className="mx-auto h-48 w-full max-w-[260px] lg:h-[220px] lg:flex-[0_0_45%] lg:max-w-none">
+              <ResponsiveContainer width="100%" height="100%">
+                <PieChart>
+                  <Pie
+                    data={breakdown}
+                    dataKey="value"
+                    nameKey="label"
+                    cx="50%"
+                    cy="50%"
+                    outerRadius={90}
+                    innerRadius={55}
+                  >
+                    {breakdown.map((_, i) => (
+                      <Cell key={i} fill={COLORS[i % COLORS.length]} />
+                    ))}
+                  </Pie>
+                  <Tooltip
+                    contentStyle={tooltipStyle}
+                    formatter={(value: number) => [
+                      metric === 'cost' ? formatCurrency(value) : formatTokens(value),
+                      '',
+                    ]}
+                  />
+                </PieChart>
+              </ResponsiveContainer>
+            </div>
+            <div className="space-y-2 text-xs lg:min-w-[220px]">
               {breakdown.map((d, i) => (
                 <div key={d.label} className="flex items-center gap-2">
                   <div
@@ -600,7 +602,7 @@ export function AnalyticsPage() {
           </CardHeader>
           <CardContent>
             <ResponsiveContainer width="100%" height={260}>
-              <BarChart data={breakdown.slice(0, 8)} layout="vertical" margin={{ left: 80 }}>
+              <BarChart data={breakdown.slice(0, 8)} layout="vertical" margin={{ left: 72 }}>
                 <CartesianGrid stroke="var(--border)" vertical={false} />
                 <XAxis
                   type="number"
@@ -613,7 +615,7 @@ export function AnalyticsPage() {
                   type="category"
                   dataKey="label"
                   tick={{ fontSize: 11, fill: 'var(--subtle-foreground)' }}
-                  width={80}
+                  width={72}
                   tickLine={false}
                   axisLine={false}
                 />

@@ -161,7 +161,7 @@ export function MobileNavigation() {
   const { t } = useI18n();
 
   return (
-    <nav className="fixed bottom-0 left-0 right-0 z-30 border-t border-border bg-surface lg:hidden">
+    <nav className="fixed inset-x-0 bottom-0 z-30 border-t border-border bg-surface lg:hidden pb-[env(safe-area-inset-bottom)]">
       <div className="grid grid-cols-5 gap-1 p-2">
         {NAV_ITEMS.map((item) => (
           <NavLink

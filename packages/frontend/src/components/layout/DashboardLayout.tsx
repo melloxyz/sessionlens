@@ -40,7 +40,7 @@ export function DashboardLayout() {
   const showDateRange = pathname === '/' || pathname === '/sessions' || pathname === '/analytics';
 
   return (
-    <div className="flex h-screen overflow-hidden bg-background text-foreground">
+    <div className="flex h-[100dvh] overflow-hidden bg-background text-foreground">
       <Sidebar />
       <main className="flex min-w-0 flex-1 flex-col overflow-hidden">
         <Topbar
@@ -49,7 +49,7 @@ export function DashboardLayout() {
           showDateRange={showDateRange}
           onRefresh={() => window.location.reload()}
         />
-        <div className="min-h-0 flex-1 overflow-auto pb-16 lg:pb-0">
+        <div className="min-h-0 flex-1 overflow-auto pb-[calc(4rem+env(safe-area-inset-bottom))] lg:pb-0">
           <Outlet />
         </div>
       </main>

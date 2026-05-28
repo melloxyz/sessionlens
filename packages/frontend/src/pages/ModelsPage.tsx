@@ -108,7 +108,7 @@ export function ModelsPage() {
           </>
         }
       >
-        <div className="relative min-w-[260px] flex-1">
+        <div className="relative w-full min-w-0 flex-1 sm:min-w-[260px]">
           <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-subtle-foreground" />
           <Input
             value={search}
@@ -273,7 +273,7 @@ function UsedModelCard({
             </div>
           </div>
         </div>
-        <div className="grid grid-cols-3 gap-2 rounded-lg border border-border bg-surface-muted p-2 text-center text-xs">
+        <div className="grid grid-cols-1 gap-2 rounded-lg border border-border bg-surface-muted p-2 text-center text-xs sm:grid-cols-3">
           <Metric label={labels.sessions} value={String(model.usage_session_count)} />
           <Metric label={labels.spend} value={formatCurrency(model.usage_total_cost)} />
           <Metric label={labels.input} value={formatCurrency(model.input_cost_per_million)} />

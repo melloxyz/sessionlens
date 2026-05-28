@@ -159,7 +159,7 @@ export function ProjectsPage() {
           </>
         }
       >
-        <div className="relative max-w-xl flex-1">
+        <div className="relative w-full min-w-0 max-w-xl flex-1">
           <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-subtle-foreground" />
           <Input
             value={search}
@@ -243,7 +243,7 @@ function ProjectCard({
   return (
     <Card interactive className="h-full overflow-hidden">
       <CardContent className="space-y-5">
-        <div className="flex items-start justify-between gap-4">
+        <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
           <Link to={`/projects/${project.id}`} className="flex min-w-0 flex-1 items-center gap-3">
             <div
               className={`grid h-11 w-11 shrink-0 place-items-center rounded-md border ${project.exists ? 'border-accent/20 bg-accent-soft text-accent' : 'border-warning/20 bg-warning-soft text-warning'}`}
@@ -263,7 +263,7 @@ function ProjectCard({
               </div>
             </div>
           </Link>
-          <div className="flex shrink-0 items-center gap-1">
+          <div className="flex shrink-0 items-center gap-1 self-end sm:self-start">
             <Button
               variant="ghost"
               size="icon-sm"
@@ -294,7 +294,7 @@ function ProjectCard({
           )}
         </div>
 
-        <div className="grid grid-cols-2 gap-3">
+        <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
           <Metric label={t('common.sessions')} value={String(project.total_sessions)} />
           <Metric label={t('common.cost')} value={formatCurrency(project.total_cost)} />
         </div>

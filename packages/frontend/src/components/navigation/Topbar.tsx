@@ -16,7 +16,7 @@ export function Topbar({ title, subtitle, onRefresh, showDateRange }: TopbarProp
   const { range, setRange } = useDateRange();
 
   return (
-    <header className="sticky top-0 z-20 flex min-h-16 items-center justify-between gap-4 border-b border-border bg-background px-4 lg:px-6">
+    <header className="sticky top-0 z-20 flex min-h-16 flex-col gap-3 border-b border-border bg-background px-4 py-3 md:flex-row md:items-center md:justify-between lg:px-6">
       <div className="min-w-0">
         <h1 className="truncate font-mono text-lg font-semibold tracking-[-0.03em] text-foreground">
           {title}

@@ -443,7 +443,7 @@ export function DashboardPage() {
             />
           ) : (
             <>
-              <div className="grid grid-cols-3 gap-2 rounded-lg border border-border bg-surface-muted p-2 text-center">
+              <div className="grid grid-cols-1 gap-2 rounded-lg border border-border bg-surface-muted p-2 text-center sm:grid-cols-3">
                 <MiniMetric label="Cost" value={formatCurrency(selectedSession?.total_cost_usd)} />
                 <MiniMetric
                   label="Tokens"
@@ -452,7 +452,7 @@ export function DashboardPage() {
                 <MiniMetric label="Tools" value={String(selectedSession?.tool_call_count ?? 0)} />
               </div>
 
-              <div className="grid grid-cols-2 gap-2 rounded-lg border border-border bg-surface-muted p-2 text-center">
+              <div className="grid grid-cols-1 gap-2 rounded-lg border border-border bg-surface-muted p-2 text-center sm:grid-cols-2">
                 <MiniMetric label="Messages" value={String(selectedSession?.message_count ?? 0)} />
                 <MiniMetric label="Duration" value={formatDuration(selectedSession?.duration_ms)} />
               </div>

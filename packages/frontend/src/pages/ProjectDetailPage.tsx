@@ -156,7 +156,7 @@ export function ProjectDetailPage() {
               {data.commits?.branch && <Badge variant="default">{data.commits.branch}</Badge>}
             </div>
           </div>
-          <div className="grid min-w-[280px] grid-cols-2 gap-3">
+          <div className="grid w-full max-w-[420px] grid-cols-1 gap-3 sm:grid-cols-2">
             <HeroMetric label={t('common.sessions')} value={String(p.total_sessions)} />
             <HeroMetric
               label={t('project.totalCost')}
@@ -171,7 +171,7 @@ export function ProjectDetailPage() {
         </div>
       </DataPanel>
 
-      <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
+      <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-4">
         <MetricTile
           icon={WalletCards}
           label={t('project.avgCost')}

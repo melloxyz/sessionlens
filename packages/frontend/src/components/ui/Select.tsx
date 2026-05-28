@@ -8,7 +8,7 @@ interface SelectProps extends SelectHTMLAttributes<HTMLSelectElement> {
 
 export function Select({ className, options, ...props }: SelectProps) {
   return (
-    <div className="relative inline-flex min-w-[10rem]">
+    <div className="relative inline-flex w-full min-w-0 sm:w-auto sm:min-w-[10rem]">
       <select
         className={cn(
           'h-9 w-full appearance-none rounded-md border border-border bg-surface py-0 pl-3 pr-9 font-mono text-sm text-foreground outline-none transition-colors duration-150 hover:border-border-strong hover:bg-surface-hover focus:border-accent focus:ring-2 focus:ring-accent/20 disabled:cursor-not-allowed disabled:opacity-50',
