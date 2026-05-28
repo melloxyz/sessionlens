@@ -45,16 +45,8 @@ import { EmptyState } from '../components/ui/EmptyState.js';
 import { ErrorState } from '../components/ui/ErrorState.js';
 import { DetailPageSkeleton } from '../components/ui/LoadingState.js';
 import { MetricTile } from '../components/ui/MetricTile.js';
+import { chartTooltipProps } from '../components/ui/ChartTooltip.js';
 import { useI18n } from '../components/i18n/LanguageProvider.js';
-
-const tooltipStyle = {
-  background: 'var(--surface-elevated)',
-  border: '1px solid var(--border)',
-  borderRadius: 6,
-  color: 'var(--foreground)',
-  boxShadow: 'none',
-  fontSize: 12,
-};
 
 interface ProjectDetailResponse {
   project: Record<string, unknown>;
@@ -224,7 +216,7 @@ export function ProjectDetailPage() {
                 tickFormatter={(v: number) => `$${v.toFixed(0)}`}
               />
               <Tooltip
-                contentStyle={tooltipStyle}
+                {...chartTooltipProps}
                 formatter={(v: number) => [formatCurrency(v), t('common.cost')]}
               />
               <Area
@@ -343,7 +335,7 @@ function DistributionCard({
               <Cell key={i} fill={chartColor(i)} />
             ))}
           </Pie>
-          <Tooltip contentStyle={tooltipStyle} formatter={(v: number) => [formatCurrency(v), '']} />
+          <Tooltip {...chartTooltipProps} formatter={(v: number) => [formatCurrency(v), '']} />
         </PieChart>
       </ResponsiveContainer>
       <div className="space-y-2 text-xs">

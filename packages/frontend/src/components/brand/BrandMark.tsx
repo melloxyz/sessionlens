@@ -1,6 +1,7 @@
 import type { SVGProps } from 'react';
 import { Badge } from '../ui/Badge.js';
 import { useTheme } from '../theme/ThemeProvider.js';
+import { Tooltip } from '../ui/Tooltip.js';
 import { cn } from '../../lib/utils.js';
 
 type LogoRoute = string | { light: string; dark: string };
@@ -128,31 +129,32 @@ export function BrandMark({
         : 'h-9 w-9 rounded-md text-xs';
 
   return (
-    <div
-      className={cn(
-        'grid shrink-0 place-items-center border border-border bg-surface-elevated font-semibold text-white',
-        sizeClass,
-        className,
-      )}
-      style={{
-        color: logo || CustomLogo ? undefined : '#fff',
-        backgroundColor: logo || CustomLogo ? undefined : meta.color,
-      }}
-      title={meta.label}
-    >
-      {CustomLogo ? (
-        <CustomLogo className="h-full w-full" />
-      ) : logo ? (
-        <img
-          src={logo}
-          alt={`${meta.label} logo`}
-          className="h-4/5 w-4/5 object-contain"
-          loading="lazy"
-        />
-      ) : (
-        meta.initials
-      )}
-    </div>
+    <Tooltip content={meta.label}>
+      <span
+        className={cn(
+          'grid shrink-0 place-items-center border border-border bg-surface-elevated font-semibold text-white',
+          sizeClass,
+          className,
+        )}
+        style={{
+          color: logo || CustomLogo ? undefined : '#fff',
+          backgroundColor: logo || CustomLogo ? undefined : meta.color,
+        }}
+      >
+        {CustomLogo ? (
+          <CustomLogo className="h-full w-full" />
+        ) : logo ? (
+          <img
+            src={logo}
+            alt={`${meta.label} logo`}
+            className="h-4/5 w-4/5 object-contain"
+            loading="lazy"
+          />
+        ) : (
+          meta.initials
+        )}
+      </span>
+    </Tooltip>
   );
 }
 

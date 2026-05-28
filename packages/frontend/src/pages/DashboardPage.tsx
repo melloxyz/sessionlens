@@ -44,6 +44,7 @@ import {
   PanelSkeleton,
   TableSkeletonRows,
 } from '../components/ui/LoadingState.js';
+import { chartTooltipProps } from '../components/ui/ChartTooltip.js';
 import { useDateRange } from '../components/filters/DateRangeProvider.js';
 import { useI18n } from '../components/i18n/LanguageProvider.js';
 import { useApi } from '../hooks/useApi.js';
@@ -98,15 +99,6 @@ interface SessionDetail extends SessionRow {
   }[];
   messages: { id: number; role: string; content: string; timestamp: string }[];
 }
-
-const tooltipStyle = {
-  background: 'var(--surface-elevated)',
-  border: '1px solid var(--border)',
-  borderRadius: 6,
-  color: 'var(--foreground)',
-  boxShadow: 'none',
-  fontSize: 12,
-};
 
 export function DashboardPage() {
   const { t } = useI18n();
@@ -326,7 +318,7 @@ export function DashboardPage() {
                     tickFormatter={(value: number) => `$${value.toFixed(0)}`}
                   />
                   <Tooltip
-                    contentStyle={tooltipStyle}
+                    {...chartTooltipProps}
                     formatter={(value: number) => [formatCurrency(value), t('common.cost')]}
                   />
                   <Area
@@ -643,7 +635,7 @@ function DonutCard({
                   ))}
                 </Pie>
                 <Tooltip
-                  contentStyle={tooltipStyle}
+                  {...chartTooltipProps}
                   formatter={(value: number) => [formatCurrency(value), t('common.cost')]}
                 />
               </PieChart>

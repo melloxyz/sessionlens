@@ -129,6 +129,11 @@ a[href] {
   background: var(--accent-soft);
 }
 
+.recharts-tooltip-wrapper {
+  pointer-events: none !important;
+  z-index: 90 !important;
+}
+
 ::-webkit-scrollbar {
   width: 8px;
   height: 8px;

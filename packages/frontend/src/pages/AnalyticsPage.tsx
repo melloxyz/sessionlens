@@ -35,6 +35,7 @@ import { EmptyState } from '../components/ui/EmptyState.js';
 import { ErrorState } from '../components/ui/ErrorState.js';
 import { MetricTile } from '../components/ui/MetricTile.js';
 import { ChartSkeleton, DonutSkeleton } from '../components/ui/LoadingState.js';
+import { chartTooltipProps } from '../components/ui/ChartTooltip.js';
 import { SectionHeader as SharedSectionHeader } from '../components/ui/SectionHeader.js';
 import { Select } from '../components/ui/Select.js';
 import { useI18n } from '../components/i18n/LanguageProvider.js';
@@ -506,7 +507,7 @@ export function AnalyticsPage() {
                     tickFormatter={(v: number) => `$${v.toFixed(0)}`}
                   />
                   <Tooltip
-                    contentStyle={tooltipStyle}
+                    {...chartTooltipProps}
                     formatter={(value: number) => [formatCurrency(value), t('common.cost')]}
                   />
                   <Area
@@ -551,7 +552,7 @@ export function AnalyticsPage() {
                     axisLine={false}
                     tickFormatter={(v: number) => formatTokens(v)}
                   />
-                  <Tooltip contentStyle={tooltipStyle} />
+                  <Tooltip {...chartTooltipProps} />
                   <Area
                     type="monotone"
                     dataKey="inputTokens"
@@ -611,7 +612,7 @@ export function AnalyticsPage() {
                         ))}
                       </Pie>
                       <Tooltip
-                        contentStyle={tooltipStyle}
+                        {...chartTooltipProps}
                         formatter={(value: number) => [
                           metric === 'cost' ? formatCurrency(value) : formatTokens(value),
                           '',
@@ -674,7 +675,7 @@ export function AnalyticsPage() {
                     tickLine={false}
                     axisLine={false}
                   />
-                  <Tooltip contentStyle={tooltipStyle} />
+                  <Tooltip {...chartTooltipProps} />
                   <Bar dataKey="value" fill="var(--accent)" radius={[0, 4, 4, 0]} />
                 </BarChart>
               </ResponsiveContainer>
@@ -1083,12 +1084,3 @@ function localizeAnomaly(item: Anomaly, locale: string): Anomaly {
     };
   return item;
 }
-
-const tooltipStyle = {
-  background: 'var(--surface-elevated)',
-  border: '1px solid var(--border)',
-  borderRadius: 6,
-  color: 'var(--foreground)',
-  boxShadow: 'none',
-  fontSize: 12,
-};
