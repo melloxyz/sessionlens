@@ -12,7 +12,7 @@ export interface TrayCallbacks {
 export function buildMenu(tray: any, callbacks: TrayCallbacks) {
   const startMinimized = getBooleanSetting('tray.startMinimized', false);
 
-  const statusItem = tray.item('Sessionless', () => {});
+  const statusItem = tray.item('Sessionlens', () => {});
   statusItem.disabled = true;
 
   const sep1 = tray.separator();

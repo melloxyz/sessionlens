@@ -60,7 +60,7 @@ export function Sidebar() {
         </div>
         <div>
           <div className="font-mono text-sm font-semibold tracking-[-0.02em] text-foreground">
-            Sessionless
+            Sessionlens
           </div>
           <div className="font-mono text-[10px] uppercase tracking-[0.12em] text-subtle-foreground">
             local AI usage
@@ -155,7 +155,7 @@ export function Sidebar() {
             <History className="h-4 w-4" />
           </NavLink>
           <a
-            href="https://github.com/melloxyz/sessionless"
+            href="https://github.com/melloxyz/sessionlens"
             target="_blank"
             rel="noreferrer"
             className="grid h-8 place-items-center rounded-md border border-transparent text-muted-foreground transition-colors hover:border-border hover:bg-surface-hover hover:text-foreground"

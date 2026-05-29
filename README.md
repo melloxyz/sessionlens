@@ -1,11 +1,11 @@
 <div align="center">
 
-# Sessionless
+# Sessionlens
 
 **Observabilidade local-first para AI Coding CLIs — multi-CLI, open-source, privado.**
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-00c853.svg?style=flat-square)](LICENSE)
-[![v0.7.1](https://img.shields.io/badge/v0.7.1-00c853?style=flat-square)](https://github.com/melloxyz/sessionless/releases)
+[![v0.7.1](https://img.shields.io/badge/v0.7.1-00c853?style=flat-square)](https://github.com/melloxyz/sessionlens/releases)
 [![Node.js](https://img.shields.io/badge/node-%3E%3D20-339933?style=flat-square&logo=node.js&logoColor=white)](https://nodejs.org)
 [![pnpm](https://img.shields.io/badge/pnpm-%3E%3D9-f69220?style=flat-square&logo=pnpm&logoColor=white)](https://pnpm.io)
 [![TypeScript](https://img.shields.io/badge/TypeScript-5.6-3178c6?style=flat-square&logo=typescript&logoColor=white)](https://www.typescriptlang.org)
@@ -21,7 +21,7 @@
 
 <br/>
 
-![Sessionless Dashboard](screenshots/sessionless-screenshot.png)
+![Sessionlens Dashboard](assets/screenshots/sessionlens-screenshot.png)
 
 </div>
 
@@ -53,8 +53,8 @@
 
 ```bash
 # Clone o repositório
-git clone https://github.com/melloxyz/sessionless.git
-cd sessionless
+git clone https://github.com/melloxyz/sessionlens.git
+cd sessionlens
 
 # Instale as dependências
 pnpm install
@@ -73,9 +73,9 @@ Acesse o frontend em **http://localhost:5173** — o backend roda em **http://12
 | `pnpm typecheck` | Typecheck em todos os packages |
 | `pnpm lint` | Lint em todos os packages |
 | `pnpm build` | Build de produção |
-| `pnpm --filter @sessionless/backend dev` | Apenas backend |
-| `pnpm --filter @sessionless/frontend dev` | Apenas frontend |
-| `pnpm --filter @sessionless/frontend build` | Build do frontend |
+| `pnpm --filter @sessionlens/backend dev` | Apenas backend |
+| `pnpm --filter @sessionlens/frontend dev` | Apenas frontend |
+| `pnpm --filter @sessionlens/frontend build` | Build do frontend |
 
 ---
 
@@ -99,7 +99,7 @@ Acesse o frontend em **http://localhost:5173** — o backend roda em **http://12
 ## Arquitetura
 
 ```
-sessionless/
+sessionlens/
 ├── packages/
 │   ├── backend/          # Fastify + sql.js + OpenRouter sync + adapters
 │   ├── frontend/         # React + Vite + Tailwind v4 + Recharts
@@ -109,7 +109,7 @@ sessionless/
 └── tsconfig.base.json    # Configuração TypeScript base
 ```
 
-### Backend (`@sessionless/backend`)
+### Backend (`@sessionlens/backend`)
 
 - **Runtime:** Fastify em `127.0.0.1:3030`
 - **Database:** SQLite via sql.js WASM (zero binários nativos)
@@ -118,7 +118,7 @@ sessionless/
 - **Sync:** OpenRouter pricing em background no startup
 - **Ingestão:** Auto-ingestão com filesystem watcher + debounce + scan periódico
 
-### Frontend (`@sessionless/frontend`)
+### Frontend (`@sessionlens/frontend`)
 
 - **Dev server:** Vite em `5173` com proxy `/api` → backend
 - **Estilo:** Tailwind v4 com CSS variables, shadcn-like primitives
@@ -126,7 +126,7 @@ sessionless/
 - **Temas:** Light/dark persistente via localStorage
 - **Idiomas:** English e Português (PT-BR) via `LanguageProvider`
 
-### Shared (`@sessionless/shared`)
+### Shared (`@sessionlens/shared`)
 
 - Tipos TypeScript compartilhados: `Session`, `CliProvider`, `SourceConfidence`, etc.
 - Usado por backend e frontend para manter contrato consistente
@@ -158,12 +158,12 @@ Copie `.env.example` para `.env` e ajuste conforme necessário:
 
 | Variável | Descrição | Padrão |
 |---|---|---|
-| `SESSIONLESS_PORT` | Porta do backend | `3030` |
-| `DATABASE_PATH` | Caminho do arquivo SQLite | `./data/sessionless.db` |
+| `SESSIONLENS_PORT` | Porta do backend | `3030` |
+| `DATABASE_PATH` | Caminho do arquivo SQLite | `./data/sessionlens.db` |
 
 ### Auto-Ingestão
 
-O Sessionless observa automaticamente os diretórios de dados das CLIs suportadas e atualiza os dados quando novos arquivos são escritos. Você pode desligar em **Settings > Auto-ingestion**.
+O Sessionlens observa automaticamente os diretórios de dados das CLIs suportadas e atualiza os dados quando novos arquivos são escritos. Você pode desligar em **Settings > Auto-ingestion**.
 
 ---
 
@@ -192,8 +192,8 @@ Este projeto está sob a [MIT License](LICENSE).
 
 <div align="center">
 
-[Contribua](https://github.com/melloxyz/sessionless/issues) · [Reporte Bugs](https://github.com/melloxyz/sessionless/issues) · [Sugira Funcionalidades](https://github.com/melloxyz/sessionless/issues)
+[Contribua](https://github.com/melloxyz/sessionlens/issues) · [Reporte Bugs](https://github.com/melloxyz/sessionlens/issues) · [Sugira Funcionalidades](https://github.com/melloxyz/sessionlens/issues)
 
-**Sessionless** — observabilidade local-first para AI Coding CLIs.
+**Sessionlens** — observabilidade local-first para AI Coding CLIs.
 
 </div>

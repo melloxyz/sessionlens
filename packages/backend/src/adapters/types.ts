@@ -1,4 +1,4 @@
-import type { CliProvider, SourceConfidence } from '@sessionless/shared';
+import type { CliProvider, SourceConfidence } from '@sessionlens/shared';
 
 export interface RawSession {
   sessionId: string;

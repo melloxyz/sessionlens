@@ -59,7 +59,7 @@ export class TrayManager {
       };
 
       const tray = await TrayIcon.create({
-        title: 'Sessionless',
+        title: 'Sessionlens',
         action: () => this.openDashboard(),
       });
 
@@ -82,7 +82,7 @@ export class TrayManager {
 
   private openDashboard() {
     if (this.browserOpened) return;
-    const url = process.env.SESSIONLESS_FRONTEND_URL || 'http://127.0.0.1:5173';
+    const url = process.env.SESSIONLENS_FRONTEND_URL || 'http://127.0.0.1:5173';
     this.browserOpened = true;
     exec(`start "" "${url}"`, { windowsHide: true });
   }
@@ -91,14 +91,14 @@ export class TrayManager {
     if (isIngestionRunning()) return;
 
     try {
-      this.tray?.setTitle('Sessionless - Ingesting...');
+      this.tray?.setTitle('Sessionlens - Ingesting...');
       await runIngestion();
       const status = getLastStatus();
       const total = status?.totalSessions ?? 0;
-      this.tray?.setTitle(`Sessionless - ${total} sessions indexed`);
+      this.tray?.setTitle(`Sessionlens - ${total} sessions indexed`);
       this.tray?.notify('Ingestion Complete', `${total} sessions indexed`);
     } catch {
-      this.tray?.setTitle('Sessionless - Ingestion failed');
+      this.tray?.setTitle('Sessionlens - Ingestion failed');
       this.tray?.notify('Ingestion Failed', 'Could not complete the ingestion cycle');
     } finally {
       setTimeout(() => this.refreshStatus(), 5000);
@@ -124,11 +124,11 @@ export class TrayManager {
     const running = isIngestionRunning();
 
     if (running) {
-      this.tray.setTitle('Sessionless - Ingesting...');
+      this.tray.setTitle('Sessionlens - Ingesting...');
     } else if (status?.errors.length) {
-      this.tray.setTitle(`Sessionless - ${total} sessions (warnings)`);
+      this.tray.setTitle(`Sessionlens - ${total} sessions (warnings)`);
     } else {
-      this.tray.setTitle(`Sessionless - ${total} sessions indexed`);
+      this.tray.setTitle(`Sessionlens - ${total} sessions indexed`);
     }
   }
 

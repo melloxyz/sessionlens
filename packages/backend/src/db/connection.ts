@@ -6,7 +6,7 @@ let db: SqlJsDatabase | null = null;
 let dbPath: string;
 
 export function getDbPath(): string {
-  return process.env.DATABASE_PATH || join(process.cwd(), 'data', 'sessionless.db');
+  return process.env.DATABASE_PATH || join(process.cwd(), 'data', 'sessionlens.db');
 }
 
 export function getDatabase(): SqlJsDatabase {

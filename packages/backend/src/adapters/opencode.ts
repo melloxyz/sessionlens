@@ -9,7 +9,7 @@ import type {
   RawUsageEvent,
   RawModelUsage,
 } from './types.js';
-import type { CliProvider, SourceConfidence } from '@sessionless/shared';
+import type { CliProvider, SourceConfidence } from '@sessionlens/shared';
 
 const OPENCODE_DB = join(homedir(), '.local', 'share', 'opencode', 'opencode.db');
 

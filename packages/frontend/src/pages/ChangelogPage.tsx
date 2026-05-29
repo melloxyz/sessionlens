@@ -35,7 +35,7 @@ export function ChangelogPage() {
         <div className="flex min-w-0 flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
           <div className="flex min-w-0 flex-wrap items-center gap-2">
             <Badge variant="default" className="gap-1.5">
-              <Sparkles className="h-3 w-3" /> Sessionless
+              <Sparkles className="h-3 w-3" /> Sessionlens
             </Badge>
             <span className="font-mono text-sm font-semibold tracking-[-0.03em] text-foreground">
               Changelog
@@ -45,13 +45,13 @@ export function ChangelogPage() {
           </div>
 
           <div className="flex flex-wrap gap-2 lg:justify-end">
-            <ActionLink href="https://github.com/melloxyz/sessionless" icon={GitBranch}>
+            <ActionLink href="https://github.com/melloxyz/sessionlens" icon={GitBranch}>
               {t('changelog.status.repository')}
             </ActionLink>
-            <ActionLink href="https://github.com/melloxyz/sessionless/releases" icon={CheckCircle2}>
+            <ActionLink href="https://github.com/melloxyz/sessionlens/releases" icon={CheckCircle2}>
               {t('changelog.status.releases')}
             </ActionLink>
-            <ActionLink href="https://github.com/melloxyz/sessionless/issues" icon={CircleDot}>
+            <ActionLink href="https://github.com/melloxyz/sessionlens/issues" icon={CircleDot}>
               {t('changelog.status.issues')}
             </ActionLink>
           </div>

@@ -2,7 +2,7 @@ import { existsSync, readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { homedir } from 'node:os';
 import type { Adapter, Checkpoint, RawSession } from './types.js';
-import type { CliProvider } from '@sessionless/shared';
+import type { CliProvider } from '@sessionlens/shared';
 
 const KIMI_HOME = join(homedir(), '.kimi');
 const KIMI_LOGS_DIR = join(KIMI_HOME, 'logs');

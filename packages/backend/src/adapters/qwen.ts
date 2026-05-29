@@ -2,7 +2,7 @@ import { existsSync, readdirSync, readFileSync, statSync } from 'node:fs';
 import { homedir } from 'node:os';
 import { join } from 'node:path';
 import type { Adapter, Checkpoint, RawMessage, RawSession } from './types.js';
-import type { CliProvider, SourceConfidence } from '@sessionless/shared';
+import type { CliProvider, SourceConfidence } from '@sessionlens/shared';
 
 const QWEN_ROOTS = [
   join(homedir(), '.qwen'),

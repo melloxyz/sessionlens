@@ -1,8 +1,8 @@
 <div align="center">
 
-# Contribuindo para o Sessionless
+# Contribuindo para o Sessionlens
 
-Obrigado por considerar contribuir com o Sessionless!
+Obrigado por considerar contribuir com o Sessionlens!
 
 </div>
 
@@ -42,8 +42,8 @@ Obrigado por considerar contribuir com o Sessionless!
 ### Setup
 
 ```bash
-git clone https://github.com/melloxyz/sessionless.git
-cd sessionless
+git clone https://github.com/melloxyz/sessionlens.git
+cd sessionlens
 pnpm install
 pnpm dev
 ```
@@ -56,9 +56,9 @@ pnpm dev
 | `pnpm typecheck` | Typecheck em todos os packages |
 | `pnpm lint` | Lint em todos os packages |
 | `pnpm build` | Build de produção |
-| `pnpm --filter @sessionless/backend dev` | Apenas backend |
-| `pnpm --filter @sessionless/frontend dev` | Apenas frontend |
-| `pnpm --filter @sessionless/frontend build` | Build do frontend |
+| `pnpm --filter @sessionlens/backend dev` | Apenas backend |
+| `pnpm --filter @sessionlens/frontend dev` | Apenas frontend |
+| `pnpm --filter @sessionlens/frontend build` | Build do frontend |
 
 ---
 
@@ -70,7 +70,7 @@ Crie o arquivo `packages/backend/src/adapters/nome.ts` e implemente a interface 
 
 ```typescript
 import type { Adapter, Checkpoint, RawSession } from './types.js';
-import type { CliProvider } from '@sessionless/shared';
+import type { CliProvider } from '@sessionlens/shared';
 
 export function createNomeAdapter(): Adapter {
   return {
@@ -141,7 +141,7 @@ Se precisar de novas colunas ou tabelas:
 
 ```bash
 pnpm typecheck
-pnpm --filter @sessionless/backend dev
+pnpm --filter @sessionlens/backend dev
 ```
 
 Verificar se `/api/integrations/status` mostra a nova CLI.

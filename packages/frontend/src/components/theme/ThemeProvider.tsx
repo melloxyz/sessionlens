@@ -10,7 +10,7 @@ interface ThemeContextValue {
 
 const ThemeContext = createContext<ThemeContextValue | null>(null);
 
-const STORAGE_KEY = 'sessionless-theme';
+const STORAGE_KEY = 'sessionlens-theme';
 
 function getInitialTheme(): Theme {
   if (typeof window === 'undefined') return 'dark';

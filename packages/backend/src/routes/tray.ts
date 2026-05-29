@@ -33,7 +33,7 @@ export function registerTrayRoutes(app: FastifyInstance) {
 
     return {
       ...getTrayConfig(),
-      message: 'Settings updated. Restart Sessionless for all changes to take effect.',
+      message: 'Settings updated. Restart Sessionlens for all changes to take effect.',
     };
   });
 }

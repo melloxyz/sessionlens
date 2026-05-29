@@ -3,7 +3,7 @@ import { readFile } from 'node:fs/promises';
 import { join } from 'node:path';
 import { homedir } from 'node:os';
 import type { Adapter, Checkpoint, RawSession, RawMessage, RawUsageEvent } from './types.js';
-import type { CliProvider, SourceConfidence } from '@sessionless/shared';
+import type { CliProvider, SourceConfidence } from '@sessionlens/shared';
 
 const CODEX_HOME = join(homedir(), '.codex');
 const STATE_DB = join(CODEX_HOME, 'state_5.sqlite');

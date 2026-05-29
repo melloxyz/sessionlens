@@ -38,7 +38,7 @@ importers:
       '@fastify/static':
         specifier: ^8.0.0
         version: 8.3.0
-      '@sessionless/shared':
+      '@sessionlens/shared':
         specifier: workspace:*
         version: link:../shared
       dotenv:
@@ -72,7 +72,7 @@ importers:
 
   packages/frontend:
     dependencies:
-      '@sessionless/shared':
+      '@sessionlens/shared':
         specifier: workspace:*
         version: link:../shared
       class-variance-authority:

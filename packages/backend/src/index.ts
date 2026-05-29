@@ -29,7 +29,7 @@ import { trayManager, isTrayEnabled } from './tray/index.js';
 import { registerTrayRoutes } from './routes/tray.js';
 import { registerBudgetRoutes } from './routes/budgets.js';
 
-const PORT = Number(process.env.SESSIONLESS_PORT || process.env.AIMETER_PORT) || 3030;
+const PORT = Number(process.env.SESSIONLENS_PORT || process.env.AIMETER_PORT) || 3030;
 const NO_TRAY = process.argv.includes('--no-tray');
 
 async function main() {
@@ -135,7 +135,7 @@ async function main() {
       }
     })();
   } catch (err) {
-    console.error('Sessionless backend startup failed:', err);
+    console.error('Sessionlens backend startup failed:', err);
     process.exit(1);
   }
 }

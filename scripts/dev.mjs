@@ -16,8 +16,8 @@ function prefix(name, chunk) {
 }
 
 const processes = [
-  start('backend', 'pnpm --filter @sessionless/backend dev'),
-  start('frontend', 'pnpm --filter @sessionless/frontend dev'),
+  start('backend', 'pnpm --filter @sessionlens/backend dev'),
+  start('frontend', 'pnpm --filter @sessionlens/frontend dev'),
 ];
 
 let shuttingDown = false;

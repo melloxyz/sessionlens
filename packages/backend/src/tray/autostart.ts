@@ -19,7 +19,7 @@ function getStartupShortcutPath(): string {
   if (!existsSync(startupDir)) {
     mkdirSync(startupDir, { recursive: true });
   }
-  return join(startupDir, 'Sessionless.lnk');
+  return join(startupDir, 'Sessionlens.lnk');
 }
 
 export function isAutoStartEnabled(): boolean {

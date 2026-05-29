@@ -40,7 +40,7 @@ jobs:
         run: pnpm lint
 
       - name: Build frontend
-        run: pnpm --filter @sessionless/frontend build
+        run: pnpm --filter @sessionlens/frontend build
 
       - name: Build backend
-        run: pnpm --filter @sessionless/backend build
+        run: pnpm --filter @sessionlens/backend build

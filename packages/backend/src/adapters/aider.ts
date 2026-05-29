@@ -1,7 +1,7 @@
 import { existsSync, readdirSync, readFileSync } from 'node:fs';
 import { join, dirname, resolve } from 'node:path';
 import type { Adapter, Checkpoint, RawMessage, RawSession } from './types.js';
-import type { CliProvider, SourceConfidence } from '@sessionless/shared';
+import type { CliProvider, SourceConfidence } from '@sessionlens/shared';
 
 const DEFAULT_HISTORY_FILE = '.aider.chat.history.md';
 
