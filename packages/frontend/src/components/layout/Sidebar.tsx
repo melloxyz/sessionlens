@@ -1,6 +1,5 @@
 import { NavLink } from 'react-router-dom';
 import {
-  Activity,
   BarChart3,
   CircleDot,
   History,
@@ -54,17 +53,14 @@ export function Sidebar() {
 
   return (
     <aside className="hidden h-full w-[244px] shrink-0 flex-col border-r border-border bg-surface lg:flex">
-      <div className="flex h-16 items-center gap-3 border-b border-border px-4">
-        <div className="grid h-9 w-9 place-items-center rounded-md border border-accent/25 bg-accent-soft text-accent">
-          <Activity className="h-5 w-5" />
-        </div>
-        <div>
-          <div className="font-mono text-sm font-semibold tracking-[-0.02em] text-foreground">
-            Sessionlens
-          </div>
-          <div className="font-mono text-[10px] uppercase tracking-[0.12em] text-subtle-foreground">
-            local AI usage
-          </div>
+      <div className="flex h-18 items-center gap-1 border-b border-border px-4">
+        <img
+          src={theme === 'dark' ? '/sessionlens-white-logo.png' : '/sessionlens-black-logo.png'}
+          alt="Sessionlens"
+          className="h-14 w-14"
+        />
+        <div className="font-mono text-xl font-semibold tracking-[-0.02em] text-foreground">
+          Sessionlens
         </div>
       </div>
 
