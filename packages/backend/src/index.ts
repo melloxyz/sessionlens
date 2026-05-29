@@ -25,8 +25,11 @@ import { registerSessionRoutes } from './routes/sessions.js';
 import { registerProjectRoutes } from './routes/projects.js';
 import { registerModelRoutes } from './routes/models.js';
 import { syncOpenRouterPricing } from './openrouter.js';
+import { trayManager, isTrayEnabled } from './tray/index.js';
+import { registerTrayRoutes } from './routes/tray.js';
 
 const PORT = Number(process.env.SESSIONLESS_PORT || process.env.AIMETER_PORT) || 3030;
+const NO_TRAY = process.argv.includes('--no-tray');
 
 async function main() {
   try {
@@ -53,6 +56,7 @@ async function main() {
     registerSessionRoutes(app);
     registerProjectRoutes(app);
     registerModelRoutes(app);
+    registerTrayRoutes(app);
 
     app.get('/api/ingest/status', async () => {
       const status = getLastStatus();
@@ -98,6 +102,23 @@ async function main() {
     });
 
     await app.listen({ port: PORT, host: '127.0.0.1' });
+
+    if (!NO_TRAY && isTrayEnabled()) {
+      await trayManager.init(app);
+    }
+
+    const gracefulShutdown = async () => {
+      await trayManager.destroy();
+      await app.close();
+      process.exit(0);
+    };
+
+    process.on('SIGINT', () => {
+      void gracefulShutdown();
+    });
+    process.on('SIGTERM', () => {
+      void gracefulShutdown();
+    });
     await startAutoIngestion(app.log);
     void (async () => {
       try {

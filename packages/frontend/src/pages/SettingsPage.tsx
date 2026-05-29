@@ -5,6 +5,7 @@ import {
   Database,
   Languages,
   LockKeyhole,
+  Monitor,
   Moon,
   RadioTower,
   RefreshCw,
@@ -53,6 +54,13 @@ interface AutoIngestionStatus {
   lastError: string | null;
 }
 
+interface TrayStatus {
+  enabled: boolean;
+  autoStart: boolean;
+  startMinimized: boolean;
+  available: boolean;
+}
+
 export function SettingsPage() {
   const { theme, setTheme } = useTheme();
   const { locale, setLocale, t } = useI18n();
@@ -83,6 +91,14 @@ export function SettingsPage() {
   const { data: integrations, loading: integrationsLoading } = useApi<{
     integrations: IntegrationStatusItem[];
   }>('/api/integrations/status', { initialData: { integrations: [] } });
+  const {
+    data: trayStatus,
+    loading: trayLoading,
+    error: trayError,
+    refetch: refetchTray,
+  } = useApi<TrayStatus>('/api/tray/status');
+  const [trayUpdating, setTrayUpdating] = useState(false);
+  const [trayMutationError, setTrayMutationError] = useState<string | null>(null);
 
   async function runIngestion() {
     setIngestionRunning(true);
@@ -109,6 +125,24 @@ export function SettingsPage() {
       setAutoMutationError(err instanceof Error ? err.message : String(err));
     } finally {
       setAutoUpdating(false);
+    }
+  }
+
+  async function updateTraySetting(key: string, value: boolean) {
+    setTrayUpdating(true);
+    setTrayMutationError(null);
+    try {
+      const res = await fetch('/api/tray/settings', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ [key]: value }),
+      });
+      if (!res.ok) throw new Error(await res.text());
+      await refetchTray();
+    } catch (err) {
+      setTrayMutationError(err instanceof Error ? err.message : String(err));
+    } finally {
+      setTrayUpdating(false);
     }
   }
 
@@ -187,6 +221,75 @@ export function SettingsPage() {
             description={t('settings.sqlite.description')}
           />
         </DataPanel>
+
+        {trayStatus && trayStatus.available && (
+          <DataPanel
+            title={t('settings.tray')}
+            description={t('settings.tray.description')}
+            action={<Badge variant="success">{t('settings.tray.available')}</Badge>}
+            contentClassName="space-y-4"
+          >
+            {trayError ? (
+              <ErrorState
+                title={t('settings.tray.loadFailed')}
+                message={trayError.message}
+                code={trayError.code}
+                details={trayError.details}
+                onRetry={refetchTray}
+              />
+            ) : (
+              <>
+                <ToggleRow
+                  icon={Monitor}
+                  title={t('settings.tray.enable')}
+                  description={t('settings.tray.enable.description')}
+                  enabled={trayStatus.enabled}
+                  loading={trayLoading && !trayStatus}
+                  updating={trayUpdating}
+                  onChange={() => updateTraySetting('enabled', !trayStatus.enabled)}
+                />
+                <ToggleRow
+                  title={t('settings.tray.autoStart')}
+                  description={t('settings.tray.autoStart.description')}
+                  enabled={trayStatus.autoStart}
+                  loading={trayLoading && !trayStatus}
+                  updating={trayUpdating}
+                  onChange={() => updateTraySetting('autoStart', !trayStatus.autoStart)}
+                />
+                <ToggleRow
+                  title={t('settings.tray.startMinimized')}
+                  description={t('settings.tray.startMinimized.description')}
+                  enabled={trayStatus.startMinimized}
+                  loading={trayLoading && !trayStatus}
+                  updating={trayUpdating}
+                  onChange={() => updateTraySetting('startMinimized', !trayStatus.startMinimized)}
+                />
+                {trayMutationError && (
+                  <div className="font-mono text-sm text-danger">{trayMutationError}</div>
+                )}
+                <div className="rounded-lg border border-border bg-surface-muted p-3 text-sm">
+                  <div className="flex items-start gap-2">
+                    <CheckCircle2 className="mt-0.5 h-3.5 w-3.5 shrink-0 text-subtle-foreground" />
+                    <span className="text-muted-foreground">{t('settings.tray.restartNote')}</span>
+                  </div>
+                </div>
+              </>
+            )}
+          </DataPanel>
+        )}
+
+        {trayStatus && !trayStatus.available && (
+          <DataPanel
+            title={t('settings.tray')}
+            description={t('settings.tray.description')}
+            action={<Badge variant="neutral">{t('settings.tray.unavailable')}</Badge>}
+            contentClassName="p-4"
+          >
+            <div className="rounded-lg border border-border bg-surface-muted p-4 text-sm text-muted-foreground">
+              {t('settings.tray.windowsOnly')}
+            </div>
+          </DataPanel>
+        )}
 
         <DataPanel
           title={t('settings.ingestion')}
@@ -561,6 +664,47 @@ function SummaryRow({
       ) : (
         <span className="text-right font-mono font-medium text-foreground">{value}</span>
       )}
+    </div>
+  );
+}
+
+function ToggleRow({
+  icon: Icon,
+  title,
+  description,
+  enabled,
+  loading,
+  updating,
+  onChange,
+}: {
+  icon?: LucideIcon;
+  title: string;
+  description: string;
+  enabled: boolean;
+  loading?: boolean;
+  updating?: boolean;
+  onChange: () => void;
+}) {
+  return (
+    <div className="flex items-start justify-between gap-4 rounded-lg border border-border bg-surface-elevated p-4">
+      <div className="flex gap-3">
+        {Icon && (
+          <div className="grid h-10 w-10 shrink-0 place-items-center rounded-md border border-border bg-transparent text-subtle-foreground">
+            <Icon className="h-4.5 w-4.5" />
+          </div>
+        )}
+        <div>
+          <div className="font-mono text-sm font-semibold text-foreground">{title}</div>
+          <div className="mt-1 text-sm leading-6 text-muted-foreground">{description}</div>
+        </div>
+      </div>
+      <Button
+        variant={enabled ? 'default' : 'outline'}
+        onClick={onChange}
+        disabled={updating || loading}
+      >
+        {loading ? '...' : enabled ? 'Enabled' : 'Disabled'}
+      </Button>
     </div>
   );
 }
