@@ -44,6 +44,13 @@ const FALLBACK_PRICING: Record<string, Omit<PricingRow, 'provider' | 'modelName'
     cachedInputCost: null,
   },
   'qwen-plus': { inputCostPerMillion: 0.4, outputCostPerMillion: 1.2, cachedInputCost: null },
+  'deepseek-v4-pro': { inputCostPerMillion: 2.5, outputCostPerMillion: 10, cachedInputCost: null },
+  'deepseek-chat': { inputCostPerMillion: 0.27, outputCostPerMillion: 1.1, cachedInputCost: 0.07 },
+  'deepseek-reasoner': {
+    inputCostPerMillion: 0.55,
+    outputCostPerMillion: 2.19,
+    cachedInputCost: 0.14,
+  },
 };
 
 export function resolveSessionCost(raw: RawSession): CostResolution {

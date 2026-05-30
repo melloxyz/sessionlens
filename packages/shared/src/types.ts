@@ -6,7 +6,8 @@ export type CliProvider =
   | 'kimi'
   | 'aider'
   | 'qwen'
-  | 'antigravity';
+  | 'antigravity'
+  | 'commandcode';
 
 export type SourceConfidence = 'HIGH' | 'MEDIUM' | 'LOW';
 

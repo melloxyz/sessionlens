@@ -860,7 +860,8 @@ const dictionaries = {
       'Mudanças mais recentes entregues no milestone atual do Sessionlens.',
     'changelog.released.description': 'Tudo que já está disponível no app local-first.',
     'changelog.progress.description': 'Trabalho sendo preparado para o próximo milestone.',
-    'changelog.planned.description': 'Funcionalidades futuras sendo projetadas para os próximos milestones.',
+    'changelog.planned.description':
+      'Funcionalidades futuras sendo projetadas para os próximos milestones.',
     'changelog.core': 'Core',
     'changelog.adapters': 'Adapters',
     'changelog.analytics': 'Analytics',

@@ -11,6 +11,7 @@ import {
   createAiderAdapter,
   createQwenAdapter,
   createAntigravityAdapter,
+  createCommandCodeAdapter,
   registry,
 } from './adapters/index.js';
 import { runIngestion, getLastStatus } from './ingestion/engine.js';
@@ -46,6 +47,7 @@ async function main() {
     registry.register(createAiderAdapter());
     registry.register(createQwenAdapter());
     registry.register(createAntigravityAdapter());
+    registry.register(createCommandCodeAdapter());
 
     const app = Fastify({ logger: true });
     await app.register(cors, { origin: true });
