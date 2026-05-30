@@ -5,6 +5,7 @@ import { DataPanel } from '../components/ui/DataPanel.js';
 import { useI18n } from '../components/i18n/LanguageProvider.js';
 
 const releaseTimeline = [
+  { key: 'changelog.released.11', tags: ['changelog.core', 'changelog.localFirst'] },
   { key: 'changelog.released.10', tags: ['changelog.ui', 'changelog.i18n'] },
   { key: 'changelog.released.0', tags: ['changelog.core', 'changelog.localFirst'] },
   { key: 'changelog.released.1', tags: ['changelog.core', 'changelog.ui'] },
@@ -17,6 +18,9 @@ const releaseTimeline = [
   { key: 'changelog.released.8', tags: ['changelog.adapters'] },
   { key: 'changelog.released.9', tags: ['changelog.core', 'changelog.localFirst'] },
 ];
+
+const inProgressCount = 6;
+const plannedCount = 3;
 
 const contributors = [
   {
@@ -59,7 +63,7 @@ export function ChangelogPage() {
       </DataPanel>
 
       <div className="grid min-h-0 flex-1 gap-4 xl:grid-cols-[minmax(0,1fr)_320px]">
-        <section className="flex min-h-0 min-w-0 flex-col gap-2 overflow-x-hidden">
+        <section className="flex min-h-0 min-w-0 flex-col gap-3 overflow-x-hidden">
           <div className="flex items-end justify-between gap-2 px-1">
             <div>
               <h3 className="font-mono text-[10px] uppercase tracking-[0.22em] text-muted-foreground">
@@ -83,8 +87,8 @@ export function ChangelogPage() {
           </DataPanel>
         </section>
 
-        <aside className="min-w-0 space-y-4 overflow-x-hidden">
-          <section className="space-y-3">
+        <aside className="flex min-h-0 min-w-0 flex-col gap-4 overflow-x-hidden">
+          <section className="shrink-0 space-y-3">
             <div className="px-1">
               <h3 className="font-mono text-[10px] uppercase tracking-[0.22em] text-muted-foreground">
                 {t('changelog.contributors.title')}
@@ -123,9 +127,73 @@ export function ChangelogPage() {
               ))}
             </div>
           </section>
+
+          <div className="flex min-h-0 flex-1 flex-col">
+            <CombinedStatusSection
+              inProgressCount={inProgressCount}
+              plannedCount={plannedCount}
+            />
+          </div>
         </aside>
       </div>
     </div>
+  );
+}
+
+function CombinedStatusSection({
+  inProgressCount,
+  plannedCount,
+}: {
+  inProgressCount: number;
+  plannedCount: number;
+}) {
+  const { t } = useI18n();
+
+  return (
+    <DataPanel className="flex h-full flex-col overflow-hidden" contentClassName="flex min-h-0 flex-1 flex-col p-0">
+      <div className="flex shrink-0 items-center gap-2 border-b border-border px-3 py-2">
+        <CircleDot className="h-3.5 w-3.5 shrink-0 text-amber-400" />
+        <span className="font-mono text-[10px] font-semibold uppercase tracking-[0.15em] text-foreground">
+          {t('changelog.inProgress')} & {t('changelog.planned')}
+        </span>
+      </div>
+
+      <div className="min-h-0 flex-1 overflow-y-auto">
+        <div className="border-t border-border">
+          <div className="px-3 pt-2 pb-0.5">
+            <span className="font-mono text-[10px] font-semibold uppercase tracking-[0.12em] text-amber-300/80">
+              {t('changelog.inProgress')}
+            </span>
+          </div>
+          <ul className="divide-y divide-border">
+            {Array.from({ length: inProgressCount }, (_, i) => i + 1).map((n) => (
+              <li key={`ip-${n}`} className="flex items-start gap-2 px-3 py-1.5">
+                <span className="mt-1.5 h-1 w-1 shrink-0 rounded-full bg-amber-400" />
+                <span className="text-[12px] leading-[1.35] text-muted-foreground">
+                  {t(`changelog.inProgress.${n}`)}
+                </span>
+              </li>
+            ))}
+          </ul>
+
+          <div className="border-t border-border px-3 pt-2 pb-0.5">
+            <span className="font-mono text-[10px] font-semibold uppercase tracking-[0.12em] text-subtle-foreground">
+              {t('changelog.planned')}
+            </span>
+          </div>
+          <ul>
+            {Array.from({ length: plannedCount }, (_, i) => i + 1).map((n) => (
+              <li key={`pl-${n}`} className="flex items-start gap-2 px-3 py-1.5">
+                <span className="mt-1.5 h-1 w-1 shrink-0 rounded-full bg-subtle-foreground" />
+                <span className="text-[12px] leading-[1.35] text-muted-foreground">
+                  {t(`changelog.planned.${n}`)}
+                </span>
+              </li>
+            ))}
+          </ul>
+        </div>
+      </div>
+    </DataPanel>
   );
 }
 
