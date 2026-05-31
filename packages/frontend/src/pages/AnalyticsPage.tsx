@@ -467,22 +467,17 @@ export function AnalyticsPage() {
             {insights.length > 0 ? (
               insights.map((insight) => {
                 const localized = localizeInsight(insight, locale);
-                const content = (
-                  <InsightRow
-                    item={localized}
-                    label={t('analytics.insight')}
-                  />
-                );
-                return localized.sessionId ? (
+                return (
                   <Link
                     key={insight.id}
-                    to={`/sessions/${localized.sessionId}`}
+                    to={`/analytics/insights/${insight.id}`}
                     className="block"
                   >
-                    {content}
+                    <InsightRow
+                      item={localized}
+                      label={t('analytics.insight')}
+                    />
                   </Link>
-                ) : (
-                  <div key={insight.id}>{content}</div>
                 );
               })
             ) : (
@@ -509,22 +504,17 @@ export function AnalyticsPage() {
             {anomalies.length > 0 ? (
               anomalies.map((anomaly) => {
                 const localized = localizeAnomaly(anomaly, locale);
-                const content = (
-                  <AnomalyRow
-                    item={localized}
-                    label={t('analytics.anomaly')}
-                  />
-                );
-                return localized.sessionId ? (
+                return (
                   <Link
                     key={anomaly.id}
-                    to={`/sessions/${localized.sessionId}`}
+                    to={`/analytics/insights/${anomaly.id}`}
                     className="block"
                   >
-                    {content}
+                    <AnomalyRow
+                      item={localized}
+                      label={t('analytics.anomaly')}
+                    />
                   </Link>
-                ) : (
-                  <div key={anomaly.id}>{content}</div>
                 );
               })
             ) : (

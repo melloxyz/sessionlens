@@ -1,6 +1,7 @@
 import type { FastifyInstance } from 'fastify';
 import { getDatabase } from '../db/connection.js';
 import { buildAnalyticsReport } from '../analytics/engine.js';
+import { buildInsightDetail } from '../analytics/insight-detail.js';
 
 const VALID_SESSION_SQL = `NOT (
   session_id = 'unknown'
@@ -34,6 +35,33 @@ export function registerAnalyticsRoutes(app: FastifyInstance): void {
         error: {
           code: 'ANALYTICS_REPORT_FAILED',
           message: 'Failed to build analytics report',
+          details: String(error),
+        },
+      };
+    }
+  });
+
+  app.get('/api/analytics/insights/:id', async (req, reply) => {
+    try {
+      const q = req.query as Record<string, string>;
+      const params = req.params as { id: string };
+      const detail = buildInsightDetail(params.id, parseAnalyticsFilters(q));
+      if (!detail) {
+        reply.code(404);
+        return {
+          error: {
+            code: 'INSIGHT_NOT_FOUND',
+            message: 'Insight or anomaly not found. Data may have changed after a new ingestion.',
+          },
+        };
+      }
+      return detail;
+    } catch (error) {
+      reply.code(500);
+      return {
+        error: {
+          code: 'INSIGHT_DETAIL_FAILED',
+          message: 'Failed to load insight detail',
           details: String(error),
         },
       };

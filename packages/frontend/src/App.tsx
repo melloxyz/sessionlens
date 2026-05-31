@@ -6,6 +6,7 @@ import { SessionDetailPage } from './pages/SessionDetailPage.js';
 import { ProjectsPage } from './pages/ProjectsPage.js';
 import { ProjectDetailPage } from './pages/ProjectDetailPage.js';
 import { AnalyticsPage } from './pages/AnalyticsPage.js';
+import { InsightDetailPage } from './pages/InsightDetailPage.js';
 import { ModelsPage } from './pages/ModelsPage.js';
 import { ThemeProvider } from './components/theme/ThemeProvider.js';
 import { LanguageProvider } from './components/i18n/LanguageProvider.js';
@@ -27,6 +28,7 @@ export function App() {
               <Route path="/projects" element={<ProjectsPage />} />
               <Route path="/projects/:id" element={<ProjectDetailPage />} />
               <Route path="/analytics" element={<AnalyticsPage />} />
+              <Route path="/analytics/insights/:id" element={<InsightDetailPage />} />
               <Route path="/models" element={<ModelsPage />} />
               <Route path="/settings" element={<SettingsPage />} />
               <Route path="/budgets" element={<BudgetsPage />} />
