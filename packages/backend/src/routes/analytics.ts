@@ -302,6 +302,9 @@ export function registerAnalyticsRoutes(app: FastifyInstance): void {
       const q = req.query as Record<string, string>;
       const dateFrom = q.dateFrom || null;
       const dateTo = q.dateTo || null;
+      const cli = q.cli || null;
+      const provider = q.provider || null;
+      const model = q.model || null;
       let where = `WHERE ${VISIBLE_SESSION_SQL}`;
       const params: string[] = [];
       if (dateFrom) {
@@ -311,6 +314,18 @@ export function registerAnalyticsRoutes(app: FastifyInstance): void {
       if (dateTo) {
         where += ` AND started_at <= ?`;
         params.push(dateTo);
+      }
+      if (cli) {
+        where += ` AND cli = ?`;
+        params.push(cli);
+      }
+      if (provider) {
+        where += ` AND LOWER(provider) = LOWER(?)`;
+        params.push(provider);
+      }
+      if (model) {
+        where += ` AND LOWER(COALESCE(model, 'unknown')) = LOWER(?)`;
+        params.push(model);
       }
 
       const db = getDatabase();

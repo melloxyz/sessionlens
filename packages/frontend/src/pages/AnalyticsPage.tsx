@@ -1,4 +1,5 @@
 import { useMemo, useState, type ReactNode } from 'react';
+import { Link, useNavigate } from 'react-router-dom';
 import {
   AlertTriangle,
   ChevronRight,
@@ -47,6 +48,7 @@ interface Insight {
   title: string;
   description: string;
   value: string;
+  sessionId?: string;
 }
 
 interface Anomaly {
@@ -56,6 +58,7 @@ interface Anomaly {
   title: string;
   description: string;
   value: string;
+  sessionId?: string;
 }
 
 interface AnalyticsReport {
@@ -132,6 +135,24 @@ export function AnalyticsPage() {
   const [providerFilter, setProviderFilter] = useState('');
   const [modelFilter, setModelFilter] = useState('');
   const [projectFilter, setProjectFilter] = useState('');
+  const [spendGranularity, setSpendGranularity] = useState<'day' | 'week' | 'month'>('week');
+
+  const setDimensionFilter = (label: string) => {
+    switch (dimension) {
+      case 'model':
+        setModelFilter(modelFilter === label ? '' : label);
+        break;
+      case 'provider':
+        setProviderFilter(providerFilter === label ? '' : label);
+        break;
+      case 'cli':
+        setCliFilter(cliFilter === label ? '' : label);
+        break;
+      case 'project':
+        setProjectFilter(projectFilter === label ? '' : label);
+        break;
+    }
+  };
   const queryPrefix = queryString ? `?${queryString}` : '';
   const filterParams = new URLSearchParams(queryString);
   if (cliFilter) filterParams.set('cli', cliFilter);
@@ -142,8 +163,14 @@ export function AnalyticsPage() {
   const filteredPrefix = filteredQuery ? `?${filteredQuery}` : '';
   const filteredSuffix = filteredQuery ? `&${filteredQuery}` : '';
 
+  const filterOptionsParams = new URLSearchParams(queryString);
+  if (cliFilter) filterOptionsParams.set('cli', cliFilter);
+  if (providerFilter) filterOptionsParams.set('provider', providerFilter);
+  const filterOptionsQuery = filterOptionsParams.toString();
+  const buildFilterOptionsQuery = () => (filterOptionsQuery ? `?${filterOptionsQuery}` : '');
+
   const { data: options } = useApi<FilterOptionsResponse>(
-    `/api/analytics/filter-options${queryPrefix}`,
+    `/api/analytics/filter-options${buildFilterOptionsQuery()}`,
     { initialData: { clis: [], providers: [], models: [], projects: [] } },
   );
   const {
@@ -159,7 +186,7 @@ export function AnalyticsPage() {
     error: spendError,
   } = useApi<{
     points: { date: string; spend: number; tokens: number }[];
-  }>(`/api/analytics/spend-over-time?granularity=week${filteredSuffix}`);
+  }>(`/api/analytics/spend-over-time?granularity=${spendGranularity}${filteredSuffix}`);
   const {
     data: tokenData,
     loading: tokenLoading,
@@ -178,6 +205,24 @@ export function AnalyticsPage() {
   }>(`/api/analytics/breakdown?dimension=${dimension}&metric=${metric}${filteredSuffix}`);
   const isValidating =
     reportValidating || spendValidating || tokenValidating || breakdownValidating;
+
+  const dimensionLabel =
+    dimension === 'model'
+      ? t('analytics.byModel')
+      : dimension === 'provider'
+        ? t('analytics.byProvider')
+        : dimension === 'cli'
+          ? t('analytics.byCli')
+          : t('analytics.byProject');
+  const metricLabel =
+    metric === 'cost'
+      ? t('common.cost')
+      : metric === 'sessions'
+        ? t('common.sessions')
+        : t('common.tokens');
+  const breakdownTitle = t('analytics.topBreakdown')
+    .replace('{{dimension}}', dimensionLabel)
+    .replace('{{metric}}', metricLabel);
 
   const breakdown = useMemo(
     () => (breakdownData?.breakdown ?? []).filter((d) => d.value > 0),
@@ -420,13 +465,26 @@ export function AnalyticsPage() {
           </CardHeader>
           <CardContent className="space-y-3">
             {insights.length > 0 ? (
-              insights.map((insight) => (
-                <InsightRow
-                  key={insight.id}
-                  item={localizeInsight(insight, locale)}
-                  label={t('analytics.insight')}
-                />
-              ))
+              insights.map((insight) => {
+                const localized = localizeInsight(insight, locale);
+                const content = (
+                  <InsightRow
+                    item={localized}
+                    label={t('analytics.insight')}
+                  />
+                );
+                return localized.sessionId ? (
+                  <Link
+                    key={insight.id}
+                    to={`/sessions/${localized.sessionId}`}
+                    className="block"
+                  >
+                    {content}
+                  </Link>
+                ) : (
+                  <div key={insight.id}>{content}</div>
+                );
+              })
             ) : (
               <EmptyState
                 title={t('analytics.noInsights.title')}
@@ -449,13 +507,26 @@ export function AnalyticsPage() {
           </CardHeader>
           <CardContent className="space-y-3">
             {anomalies.length > 0 ? (
-              anomalies.map((anomaly) => (
-                <AnomalyRow
-                  key={anomaly.id}
-                  item={localizeAnomaly(anomaly, locale)}
-                  label={t('analytics.anomaly')}
-                />
-              ))
+              anomalies.map((anomaly) => {
+                const localized = localizeAnomaly(anomaly, locale);
+                const content = (
+                  <AnomalyRow
+                    item={localized}
+                    label={t('analytics.anomaly')}
+                  />
+                );
+                return localized.sessionId ? (
+                  <Link
+                    key={anomaly.id}
+                    to={`/sessions/${localized.sessionId}`}
+                    className="block"
+                  >
+                    {content}
+                  </Link>
+                ) : (
+                  <div key={anomaly.id}>{content}</div>
+                );
+              })
             ) : (
               <EmptyState
                 title={t('analytics.noAnomalies.title')}
@@ -474,11 +545,30 @@ export function AnalyticsPage() {
       <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
         <Card>
           <CardHeader>
-            <div>
-              <CardTitle>{t('analytics.weeklySpend')}</CardTitle>
-              <p className="mt-1 text-xs text-subtle-foreground">
-                {t('analytics.weeklySpendDescription')}
-              </p>
+            <div className="flex items-start justify-between gap-3">
+              <div>
+                <CardTitle>
+                  {spendGranularity === 'day'
+                    ? t('analytics.dailySpend')
+                    : spendGranularity === 'month'
+                      ? t('analytics.monthlySpend')
+                      : t('analytics.weeklySpend')}
+                </CardTitle>
+                <p className="mt-1 text-xs text-subtle-foreground">
+                  {t('analytics.weeklySpendDescription')}
+                </p>
+              </div>
+              <Select
+                value={spendGranularity}
+                onChange={(e) =>
+                  setSpendGranularity(e.target.value as 'day' | 'week' | 'month')
+                }
+                options={[
+                  { label: t('analytics.granularityDay'), value: 'day' },
+                  { label: t('analytics.granularityWeek'), value: 'week' },
+                  { label: t('analytics.granularityMonth'), value: 'month' },
+                ]}
+              />
             </div>
           </CardHeader>
           <CardContent>
@@ -606,6 +696,8 @@ export function AnalyticsPage() {
                         cy="50%"
                         outerRadius={90}
                         innerRadius={55}
+                        onClick={(data: { name: string }) => setDimensionFilter(data.name)}
+                        className="cursor-pointer"
                       >
                         {breakdown.map((_, i) => (
                           <Cell key={i} fill={chartColor(i)} />
@@ -623,12 +715,16 @@ export function AnalyticsPage() {
                 </div>
                 <div className="space-y-2 text-xs lg:min-w-[220px]">
                   {breakdown.map((d, i) => (
-                    <div key={d.label} className="flex items-center gap-2">
+                    <div
+                      key={d.label}
+                      className="flex cursor-pointer items-center gap-2 rounded px-1 py-0.5 transition-colors hover:bg-surface-elevated"
+                      onClick={() => setDimensionFilter(d.label)}
+                    >
                       <div
                         className="h-2.5 w-2.5 shrink-0 rounded-sm"
                         style={{ background: chartColor(i) }}
                       />
-                      <span className="max-w-[120px] truncate text-subtle-foreground">
+                      <span className="max-w-[160px] truncate text-subtle-foreground">
                         {d.label}
                       </span>
                       <span className="ml-auto font-mono font-medium text-foreground">
@@ -645,7 +741,7 @@ export function AnalyticsPage() {
         <Card>
           <CardHeader>
             <div>
-              <CardTitle>{t('analytics.topProjectsSpend')}</CardTitle>
+              <CardTitle>{breakdownTitle}</CardTitle>
               <p className="mt-1 text-xs text-subtle-foreground">
                 {t('analytics.topProjectsDescription')}
               </p>
@@ -676,7 +772,13 @@ export function AnalyticsPage() {
                     axisLine={false}
                   />
                   <Tooltip {...chartTooltipProps} />
-                  <Bar dataKey="value" fill="var(--accent)" radius={[0, 4, 4, 0]} />
+                  <Bar
+                    dataKey="value"
+                    fill="var(--accent)"
+                    radius={[0, 4, 4, 0]}
+                    onClick={(data: { label: string }) => setDimensionFilter(data.label)}
+                    className="cursor-pointer"
+                  />
                 </BarChart>
               </ResponsiveContainer>
             )}
@@ -734,9 +836,10 @@ export function AnalyticsPage() {
           <CardContent className="space-y-3">
             {(productivity?.topToolCallSessions ?? []).length > 0 ? (
               productivity!.topToolCallSessions.map((session) => (
-                <div
+                <Link
                   key={session.sessionId}
-                  className="rounded-lg border border-border bg-surface-elevated p-4 text-sm"
+                  to={`/sessions/${session.sessionId}`}
+                  className="block rounded-lg border border-border bg-surface-elevated p-4 text-sm transition-colors hover:bg-surface-hover"
                 >
                   <div className="flex items-start justify-between gap-3">
                     <div className="min-w-0">
@@ -767,7 +870,7 @@ export function AnalyticsPage() {
                       value={formatNumber(session.tokensPerToolCall)}
                     />
                   </div>
-                </div>
+                </Link>
               ))
             ) : (
               <EmptyState
@@ -799,7 +902,14 @@ export function AnalyticsPage() {
               modelUsage.slice(0, 8).map((item) => (
                 <div
                   key={`${item.provider}/${item.model}`}
-                  className="rounded-lg border border-border bg-surface-elevated p-4 text-sm"
+                  className="cursor-pointer rounded-lg border border-border bg-surface-elevated p-4 text-sm transition-colors hover:bg-surface-hover"
+                  onClick={() => {
+                    setProviderFilter(
+                      providerFilter === item.provider ? '' : item.provider,
+                    );
+                    setModelFilter(modelFilter === item.model ? '' : item.model);
+                  }}
+                  title={t('analytics.clickToFilterByModel')}
                 >
                   <div className="flex items-start justify-between gap-3">
                     <div className="min-w-0">

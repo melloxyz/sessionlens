@@ -20,6 +20,7 @@ export interface AnalyticsInsight {
   title: string;
   description: string;
   value: string;
+  sessionId?: string;
 }
 
 export interface AnalyticsAnomaly {
@@ -29,6 +30,7 @@ export interface AnalyticsAnomaly {
   title: string;
   description: string;
   value: string;
+  sessionId?: string;
 }
 
 export interface AnalyticsReport {
@@ -272,6 +274,7 @@ export function buildAnalyticsReport(filters: AnalyticsFilters = {}): AnalyticsR
       title: 'Long expensive session detected',
       description: `Session ${expensiveSession.session_id.slice(0, 10)} is among the priciest entries and may deserve a closer look.`,
       value: `${formatCurrency(expensiveSession.total_cost_usd)} · ${formatDuration(expensiveSession.duration_ms)}`,
+      sessionId: expensiveSession.session_id,
     });
   }
 
@@ -286,6 +289,7 @@ export function buildAnalyticsReport(filters: AnalyticsFilters = {}): AnalyticsR
       title: 'High context waste on a session',
       description: `${cacheWasteCandidate.session.cli} on ${compactPath(cacheWasteCandidate.session.project_path)} is missing cache hits for most of its input tokens.`,
       value: `${formatPercent((cacheWasteCandidate.cacheMissRate ?? 0) * 100)} miss rate`,
+      sessionId: cacheWasteCandidate.session.session_id,
     });
   }
 
@@ -319,6 +323,7 @@ export function buildAnalyticsReport(filters: AnalyticsFilters = {}): AnalyticsR
       title: 'Token usage outlier',
       description: `Session ${tokenOutlier.session.session_id.slice(0, 10)} used far more tokens than the typical session.`,
       value: formatTokens(tokenOutlier.totalTokens),
+      sessionId: tokenOutlier.session.session_id,
     });
   }
 
@@ -336,6 +341,7 @@ export function buildAnalyticsReport(filters: AnalyticsFilters = {}): AnalyticsR
       title: 'High-cost session outlier',
       description: `Session ${costOutlier.session_id.slice(0, 10)} is much more expensive than the average session.`,
       value: formatCurrency(costOutlier.total_cost_usd),
+      sessionId: costOutlier.session_id,
     });
   }
 

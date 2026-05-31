@@ -159,10 +159,14 @@ export function registerSessionRoutes(app: FastifyInstance): void {
     try {
       const { id } = req.params as { id: string };
       const db = getDatabase();
+      const isNumeric = /^\d+$/.test(id);
+
+      const lookupClause = isNumeric ? 'id = ?' : 'session_id = ?';
+      const lookupParam: string | number = isNumeric ? Number(id) : id;
 
       const sessionResult = db.exec(
-        `SELECT * FROM sessions WHERE id = ? AND NOT EXISTS (SELECT 1 FROM hidden_projects hp WHERE hp.path = COALESCE(project_path, 'unknown'))`,
-        [Number(id)],
+        `SELECT * FROM sessions WHERE ${lookupClause} AND NOT EXISTS (SELECT 1 FROM hidden_projects hp WHERE hp.path = COALESCE(project_path, 'unknown'))`,
+        [lookupParam],
       );
       if (
         sessionResult.length === 0 ||
@@ -184,9 +188,11 @@ export function registerSessionRoutes(app: FastifyInstance): void {
           ? existsSync(session.project_path)
           : false;
 
+      const sessionNumericId = session.id as number;
+
       const msgResult = db.exec(
         `SELECT id, role, content, timestamp FROM messages WHERE session_fk = ? ORDER BY timestamp`,
-        [Number(id)],
+        [sessionNumericId],
       );
       const messages: Record<string, unknown>[] = [];
       if (msgResult.length > 0 && msgResult[0].values && msgResult[0].columns) {
@@ -202,7 +208,7 @@ export function registerSessionRoutes(app: FastifyInstance): void {
 
       const usageResult = db.exec(
         `SELECT * FROM usage_events WHERE session_fk = ? ORDER BY timestamp`,
-        [Number(id)],
+        [sessionNumericId],
       );
       const usageEvents: Record<string, unknown>[] = [];
       if (usageResult.length > 0 && usageResult[0].values && usageResult[0].columns) {
@@ -219,7 +225,7 @@ export function registerSessionRoutes(app: FastifyInstance): void {
       const modelUsageResult = db.exec(
         `SELECT provider, model, message_count, input_tokens, output_tokens, reasoning_tokens, cache_read_tokens, cache_write_tokens, tool_calls_count, total_cost_usd
          FROM session_model_usage WHERE session_fk = ? ORDER BY total_cost_usd DESC, message_count DESC`,
-        [Number(id)],
+        [sessionNumericId],
       );
       const modelUsage: Record<string, unknown>[] = [];
       if (
@@ -254,7 +260,12 @@ export function registerSessionRoutes(app: FastifyInstance): void {
     try {
       const { id } = req.params as { id: string };
       const db = getDatabase();
-      const result = db.exec(`SELECT project_path FROM sessions WHERE id = ?`, [Number(id)]);
+      const isNumeric = /^\d+$/.test(id);
+      const lookupClause = isNumeric ? 'id = ?' : 'session_id = ?';
+      const result = db.exec(
+        `SELECT project_path FROM sessions WHERE ${lookupClause}`,
+        [isNumeric ? Number(id) : id],
+      );
       const projectPath = result[0]?.values?.[0]?.[0] as string | undefined;
       if (!projectPath || projectPath === 'unknown' || !existsSync(projectPath)) {
         reply.code(404);
