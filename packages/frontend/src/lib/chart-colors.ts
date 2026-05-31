@@ -17,6 +17,7 @@ export const CLI_COLORS: Record<string, string> = {
   aider: '#30d158',
   qwen: '#3b82f6',
   antigravity: '#ffb340',
+  commandcode: '#000000',
 };
 
 export function chartColor(index: number) {

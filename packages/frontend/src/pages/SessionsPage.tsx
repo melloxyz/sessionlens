@@ -110,6 +110,8 @@ export function SessionsPage() {
               { label: 'Kimi', value: 'kimi' },
               { label: 'Aider', value: 'aider' },
               { label: 'Qwen', value: 'qwen' },
+              { label: 'Antigravity', value: 'antigravity' },
+              { label: 'CommandCode', value: 'commandcode' },
             ]}
           />
         }

@@ -1,6 +1,6 @@
 import { existsSync, statSync } from 'node:fs';
 import { readFile, readdir } from 'node:fs/promises';
-import { join } from 'node:path';
+import { join, basename, dirname } from 'node:path';
 import { homedir } from 'node:os';
 import type {
   Adapter,
@@ -66,6 +66,13 @@ function parseModel(raw: string | null | undefined): string | null {
   return slash > 0 ? raw.slice(slash + 1) : raw;
 }
 
+function decodeProjectPath(dirName: string): string | null {
+  if (!dirName || dirName.length < 2) return null;
+  const drive = dirName[0].toUpperCase();
+  const rest = dirName.slice(1).replace(/-/g, '\\');
+  return `${drive}:${rest}`;
+}
+
 async function readMeta(sessionPath: string): Promise<MetaJson> {
   const metaPath = sessionPath.replace(/\.jsonl$/, '.meta.json');
   if (!existsSync(metaPath)) return {};
@@ -96,7 +103,11 @@ async function walkJsonlFiles(dir: string, depth: number): Promise<string[]> {
   return results;
 }
 
-function buildSession(events: CommandCodeEvent[], meta: MetaJson): RawSession[] {
+function buildSession(
+  events: CommandCodeEvent[],
+  meta: MetaJson,
+  projectPath: string | null,
+): RawSession[] {
   const groups = new Map<string, CommandCodeEvent[]>();
   for (const evt of events) {
     const sid = evt.sessionId || 'unknown';
@@ -143,7 +154,6 @@ function buildSession(events: CommandCodeEvent[], meta: MetaJson): RawSession[] 
         const toolMessages = extractToolResults(evt);
         for (const tm of toolMessages) {
           messages.push(tm);
-          toolCallCount++;
         }
       }
 
@@ -196,7 +206,7 @@ function buildSession(events: CommandCodeEvent[], meta: MetaJson): RawSession[] 
       sessionId,
       provider,
       cli: 'commandcode' as CliProvider,
-      projectPath: null,
+      projectPath,
       sourcePath: undefined,
       model,
       startedAt: firstTs || new Date().toISOString(),
@@ -304,6 +314,9 @@ export function createCommandCodeAdapter(): Adapter {
 
       const meta = await readMeta(sessionPath);
 
+      const parentDir = basename(dirname(sessionPath));
+      const projectPath = decodeProjectPath(parentDir);
+
       const raw = await readFile(sessionPath, 'utf-8');
       const lines = raw.trim().split('\n').filter(Boolean);
       if (lines.length === 0) return [];
@@ -317,7 +330,7 @@ export function createCommandCodeAdapter(): Adapter {
         }
       }
 
-      return buildSession(events, meta);
+      return buildSession(events, meta, projectPath);
     },
 
     normalize(raw: RawSession): RawSession {

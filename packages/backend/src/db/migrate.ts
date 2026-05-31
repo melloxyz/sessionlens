@@ -36,6 +36,7 @@ export function runMigrations(): void {
     '0004_pricing_aliases',
     '0005_app_settings',
     '0006_budget_alerts',
+    '0007_commandcode_cli',
   ];
 
   for (const name of migrations) {
