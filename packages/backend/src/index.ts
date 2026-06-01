@@ -1,6 +1,11 @@
 import 'dotenv/config';
 import Fastify from 'fastify';
 import cors from '@fastify/cors';
+import { existsSync } from 'node:fs';
+import { spawn } from 'node:child_process';
+import { platform } from 'node:process';
+import { homedir } from 'node:os';
+import { join } from 'node:path';
 import { initDatabase, runMigrations, seedModels } from './db/index.js';
 import {
   createCodexAdapter,
@@ -90,14 +95,46 @@ async function main() {
     app.get('/api/integrations/status', async () => {
       const adapters = registry.getAll();
       const resolved = await Promise.all(
-        adapters.map(async (adapter) => ({
-          cli: adapter.cli,
-          status: (await adapter.detect()) ? 'available' : 'missing',
-        })),
+        adapters.map(async (adapter) => {
+          const detected = await adapter.detect();
+          return {
+            cli: adapter.cli,
+            status: detected ? 'available' : 'missing',
+            path: resolveIntegrationPath(adapter.cli, detected),
+          };
+        }),
       );
       return {
         integrations: resolved,
       };
+    });
+
+    app.post('/api/integrations/:cli/open', async (req, reply) => {
+      try {
+        const { cli } = req.params as { cli: string };
+        const target = resolveIntegrationPath(cli, true);
+        if (!target || !existsSync(target)) {
+          reply.code(404);
+          return {
+            error: {
+              code: 'INTEGRATION_PATH_NOT_FOUND',
+              message: 'Integration folder not found',
+            },
+          };
+        }
+
+        openFolder(target);
+        return { ok: true, path: target };
+      } catch (error) {
+        reply.code(500);
+        return {
+          error: {
+            code: 'OPEN_INTEGRATION_FAILED',
+            message: 'Failed to open integration folder',
+            details: String(error),
+          },
+        };
+      }
     });
 
     app.post('/api/ingest', async () => {
@@ -143,3 +180,43 @@ async function main() {
 }
 
 void main();
+
+function resolveIntegrationPath(cli: string, detected: boolean): string | null {
+  const resolveFirstExisting = (...candidates: string[]) =>
+    candidates.find((candidate) => existsSync(candidate)) ?? null;
+
+  const known = cli.toLowerCase();
+  const fallback =
+    known === 'codex'
+      ? join(homedir(), '.codex')
+      : known === 'claude'
+        ? join(homedir(), '.claude')
+        : known === 'opencode'
+          ? join(homedir(), '.local', 'share', 'opencode')
+          : known === 'gemini'
+            ? join(homedir(), '.gemini')
+            : known === 'kimi'
+              ? join(homedir(), '.kimi')
+              : known === 'qwen'
+                ? resolveFirstExisting(
+                    join(homedir(), '.qwen'),
+                    join(homedir(), '.config', 'qwen'),
+                    join(homedir(), '.local', 'share', 'qwen'),
+                  )
+                : known === 'antigravity'
+                  ? join(homedir(), '.gemini', 'antigravity')
+                  : known === 'commandcode'
+                    ? join(homedir(), '.commandcode')
+                    : null;
+
+  if (!fallback) return null;
+  if (existsSync(fallback)) return fallback;
+  return detected ? fallback : null;
+}
+
+function openFolder(target: string): void {
+  const command =
+    platform === 'win32' ? 'explorer.exe' : platform === 'darwin' ? 'open' : 'xdg-open';
+  const child = spawn(command, [target], { detached: true, stdio: 'ignore' });
+  child.unref();
+}

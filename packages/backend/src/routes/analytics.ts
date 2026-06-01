@@ -333,48 +333,64 @@ export function registerAnalyticsRoutes(app: FastifyInstance): void {
       const cli = q.cli || null;
       const provider = q.provider || null;
       const model = q.model || null;
-      let where = `WHERE ${VISIBLE_SESSION_SQL}`;
-      const params: string[] = [];
-      if (dateFrom) {
-        where += ` AND started_at >= ?`;
-        params.push(dateFrom);
-      }
-      if (dateTo) {
-        where += ` AND started_at <= ?`;
-        params.push(dateTo);
-      }
-      if (cli) {
-        where += ` AND cli = ?`;
-        params.push(cli);
-      }
-      if (provider) {
-        where += ` AND LOWER(provider) = LOWER(?)`;
-        params.push(provider);
-      }
-      if (model) {
-        where += ` AND LOWER(COALESCE(model, 'unknown')) = LOWER(?)`;
-        params.push(model);
-      }
+      const project = q.project || null;
 
       const db = getDatabase();
-      const read = (sql: string) =>
+      const buildWhere = (exclude?: 'cli' | 'provider' | 'model' | 'project') => {
+        let where = `WHERE ${VISIBLE_SESSION_SQL}`;
+        const params: string[] = [];
+        if (dateFrom) {
+          where += ` AND started_at >= ?`;
+          params.push(dateFrom);
+        }
+        if (dateTo) {
+          where += ` AND started_at <= ?`;
+          params.push(dateTo);
+        }
+        if (cli && exclude !== 'cli') {
+          where += ` AND cli = ?`;
+          params.push(cli);
+        }
+        if (provider && exclude !== 'provider') {
+          where += ` AND LOWER(provider) = LOWER(?)`;
+          params.push(provider);
+        }
+        if (model && exclude !== 'model') {
+          where += ` AND LOWER(COALESCE(model, 'unknown')) = LOWER(?)`;
+          params.push(model);
+        }
+        if (project && exclude !== 'project') {
+          where += ` AND COALESCE(project_path, 'unknown') = ?`;
+          params.push(project);
+        }
+        return { where, params };
+      };
+      const read = (sql: string, params: string[]) =>
         (db.exec(sql, params)[0]?.values ?? []).map((row) => ({
           label: String(row[0] ?? 'unknown'),
           value: String(row[0] ?? 'unknown'),
           count: Number(row[1]) || 0,
         }));
+      const cliWhere = buildWhere('cli');
+      const providerWhere = buildWhere('provider');
+      const modelWhere = buildWhere('model');
+      const projectWhere = buildWhere('project');
       return {
         clis: read(
-          `SELECT cli, COUNT(*) FROM sessions ${where} GROUP BY cli ORDER BY COUNT(*) DESC, cli ASC`,
+          `SELECT cli, COUNT(*) FROM sessions ${cliWhere.where} GROUP BY cli ORDER BY COUNT(*) DESC, cli ASC`,
+          cliWhere.params,
         ),
         providers: read(
-          `SELECT COALESCE(provider, 'unknown'), COUNT(*) FROM sessions ${where} GROUP BY COALESCE(provider, 'unknown') ORDER BY COUNT(*) DESC`,
+          `SELECT COALESCE(provider, 'unknown'), COUNT(*) FROM sessions ${providerWhere.where} GROUP BY COALESCE(provider, 'unknown') ORDER BY COUNT(*) DESC`,
+          providerWhere.params,
         ),
         models: read(
-          `SELECT COALESCE(model, 'unknown'), COUNT(*) FROM sessions ${where} GROUP BY COALESCE(model, 'unknown') ORDER BY COUNT(*) DESC LIMIT 100`,
+          `SELECT COALESCE(model, 'unknown'), COUNT(*) FROM sessions ${modelWhere.where} GROUP BY COALESCE(model, 'unknown') ORDER BY COUNT(*) DESC LIMIT 100`,
+          modelWhere.params,
         ),
         projects: read(
-          `SELECT COALESCE(project_path, 'unknown'), COUNT(*) FROM sessions ${where} GROUP BY COALESCE(project_path, 'unknown') ORDER BY COUNT(*) DESC LIMIT 100`,
+          `SELECT COALESCE(project_path, 'unknown'), COUNT(*) FROM sessions ${projectWhere.where} GROUP BY COALESCE(project_path, 'unknown') ORDER BY COUNT(*) DESC LIMIT 100`,
+          projectWhere.params,
         ),
       };
     } catch (error) {

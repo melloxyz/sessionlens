@@ -18,6 +18,7 @@ export interface InsightDetail {
     growthPercent?: number | null;
     baselineDailySpend?: number;
 
+    projectId?: number;
     projectPath?: string;
     projectSpend?: number;
     projectSessions?: number;
@@ -77,7 +78,15 @@ interface SessionRow {
   tool_call_count: number;
 }
 
-interface UsageAggregate {
+interface CacheSessionRow extends SessionRow {
+  input_tokens: number;
+  output_tokens: number;
+  cache_read_tokens: number;
+  cache_write_tokens: number;
+  reasoning_tokens: number;
+}
+
+interface _UsageAggregate {
   session_id: number;
   input_tokens: number;
   output_tokens: number;
@@ -163,14 +172,16 @@ function formatCurrency(value: number | null | undefined): string {
 
 function formatTokens(value: number | null | undefined): string {
   if (value == null) return '0';
-  return new Intl.NumberFormat('en-US', { notation: 'compact', maximumFractionDigits: 1 }).format(value);
+  return new Intl.NumberFormat('en-US', { notation: 'compact', maximumFractionDigits: 1 }).format(
+    value,
+  );
 }
 
 function formatPercent(value: number): string {
   return `${value.toFixed(0)}%`;
 }
 
-function slug(value: string): string {
+function _slug(value: string): string {
   return value
     .toLowerCase()
     .replace(/[^a-z0-9]+/g, '-')
@@ -187,19 +198,22 @@ const RECOMMENDATIONS: Record<string, RecDef[]> = {
   growth: [
     {
       title: 'Set a budget limit',
-      description: 'Define a spending cap so you are alerted before costs escalate further. A weekly or monthly budget helps catch upward trends early.',
+      description:
+        'Define a spending cap so you are alerted before costs escalate further. A weekly or monthly budget helps catch upward trends early.',
       url: '/budgets',
       action: 'Create budget',
     },
     {
       title: 'Review what caused the growth',
-      description: 'Filter recent sessions to see which projects, models or CLIs are driving the increase. Understanding the source is the first step to controlling it.',
+      description:
+        'Filter recent sessions to see which projects, models or CLIs are driving the increase. Understanding the source is the first step to controlling it.',
       url: '/sessions',
       action: 'Review sessions',
     },
     {
       title: 'Consider cheaper models for light tasks',
-      description: 'Not every prompt needs the most expensive model. Switching lighter sessions to a cheaper alternative can cut costs significantly without sacrificing results.',
+      description:
+        'Not every prompt needs the most expensive model. Switching lighter sessions to a cheaper alternative can cut costs significantly without sacrificing results.',
       url: '/models',
       action: 'Compare models',
     },
@@ -207,37 +221,43 @@ const RECOMMENDATIONS: Record<string, RecDef[]> = {
   project: [
     {
       title: 'Set a budget limit for this project',
-      description: 'Create a project-scoped budget so you are notified when this workspace approaches or exceeds a comfortable threshold.',
+      description:
+        'Create a project-scoped budget so you are notified when this workspace approaches or exceeds a comfortable threshold.',
       url: '/budgets',
       action: 'Create budget',
     },
     {
       title: 'Open project detail',
-      description: 'See the full breakdown of sessions, models and spend timeline for this project. Understanding usage patterns helps identify optimization opportunities.',
+      description:
+        'See the full breakdown of sessions, models and spend timeline for this project. Understanding usage patterns helps identify optimization opportunities.',
       action: 'Open project',
     },
     {
       title: 'Review sessions in this project',
-      description: 'Browse individual sessions to find expensive conversations or sessions that could have used a cheaper model.',
+      description:
+        'Browse individual sessions to find expensive conversations or sessions that could have used a cheaper model.',
       action: 'Review sessions',
     },
   ],
   model: [
     {
       title: 'Use cheaper models for light tasks',
-      description: 'If this expensive model is used for sessions with few messages, consider switching to a cheaper alternative for simple or boilerplate work.',
+      description:
+        'If this expensive model is used for sessions with few messages, consider switching to a cheaper alternative for simple or boilerplate work.',
       url: '/models',
       action: 'Compare models',
     },
     {
       title: 'Set a spending cap for this model',
-      description: 'Create a model-scoped budget limit so you get alerted when spend on this specific model crosses a threshold.',
+      description:
+        'Create a model-scoped budget limit so you get alerted when spend on this specific model crosses a threshold.',
       url: '/budgets',
       action: 'Create budget',
     },
     {
       title: 'Audit sessions using this model',
-      description: 'Review which sessions are using this expensive model and whether they genuinely need its capabilities.',
+      description:
+        'Review which sessions are using this expensive model and whether they genuinely need its capabilities.',
       url: '/sessions',
       action: 'Review sessions',
     },
@@ -245,18 +265,21 @@ const RECOMMENDATIONS: Record<string, RecDef[]> = {
   session: [
     {
       title: 'Review this session in detail',
-      description: 'Look at the full conversation, messages and tool calls to understand why this session was particularly expensive.',
+      description:
+        'Look at the full conversation, messages and tool calls to understand why this session was particularly expensive.',
       action: 'Open session',
     },
     {
       title: 'Set a per-session cost alert',
-      description: 'Create a budget limit to catch sessions that exceed a comfortable cost threshold before they grow too large.',
+      description:
+        'Create a budget limit to catch sessions that exceed a comfortable cost threshold before they grow too large.',
       url: '/budgets',
       action: 'Create budget',
     },
     {
       title: 'Check if a cheaper model would have worked',
-      description: 'Review the session to see if a lighter or cheaper model could have handled the same task. Sometimes we default to expensive models out of habit.',
+      description:
+        'Review the session to see if a lighter or cheaper model could have handled the same task. Sometimes we default to expensive models out of habit.',
       url: '/models',
       action: 'Compare models',
     },
@@ -264,52 +287,61 @@ const RECOMMENDATIONS: Record<string, RecDef[]> = {
   cache: [
     {
       title: 'Improve prompt and system-prompt consistency',
-      description: 'High cache miss rates often happen when prompts vary too much between messages. Keeping system prompts stable and reusing prompt patterns helps cache hits.',
+      description:
+        'High cache miss rates often happen when prompts vary too much between messages. Keeping system prompts stable and reusing prompt patterns helps cache hits.',
       action: 'Review prompts',
     },
     {
       title: 'Reduce context changes between messages',
-      description: 'Each large context shift resets the cache. Try to keep conversations focused and avoid mixing unrelated topics in a single session.',
+      description:
+        'Each large context shift resets the cache. Try to keep conversations focused and avoid mixing unrelated topics in a single session.',
       action: 'Review session',
     },
     {
       title: 'Review the session',
-      description: 'Open the full session to see message-by-message where context shifts may have occurred.',
+      description:
+        'Open the full session to see message-by-message where context shifts may have occurred.',
       action: 'Open session',
     },
   ],
   spend: [
     {
       title: 'Check if this was a planned heavy day',
-      description: 'A spike can be normal during intensive work. Review what sessions ran that day to decide if the spending was intentional.',
+      description:
+        'A spike can be normal during intensive work. Review what sessions ran that day to decide if the spending was intentional.',
       action: 'Review sessions',
     },
     {
       title: 'Set a daily budget limit',
-      description: 'Configure a daily budget to alert you when spend crosses a threshold you are comfortable with.',
+      description:
+        'Configure a daily budget to alert you when spend crosses a threshold you are comfortable with.',
       url: '/budgets',
       action: 'Create budget',
     },
     {
       title: 'Review sessions from that date',
-      description: 'Filter sessions to the spike date and inspect the most expensive conversations.',
+      description:
+        'Filter sessions to the spike date and inspect the most expensive conversations.',
       action: 'Review sessions',
     },
   ],
   token: [
     {
       title: 'Review the session for large context',
-      description: 'Sessions with unusually high token counts often have very large input contexts or long back-and-forth conversations. Check if the context size was necessary.',
+      description:
+        'Sessions with unusually high token counts often have very large input contexts or long back-and-forth conversations. Check if the context size was necessary.',
       action: 'Open session',
     },
     {
       title: 'Use caching or streaming where possible',
-      description: 'Some models support prompt caching which reduces token costs for repeated context. Check if your CLI supports cache-friendly modes.',
+      description:
+        'Some models support prompt caching which reduces token costs for repeated context. Check if your CLI supports cache-friendly modes.',
       action: 'Learn more',
     },
     {
       title: 'Set a token usage alert',
-      description: 'Create a budget limit to detect sessions that consume excessive tokens before they become costly.',
+      description:
+        'Create a budget limit to detect sessions that consume excessive tokens before they become costly.',
       url: '/budgets',
       action: 'Create budget',
     },
@@ -317,18 +349,21 @@ const RECOMMENDATIONS: Record<string, RecDef[]> = {
   costOutlier: [
     {
       title: 'Review this session in detail',
-      description: 'Open the full session to understand what made it disproportionately expensive compared to your average.',
+      description:
+        'Open the full session to understand what made it disproportionately expensive compared to your average.',
       action: 'Open session',
     },
     {
       title: 'Set a cost alert threshold',
-      description: 'Configure a budget alert so you are notified when any single session exceeds a cost you are comfortable with.',
+      description:
+        'Configure a budget alert so you are notified when any single session exceeds a cost you are comfortable with.',
       url: '/budgets',
       action: 'Create budget',
     },
     {
       title: 'Check model appropriateness',
-      description: 'Confirm that the model used was the right choice for the task. Sometimes we use expensive models for work that cheaper alternatives handle well.',
+      description:
+        'Confirm that the model used was the right choice for the task. Sometimes we use expensive models for work that cheaper alternatives handle well.',
       url: '/models',
       action: 'Compare models',
     },
@@ -336,17 +371,20 @@ const RECOMMENDATIONS: Record<string, RecDef[]> = {
   cacheBasin: [
     {
       title: 'Use system prompts more consistently',
-      description: 'System-wide cache misses across all sessions suggest prompts are frequently changing. Adopting consistent system prompts can increase cache-hit rates.',
+      description:
+        'System-wide cache misses across all sessions suggest prompts are frequently changing. Adopting consistent system prompts can increase cache-hit rates.',
       action: 'Review prompts',
     },
     {
       title: 'Standardize your prompting patterns',
-      description: 'Repeating similar instruction patterns allows the model to cache more context, reducing both cost and latency.',
+      description:
+        'Repeating similar instruction patterns allows the model to cache more context, reducing both cost and latency.',
       action: 'Review patterns',
     },
     {
       title: 'Review worst-offender sessions',
-      description: 'Identify the sessions with the highest cache miss rates and check what makes their prompts different from your typical sessions.',
+      description:
+        'Identify the sessions with the highest cache miss rates and check what makes their prompts different from your typical sessions.',
       action: 'Review sessions',
     },
   ],
@@ -467,6 +505,12 @@ export function buildInsightDetail(
       value = `${formatCurrency(projectSpend)} · ${projectSessions} sessions`;
       severity = projectSpend / Math.max(summary.totalSpend, 0.01) >= 0.5 ? 'high' : 'medium';
 
+      const projectMetaResult = db.exec(
+        `SELECT id FROM projects WHERE path = ? AND NOT EXISTS (SELECT 1 FROM hidden_projects hp WHERE hp.path = projects.path) LIMIT 1`,
+        [projectPath],
+      );
+
+      context.projectId = Number(projectMetaResult[0]?.values?.[0]?.[0]) || undefined;
       context.projectPath = projectPath;
       context.projectSpend = projectSpend;
       context.projectSessions = projectSessions;
@@ -567,14 +611,15 @@ export function buildInsightDetail(
          GROUP BY s.id`,
         [cacheSessionDbId, ...usageRange.params],
       );
-      const cacheRow = mapRows<any>(usageResult)[0];
+      const cacheRow = mapRows<CacheSessionRow>(usageResult)[0];
       if (!cacheRow) return null;
 
       const inputTokens =
         (Number(cacheRow.input_tokens) || 0) +
         (Number(cacheRow.cache_read_tokens) || 0) +
         (Number(cacheRow.cache_write_tokens) || 0);
-      const cacheHitRate = inputTokens > 0 ? (Number(cacheRow.cache_read_tokens) || 0) / inputTokens : null;
+      const cacheHitRate =
+        inputTokens > 0 ? (Number(cacheRow.cache_read_tokens) || 0) / inputTokens : null;
       const cacheMissRate = cacheHitRate != null ? 1 - cacheHitRate : null;
 
       title = 'High context waste on a session';
@@ -601,14 +646,15 @@ export function buildInsightDetail(
          ORDER BY miss_rate DESC LIMIT 5`,
         usageRange.params,
       );
-      context.topCacheWasteSessions =
-        mapRows<{ sessionId: string; missRate: number; tokens: number }>(topWasteResult).map(
-          (r) => ({
-            sessionId: r.sessionId,
-            missRate: Number(r.missRate) || 0,
-            tokens: Number(r.tokens) || 0,
-          }),
-        );
+      context.topCacheWasteSessions = mapRows<{
+        sessionId: string;
+        missRate: number;
+        tokens: number;
+      }>(topWasteResult).map((r) => ({
+        sessionId: r.sessionId,
+        missRate: Number(r.missRate) || 0,
+        tokens: Number(r.tokens) || 0,
+      }));
 
       const avgCacheResult = db.exec(
         `SELECT
@@ -634,7 +680,7 @@ export function buildInsightDetail(
       title = 'Daily spend spike';
       const baseline = report.summary.baselineDailySpend;
       const spikeSpend = spikePoint?.spend ?? 0;
-      description = `The latest day spent ${formatPercent(baseline > 0 ? ((spikeSpend / baseline) * 100 - 100) : 0)} more than the 7-day baseline.`;
+      description = `The latest day spent ${formatPercent(baseline > 0 ? (spikeSpend / baseline) * 100 - 100 : 0)} more than the 7-day baseline.`;
       value = `${formatCurrency(spikeSpend)} vs ${formatCurrency(baseline)}/day`;
       severity = spikeSpend >= baseline * 3 ? 'high' : 'medium';
 
@@ -736,9 +782,10 @@ export function buildInsightDetail(
          WHERE ${validSessionS}${usageRange.sql}`,
         usageRange.params,
       );
-      const avgCM = avgCacheBasinResult[0]?.values?.[0]?.[0] != null
-        ? Number(avgCacheBasinResult[0].values[0][0])
-        : null;
+      const avgCM =
+        avgCacheBasinResult[0]?.values?.[0]?.[0] != null
+          ? Number(avgCacheBasinResult[0].values[0][0])
+          : null;
 
       const topWasteBasinResult = db.exec(
         `SELECT
@@ -763,14 +810,15 @@ export function buildInsightDetail(
       severity = (avgCM ?? 0) >= 0.7 ? 'high' : 'medium';
 
       context.overallAvgCacheMiss = avgCM;
-      context.topCacheWasteSessions =
-        mapRows<{ sessionId: string; missRate: number; tokens: number }>(
-          topWasteBasinResult,
-        ).map((r) => ({
-          sessionId: r.sessionId,
-          missRate: Number(r.missRate) || 0,
-          tokens: Number(r.tokens) || 0,
-        }));
+      context.topCacheWasteSessions = mapRows<{
+        sessionId: string;
+        missRate: number;
+        tokens: number;
+      }>(topWasteBasinResult).map((r) => ({
+        sessionId: r.sessionId,
+        missRate: Number(r.missRate) || 0,
+        tokens: Number(r.tokens) || 0,
+      }));
       break;
     }
 

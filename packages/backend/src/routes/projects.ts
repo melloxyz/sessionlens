@@ -1,6 +1,7 @@
 import type { FastifyInstance } from 'fastify';
 import { existsSync } from 'node:fs';
-import { execFileSync } from 'node:child_process';
+import { execFileSync, spawn } from 'node:child_process';
+import { platform } from 'node:process';
 import { getDatabase, saveDatabase } from '../db/connection.js';
 
 export function registerProjectRoutes(app: FastifyInstance): void {
@@ -9,9 +10,18 @@ export function registerProjectRoutes(app: FastifyInstance): void {
       const q = req.query as Record<string, string>;
       const db = getDatabase();
       const search = q.search || null;
+      const includeHidden = q.includeHidden === '1' || q.includeHidden === 'true';
 
-      let sql = `SELECT * FROM projects WHERE NOT EXISTS (SELECT 1 FROM hidden_projects hp WHERE hp.path = projects.path)`;
+      let sql = `
+        SELECT projects.*, CASE WHEN hp.path IS NULL THEN 0 ELSE 1 END AS hidden
+        FROM projects
+        LEFT JOIN hidden_projects hp ON hp.path = projects.path
+        WHERE 1=1
+      `;
       const params: (string | number | null)[] = [];
+      if (!includeHidden) {
+        sql += ` AND hp.path IS NULL`;
+      }
       if (search) {
         sql += ` AND path LIKE ?`;
         params.push(`%${search}%`);
@@ -50,10 +60,14 @@ export function registerProjectRoutes(app: FastifyInstance): void {
   app.get('/api/projects/:id', async (req, reply) => {
     const { id } = req.params as { id: string };
     const db = getDatabase();
+    const decodedId = decodeURIComponent(id);
+    const isNumeric = /^\d+$/.test(decodedId);
 
     const projResult = db.exec(
-      `SELECT * FROM projects WHERE id = ? AND NOT EXISTS (SELECT 1 FROM hidden_projects hp WHERE hp.path = projects.path)`,
-      [Number(id)],
+      `SELECT * FROM projects
+       WHERE ${isNumeric ? 'id = ?' : 'path = ?'}
+         AND NOT EXISTS (SELECT 1 FROM hidden_projects hp WHERE hp.path = projects.path)`,
+      [isNumeric ? Number(decodedId) : decodedId],
     );
     if (projResult.length === 0 || !projResult[0].values || projResult[0].values.length === 0) {
       reply.code(404);
@@ -71,7 +85,7 @@ export function registerProjectRoutes(app: FastifyInstance): void {
 
     // Sessions for this project
     const sessionResult = db.exec(
-      `SELECT id, cli, model, started_at, ended_at, duration_ms, total_cost_usd, cost_source, source_confidence, message_count, tool_call_count
+      `SELECT id, session_id, cli, model, started_at, ended_at, duration_ms, total_cost_usd, cost_source, source_confidence, message_count, tool_call_count
        FROM sessions WHERE COALESCE(project_path, 'unknown') = ? ORDER BY started_at DESC LIMIT 100`,
       [path],
     );
@@ -160,6 +174,69 @@ export function registerProjectRoutes(app: FastifyInstance): void {
         error: {
           code: 'PROJECT_HIDE_FAILED',
           message: 'Failed to hide project',
+          details: String(error),
+        },
+      };
+    }
+  });
+
+  app.post('/api/projects/:id/restore', async (req, reply) => {
+    try {
+      const { id } = req.params as { id: string };
+      const db = getDatabase();
+      const decodedId = decodeURIComponent(id);
+      const isNumeric = /^\d+$/.test(decodedId);
+      const result = db.exec(
+        `SELECT path FROM projects WHERE ${isNumeric ? 'id = ?' : 'path = ?'}`,
+        [isNumeric ? Number(decodedId) : decodedId],
+      );
+      const path = result[0]?.values?.[0]?.[0] as string | undefined;
+      if (!path) {
+        reply.code(404);
+        return { error: { code: 'PROJECT_NOT_FOUND', message: 'Project not found' } };
+      }
+      db.run(`DELETE FROM hidden_projects WHERE path = ?`, [path]);
+      saveDatabase();
+      return { ok: true };
+    } catch (error) {
+      reply.code(500);
+      return {
+        error: {
+          code: 'PROJECT_RESTORE_FAILED',
+          message: 'Failed to restore project',
+          details: String(error),
+        },
+      };
+    }
+  });
+
+  app.post('/api/projects/:id/open', async (req, reply) => {
+    try {
+      const { id } = req.params as { id: string };
+      const db = getDatabase();
+      const decodedId = decodeURIComponent(id);
+      const isNumeric = /^\d+$/.test(decodedId);
+      const result = db.exec(
+        `SELECT path FROM projects WHERE ${isNumeric ? 'id = ?' : 'path = ?'}`,
+        [isNumeric ? Number(decodedId) : decodedId],
+      );
+      const path = result[0]?.values?.[0]?.[0] as string | undefined;
+      if (!path || path === 'unknown' || !existsSync(path)) {
+        reply.code(404);
+        return { error: { code: 'PROJECT_PATH_NOT_FOUND', message: 'Project folder not found' } };
+      }
+
+      const command =
+        platform === 'win32' ? 'explorer.exe' : platform === 'darwin' ? 'open' : 'xdg-open';
+      const child = spawn(command, [path], { detached: true, stdio: 'ignore' });
+      child.unref();
+      return { ok: true };
+    } catch (error) {
+      reply.code(500);
+      return {
+        error: {
+          code: 'OPEN_PROJECT_FAILED',
+          message: 'Failed to open project folder',
           details: String(error),
         },
       };
