@@ -90,6 +90,7 @@ export interface ProductivitySession {
 
 export interface ProductivityReport {
   totalToolCalls: number;
+  avgFilesPerSession: number;
   avgToolCallsPerSession: number;
   avgToolCallsPerMinute: number | null;
   avgTokensPerToolCall: number | null;
@@ -129,6 +130,11 @@ interface UsageAggregate {
   tool_calls_count: number;
 }
 
+interface FileAggregate {
+  session_id: number;
+  file_count: number;
+}
+
 interface ProjectSummary {
   project: string;
   spend: number;
@@ -165,12 +171,16 @@ export function buildAnalyticsReport(filters: AnalyticsFilters = {}): AnalyticsR
 
   const sessions = querySessions(db, filters);
   const usageAggregates = queryUsageAggregates(db, filters);
+  const fileAggregates = queryFileAggregates(db, filters);
   const projectSummaries = queryProjectSummaries(db, filters);
   const modelSummaries = queryModelSummaries(db, filters);
   const modelUsageBreakdown = queryModelUsageBreakdown(db, filters);
   const dailyTrend = queryDailyTrend(db, filters);
 
   const sessionById = new Map<number, SessionRow>(sessions.map((session) => [session.id, session]));
+  const filesBySession = new Map<number, number>(
+    fileAggregates.map((row) => [row.session_id, row.file_count]),
+  );
   const aggregatedSessions = usageAggregates
     .map((row) => {
       const session = sessionById.get(row.session_id);
@@ -204,6 +214,7 @@ export function buildAnalyticsReport(filters: AnalyticsFilters = {}): AnalyticsR
   const totalSpend = sessions.reduce((sum, session) => sum + (session.total_cost_usd ?? 0), 0);
   const totalMessages = sessions.reduce((sum, session) => sum + session.message_count, 0);
   const totalTools = sessions.reduce((sum, session) => sum + session.tool_call_count, 0);
+  const totalFiles = [...filesBySession.values()].reduce((sum, value) => sum + value, 0);
   const totalDuration = sessions.reduce((sum, session) => sum + (session.duration_ms ?? 0), 0);
   const totalTokens = aggregatedSessions.reduce((sum, item) => sum + item.totalTokens, 0);
   const avgCost = average(sessions.map((session) => session.total_cost_usd ?? 0));
@@ -418,10 +429,13 @@ export function buildAnalyticsReport(filters: AnalyticsFilters = {}): AnalyticsR
       avgMessagesPerToolCall: productivityMessagesPerToolCall,
       costToolCallCorrelation,
       topToolCallSessions,
-      filesModifiedSupported: false,
+      avgFilesPerSession: sessions.length > 0 ? totalFiles / sessions.length : 0,
+      filesModifiedSupported: totalFiles > 0,
       notes: [
-        'Files modified per session is not available yet because no adapter exposes a reliable source.',
-        'Tool-call and token-based efficiency is now calculated across Codex, Claude and OpenCode sessions.',
+        totalFiles > 0
+          ? 'Files modified per session now reflects structured session_files rows captured from reliable adapters.'
+          : 'Files modified per session is not available yet because no adapter exposed structured file data in the selected range.',
+        'Tool-call and token-based efficiency is now calculated across all indexed CLI sessions.',
       ],
     },
     modelUsageBreakdown,
@@ -463,9 +477,12 @@ function queryUsageAggregates(
        COALESCE(SUM(ue.cache_read_tokens), 0) AS cache_read_tokens,
        COALESCE(SUM(ue.cache_write_tokens), 0) AS cache_write_tokens,
        COALESCE(SUM(ue.reasoning_tokens), 0) AS reasoning_tokens,
-       COALESCE(SUM(ue.tool_calls_count), 0) AS tool_calls_count
-     FROM usage_events ue
-     JOIN sessions s ON s.id = ue.session_fk
+       CASE
+         WHEN COALESCE(SUM(ue.tool_calls_count), 0) > 0 THEN COALESCE(SUM(ue.tool_calls_count), 0)
+         ELSE COALESCE(MAX(s.tool_call_count), 0)
+       END AS tool_calls_count
+     FROM sessions s
+     LEFT JOIN usage_events ue ON s.id = ue.session_fk
       WHERE ${validSession}${range.sql}
       GROUP BY s.id
       ORDER BY s.started_at ASC`,
@@ -473,6 +490,24 @@ function queryUsageAggregates(
   );
 
   return mapRows<UsageAggregate>(result);
+}
+
+function queryFileAggregates(
+  db: ReturnType<typeof getDatabase>,
+  filters: AnalyticsFilters,
+): FileAggregate[] {
+  const range = buildWhere(filters, 's');
+  const validSession = validSessionSql('s');
+  const result = db.exec(
+    `SELECT s.id AS session_id, COUNT(sf.id) AS file_count
+     FROM sessions s
+     JOIN session_files sf ON sf.session_fk = s.id
+     WHERE ${validSession}${range.sql}
+     GROUP BY s.id`,
+    range.params,
+  );
+
+  return mapRows<FileAggregate>(result);
 }
 
 function queryProjectSummaries(

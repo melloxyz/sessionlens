@@ -7,24 +7,16 @@ import { platform } from 'node:process';
 import { homedir } from 'node:os';
 import { join } from 'node:path';
 import { initDatabase, runMigrations, seedModels } from './db/index.js';
-import {
-  createCodexAdapter,
-  createClaudeAdapter,
-  createOpencodeAdapter,
-  createGeminiAdapter,
-  createKimiAdapter,
-  createAiderAdapter,
-  createQwenAdapter,
-  createAntigravityAdapter,
-  createCommandCodeAdapter,
-  registry,
-} from './adapters/index.js';
+import { getDatabase } from './db/connection.js';
+import { type AdapterCapabilities, type SessionDataQuality, registry } from './adapters/index.js';
+import { registerAllAdapters } from './adapters/bootstrap.js';
 import { runIngestion, getLastStatus } from './ingestion/engine.js';
 import {
   getAutoIngestionStatus,
   setAutoIngestionEnabled,
   startAutoIngestion,
 } from './ingestion/watcher.js';
+import { capabilityScore, summarizeQuality } from './ingestion/session-quality.js';
 import { registerOverviewRoutes } from './routes/overview.js';
 import { registerAnalyticsRoutes } from './routes/analytics.js';
 import { registerSessionRoutes } from './routes/sessions.js';
@@ -44,15 +36,7 @@ async function main() {
     runMigrations();
     seedModels();
 
-    registry.register(createCodexAdapter());
-    registry.register(createClaudeAdapter());
-    registry.register(createOpencodeAdapter());
-    registry.register(createGeminiAdapter());
-    registry.register(createKimiAdapter());
-    registry.register(createAiderAdapter());
-    registry.register(createQwenAdapter());
-    registry.register(createAntigravityAdapter());
-    registry.register(createCommandCodeAdapter());
+    registerAllAdapters();
 
     const app = Fastify({ logger: true });
     await app.register(cors, { origin: true });
@@ -97,10 +81,21 @@ async function main() {
       const resolved = await Promise.all(
         adapters.map(async (adapter) => {
           const detected = await adapter.detect();
+          const sourceStats = getAdapterSourceStats(adapter.cli);
+          const capabilities = adapter.getCapabilities?.() ?? unknownCapabilities();
+          const dataQualitySummary = getCliDataQualitySummary(adapter.cli);
           return {
             cli: adapter.cli,
+            detected,
             status: detected ? 'available' : 'missing',
-            path: resolveIntegrationPath(adapter.cli, detected),
+            path: sourceStats.path ?? resolveIntegrationPath(adapter.cli, detected),
+            pathsFound: sourceStats.pathsFound,
+            sessionsIndexed: sourceStats.sessionsIndexed,
+            lastIngestedAt: sourceStats.lastIngestedAt ?? getLastStatus()?.completedAt ?? null,
+            lastError: sourceStats.lastError,
+            capabilities,
+            dataQualitySummary,
+            completenessScore: capabilityScore(capabilities),
           };
         }),
       );
@@ -219,4 +214,73 @@ function openFolder(target: string): void {
     platform === 'win32' ? 'explorer.exe' : platform === 'darwin' ? 'open' : 'xdg-open';
   const child = spawn(command, [target], { detached: true, stdio: 'ignore' });
   child.unref();
+}
+
+function getAdapterSourceStats(cli: string): {
+  path: string | null;
+  pathsFound: number;
+  sessionsIndexed: number;
+  lastIngestedAt: string | null;
+  lastError: string | null;
+} {
+  const db = getDatabase();
+  const sourceResult = db.exec(
+    `SELECT source_path, last_ingested_at, last_error
+     FROM adapter_sources
+     WHERE cli = ? AND detected = 1
+     ORDER BY last_ingested_at DESC, source_path ASC
+     LIMIT 1`,
+    [cli],
+  );
+  const aggregateResult = db.exec(
+    `SELECT COUNT(*) AS paths_found, COALESCE(SUM(session_count), 0) AS sessions_indexed
+     FROM adapter_sources WHERE cli = ? AND detected = 1`,
+    [cli],
+  );
+  const fallbackSessionCount =
+    Number(
+      db.exec(`SELECT COUNT(*) FROM sessions WHERE cli = ?`, [cli])[0]?.values?.[0]?.[0] ?? 0,
+    ) || 0;
+
+  return {
+    path: (sourceResult[0]?.values?.[0]?.[0] as string | undefined) ?? null,
+    pathsFound: Number(aggregateResult[0]?.values?.[0]?.[0] ?? 0) || 0,
+    sessionsIndexed: Number(aggregateResult[0]?.values?.[0]?.[1] ?? 0) || fallbackSessionCount,
+    lastIngestedAt: (sourceResult[0]?.values?.[0]?.[1] as string | undefined) ?? null,
+    lastError: (sourceResult[0]?.values?.[0]?.[2] as string | undefined) ?? null,
+  };
+}
+
+function getCliDataQualitySummary(cli: string): SessionDataQuality {
+  const db = getDatabase();
+  const result = db.exec(`SELECT data_quality_json FROM sessions WHERE cli = ?`, [cli]);
+  const rows: SessionDataQuality[] = [];
+
+  for (const row of result[0]?.values ?? []) {
+    const raw = row[0];
+    if (typeof raw !== 'string' || raw.length === 0) continue;
+    try {
+      rows.push(JSON.parse(raw) as SessionDataQuality);
+    } catch {
+      // ignore malformed historic rows
+    }
+  }
+
+  return summarizeQuality(rows);
+}
+
+function unknownCapabilities(): AdapterCapabilities {
+  return {
+    messages: 'unknown',
+    tokens: 'unknown',
+    cost: 'unknown',
+    model: 'unknown',
+    provider: 'unknown',
+    projectPath: 'unknown',
+    duration: 'unknown',
+    toolCalls: 'unknown',
+    fileReads: 'unknown',
+    fileWrites: 'unknown',
+    multiModel: 'unknown',
+  };
 }

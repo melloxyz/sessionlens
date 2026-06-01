@@ -3,6 +3,7 @@ import { existsSync } from 'node:fs';
 import { spawn } from 'node:child_process';
 import { platform } from 'node:process';
 import { getDatabase } from '../db/connection.js';
+import type { SessionDataQuality } from '../adapters/types.js';
 
 const VALID_SESSION_SQL = `NOT (
   session_id = 'unknown'
@@ -183,6 +184,15 @@ export function registerSessionRoutes(app: FastifyInstance): void {
       for (let i = 0; i < sessionCols.length; i++) {
         session[sessionCols[i]] = sessionRow[i];
       }
+      if (typeof session.data_quality_json === 'string' && session.data_quality_json.length > 0) {
+        try {
+          session.data_quality = JSON.parse(session.data_quality_json) as SessionDataQuality;
+        } catch {
+          session.data_quality = null;
+        }
+      } else {
+        session.data_quality = null;
+      }
       session.project_exists =
         typeof session.project_path === 'string' && session.project_path !== 'unknown'
           ? existsSync(session.project_path)
@@ -243,7 +253,55 @@ export function registerSessionRoutes(app: FastifyInstance): void {
         }
       }
 
-      return { ...session, messages, usageEvents, modelUsage };
+      const toolResult = db.exec(
+        `SELECT id, timestamp, tool_name, operation, input_json, output_preview, source_confidence
+         FROM session_tools WHERE session_fk = ? ORDER BY timestamp, id`,
+        [sessionNumericId],
+      );
+      const tools: Record<string, unknown>[] = [];
+      if (toolResult.length > 0 && toolResult[0].values && toolResult[0].columns) {
+        const cols = toolResult[0].columns;
+        for (const row of toolResult[0].values) {
+          const obj: Record<string, unknown> = {};
+          for (let i = 0; i < cols.length; i++) {
+            obj[cols[i]] = row[i];
+          }
+          if (typeof obj.input_json === 'string' && obj.input_json.length > 0) {
+            try {
+              obj.input = JSON.parse(obj.input_json);
+            } catch {
+              obj.input = null;
+            }
+          }
+          tools.push(obj);
+        }
+      }
+
+      const fileResult = db.exec(
+        `SELECT id, path, operation, tool_name, timestamp, confidence, metadata_json
+         FROM session_files WHERE session_fk = ? ORDER BY timestamp, id`,
+        [sessionNumericId],
+      );
+      const files: Record<string, unknown>[] = [];
+      if (fileResult.length > 0 && fileResult[0].values && fileResult[0].columns) {
+        const cols = fileResult[0].columns;
+        for (const row of fileResult[0].values) {
+          const obj: Record<string, unknown> = {};
+          for (let i = 0; i < cols.length; i++) {
+            obj[cols[i]] = row[i];
+          }
+          if (typeof obj.metadata_json === 'string' && obj.metadata_json.length > 0) {
+            try {
+              obj.metadata = JSON.parse(obj.metadata_json);
+            } catch {
+              obj.metadata = null;
+            }
+          }
+          files.push(obj);
+        }
+      }
+
+      return { ...session, messages, usageEvents, modelUsage, tools, files };
     } catch (error) {
       reply.code(500);
       return {
@@ -262,10 +320,9 @@ export function registerSessionRoutes(app: FastifyInstance): void {
       const db = getDatabase();
       const isNumeric = /^\d+$/.test(id);
       const lookupClause = isNumeric ? 'id = ?' : 'session_id = ?';
-      const result = db.exec(
-        `SELECT project_path FROM sessions WHERE ${lookupClause}`,
-        [isNumeric ? Number(id) : id],
-      );
+      const result = db.exec(`SELECT project_path FROM sessions WHERE ${lookupClause}`, [
+        isNumeric ? Number(id) : id,
+      ]);
       const projectPath = result[0]?.values?.[0]?.[0] as string | undefined;
       if (!projectPath || projectPath === 'unknown' || !existsSync(projectPath)) {
         reply.code(404);

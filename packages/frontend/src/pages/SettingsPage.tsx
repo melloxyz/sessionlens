@@ -568,17 +568,46 @@ export function SettingsPage() {
             : (integrations?.integrations ?? []).map((item) => (
                 <div
                   key={item.cli}
-                  className="flex items-center justify-between rounded-lg border border-border bg-surface-muted p-3"
+                  className="rounded-lg border border-border bg-surface-muted p-3"
                 >
-                  <div className="flex items-center gap-3">
-                    <BrandMark value={item.cli} size="sm" />
-                    <span className="text-sm font-medium text-foreground">
-                      {getBrandMeta(item.cli).label}
-                    </span>
+                  <div className="flex items-start justify-between gap-3">
+                    <div className="flex items-center gap-3">
+                      <BrandMark value={item.cli} size="sm" />
+                      <div>
+                        <div className="text-sm font-medium text-foreground">
+                          {getBrandMeta(item.cli).label}
+                        </div>
+                        <div className="text-xs text-subtle-foreground">
+                          {(item.pathsFound ?? 0).toString()} {t('settings.pathsDiscovered')} ·{' '}
+                          {(item.sessionsIndexed ?? 0).toString()}{' '}
+                          {t('settings.totalSessions').toLowerCase()}
+                        </div>
+                      </div>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      {typeof item.completenessScore === 'number' && (
+                        <Badge variant="neutral">{item.completenessScore}%</Badge>
+                      )}
+                      <Badge variant={item.status === 'available' ? 'success' : 'neutral'}>
+                        {item.status === 'available' ? t('common.detected') : t('common.missing')}
+                      </Badge>
+                    </div>
                   </div>
-                  <Badge variant={item.status === 'available' ? 'success' : 'neutral'}>
-                    {item.status === 'available' ? t('common.detected') : t('common.missing')}
-                  </Badge>
+                  <div className="mt-3 grid gap-2 text-xs text-subtle-foreground md:grid-cols-2">
+                    <SummaryRow label={t('common.path')} value={item.path ?? '—'} />
+                    <SummaryRow
+                      label={t('settings.lastRun')}
+                      value={item.lastIngestedAt ? formatDateTime(item.lastIngestedAt) : '—'}
+                    />
+                    <SummaryRow
+                      label={t('common.tools')}
+                      value={String(item.dataQualitySummary?.tools ?? 'unknown')}
+                    />
+                    <SummaryRow
+                      label={t('common.files')}
+                      value={String(item.dataQualitySummary?.files ?? 'unknown')}
+                    />
+                  </div>
                 </div>
               ))}
         </DataPanel>

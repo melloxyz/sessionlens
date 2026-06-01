@@ -21,6 +21,7 @@ import { useApi } from '../../hooks/useApi.js';
 import { cn } from '../../lib/utils.js';
 import type { IntegrationStatusItem } from './IntegrationStatus.js';
 import { BrandMark, getBrandMeta } from '../brand/BrandMark.js';
+import { Tooltip } from '../ui/Tooltip.js';
 
 const NAV_ITEMS: {
   to: string;
@@ -107,28 +108,33 @@ export function Sidebar() {
         </div>
         <div className="space-y-1">
           {integrations.map((item) => (
-            <button
-              type="button"
+            <Tooltip
               key={item.label}
-              className="flex h-9 w-full items-center justify-between rounded-md border border-transparent px-2 text-left text-xs text-muted-foreground transition-colors hover:border-border hover:bg-surface hover:text-foreground"
-              onClick={async () => {
-                await fetch(`/api/integrations/${item.cli}/open`, { method: 'POST' });
-              }}
-              title={item.path ?? item.label}
+              content={`${item.pathsFound ?? 0} paths · ${item.sessionsIndexed ?? 0} sessions · ${item.completenessScore ?? 0}%`}
+              className="w-full"
             >
-              <div className="flex items-center gap-2.5">
-                <BrandMark value={item.cli} size="sm" />
-                <span>{item.label}</span>
-              </div>
-              <CircleDot
-                className={cn(
-                  'h-3 w-3',
-                  item.status === 'available'
-                    ? 'fill-success text-success'
-                    : 'fill-muted-foreground text-muted-foreground',
-                )}
-              />
-            </button>
+              <button
+                type="button"
+                className="flex h-9 w-full items-center justify-between rounded-md border border-transparent px-2 text-left text-xs text-muted-foreground transition-colors hover:border-border hover:bg-surface hover:text-foreground"
+                onClick={async () => {
+                  await fetch(`/api/integrations/${item.cli}/open`, { method: 'POST' });
+                }}
+                title={item.path ?? item.label}
+              >
+                <div className="flex items-center gap-2.5">
+                  <BrandMark value={item.cli} size="sm" />
+                  <span>{item.label}</span>
+                </div>
+                <CircleDot
+                  className={cn(
+                    'h-3 w-3',
+                    item.status === 'available'
+                      ? 'fill-success text-success'
+                      : 'fill-muted-foreground text-muted-foreground',
+                  )}
+                />
+              </button>
+            </Tooltip>
           ))}
         </div>
       </div>

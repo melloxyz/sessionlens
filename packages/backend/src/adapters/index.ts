@@ -1,10 +1,15 @@
 export type {
   Adapter,
+  AdapterCapabilities,
+  CapabilityLevel,
   Checkpoint,
-  RawSession,
+  RawFileEvent,
   RawMessage,
-  RawUsageEvent,
   RawModelUsage,
+  RawSession,
+  RawToolEvent,
+  RawUsageEvent,
+  SessionDataQuality,
 } from './types.js';
 export { registry } from './registry.js';
 export { createCodexAdapter } from './codex.js';

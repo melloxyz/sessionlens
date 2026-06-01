@@ -44,6 +44,7 @@
 | **Rastreamento de custos** | Custo real da CLI, estimativa por tokens e sync com OpenRouter para pricing atualizado |
 | **Sessões inteligentes** | Tokens (input/output/cache/reasoning), tool calls, duração, contexto do projeto |
 | **Analytics** | Dashboard com filtros contextuais, trends de gastos, breakdown por modelo/provider/projeto, páginas dedicadas de insight e anomalias |
+| **Confiabilidade de dados** | Origem da sessão, qualidade por campo, tools capturadas, arquivos tocados e coverage por CLI em Settings e Session Detail |
 | **Orçamentos** | Defina limites globais, por projeto, CLI, provider ou modelo, com histórico de alertas locais |
 | **Privacidade local-first** | SQLite via sql.js WASM — zero dados enviados externamente, zero telemetria |
 | **Auto-ingestão** | Filesystem watcher com debounce observa diretórios das CLIs e atualiza automaticamente |
@@ -59,6 +60,7 @@
 - Redesign global do Sessionlens com shell desktop-first, sidebar refinada, topbar consistente e componentes mais densos para leitura em monitores.
 - Analytics com filtros realmente aplicados, páginas dedicadas de insight, drill-downs para projetos/sessões e melhor leitura de gráficos em light/dark.
 - Budgets redesenhado com melhor distribuição de limites, alertas, progresso e estados de configuração.
+- Data quality por sessão e por integração: origem persistida, tools/files estruturados, score de completude por CLI e status honesto para fontes experimentais.
 - Projects e Project Detail com layout mais claro, correção de navegação para detalhes e integração melhor com sessões e histórico local.
 - Changelog dentro do app atualizado para acompanhar entregas, status do projeto, contribuidores e roadmap local-first.
 - Integração CommandCode adicionada a partir de arquivos locais em `~/.commandcode/projects`.
@@ -97,6 +99,8 @@ Acesse o frontend em **http://localhost:5173** — o backend roda em **http://12
 | `pnpm lint` | Lint em todos os packages |
 | `pnpm build` | Build de produção |
 | `pnpm --filter @sessionlens/backend dev` | Apenas backend |
+| `pnpm --filter @sessionlens/backend diagnose:adapters` | Diagnóstico local de adapters, capabilities e fontes detectadas |
+| `pnpm --filter @sessionlens/backend backfill:quality` | Reingestão/backfill de tools, files e data quality |
 | `pnpm --filter @sessionlens/frontend dev` | Apenas frontend |
 | `pnpm --filter @sessionlens/frontend build` | Build do frontend |
 
@@ -172,11 +176,11 @@ sessionlens/
 | **Claude Code** | ✅ Suportado | `~/.claude/projects/**/*.jsonl` | MEDIUM |
 | **OpenCode** | ✅ Suportado | `~/.local/share/opencode/opencode.db` | HIGH |
 | **Gemini CLI** | ✅ Suportado | `~/.gemini/tmp/**/chats/*.jsonl` | HIGH |
-| **Kimi CLI** | ✅ Suportado | `~/.kimi/logs/kimi.log` | MEDIUM |
-| **Aider** | ✅ Suportado | `.aider.chat.history.md` | LOW |
-| **Qwen CLI** | ✅ Suportado | `~/.qwen/`, `~/.config/qwen/`, `~/.local/share/qwen/` | MEDIUM |
-| **Antigravity** | ✅ Suportado | `~/.gemini/antigravity/` | MEDIUM |
-| **CommandCode** | ✅ Suportado | `~/.commandcode/projects/**/*.jsonl` + `.meta.json` | MEDIUM |
+| **Kimi CLI** | ⚠️ Experimental honesto | `~/.kimi/sessions/**/context.jsonl` ou `KIMI_SHARE_DIR` | PARTIAL |
+| **Aider** | ⚠️ Experimental honesto | `.aider.chat.history.md` + `.aider.llm.history` | PARTIAL |
+| **Qwen CLI** | ⚠️ Experimental honesto | `~/.qwen/sessions/**/*.json` e equivalentes | PARTIAL |
+| **Antigravity** | ⚠️ Experimental honesto | `~/.gemini/antigravity/` | PARTIAL |
+| **CommandCode** | ✅ Suportado | `~/.commandcode/projects/**/*.jsonl` + `.meta.json` + `.checkpoints.jsonl` | HIGH |
 
 > Cada adapter é isolado — uma mudança no schema de uma CLI não afeta as outras.
 > A confiança representa a qualidade dos dados disponíveis por fonte. Algumas CLIs não expõem custo, tokens ou ferramentas de forma completa; nesses casos o Sessionlens preserva os dados reais disponíveis e marca lacunas para melhoria.

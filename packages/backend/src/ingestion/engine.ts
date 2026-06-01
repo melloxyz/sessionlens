@@ -1,8 +1,9 @@
 import { getDatabase, saveDatabase } from '../db/connection.js';
 import { registry } from '../adapters/registry.js';
-import type { RawSession, RawModelUsage } from '../adapters/types.js';
+import type { RawFileEvent, RawModelUsage, RawSession, RawToolEvent } from '../adapters/types.js';
 import { execSync } from 'node:child_process';
 import { resolveSessionCost } from '../costing.js';
+import { buildSessionDataQuality, countToolCalls } from './session-quality.js';
 
 function normalizePath(p: string | null): string | null {
   if (!p) return null;
@@ -28,6 +29,62 @@ function normalizeModel(raw: string | null): string | null {
     return raw.split('/').slice(1).join('/');
   }
   return raw;
+}
+
+function resolveToolCallCount(raw: RawSession): number {
+  return countToolCalls(raw);
+}
+
+function resolveDataQuality(raw: RawSession, costSource: 'actual' | 'estimated' | 'unknown') {
+  return buildSessionDataQuality(raw, costSource);
+}
+
+function persistToolEvents(
+  db: ReturnType<typeof getDatabase>,
+  sessionPk: number,
+  rows: RawToolEvent[],
+): void {
+  db.run(`DELETE FROM session_tools WHERE session_fk = ?`, [sessionPk]);
+
+  for (const row of rows) {
+    db.run(
+      `INSERT INTO session_tools (session_fk, timestamp, tool_name, operation, input_json, output_preview, source_confidence)
+       VALUES (?, ?, ?, ?, ?, ?, ?)`,
+      [
+        sessionPk,
+        row.timestamp,
+        row.toolName,
+        row.operation,
+        row.input ? JSON.stringify(row.input) : null,
+        row.outputPreview ?? null,
+        row.sourceConfidence,
+      ],
+    );
+  }
+}
+
+function persistFileEvents(
+  db: ReturnType<typeof getDatabase>,
+  sessionPk: number,
+  rows: RawFileEvent[],
+): void {
+  db.run(`DELETE FROM session_files WHERE session_fk = ?`, [sessionPk]);
+
+  for (const row of rows) {
+    db.run(
+      `INSERT INTO session_files (session_fk, path, operation, tool_name, timestamp, confidence, metadata_json)
+       VALUES (?, ?, ?, ?, ?, ?, ?)`,
+      [
+        sessionPk,
+        normalizePath(row.path),
+        row.operation,
+        row.toolName,
+        row.timestamp,
+        row.confidence,
+        row.metadata ? JSON.stringify(row.metadata) : null,
+      ],
+    );
+  }
 }
 
 export interface IngestionStatus {
@@ -81,16 +138,23 @@ async function runIngestionInternal(): Promise<IngestionStatus> {
     try {
       const detected = await adapter.detect();
       adapterInfo[adapter.cli] = { detected, paths: 0 };
+      markAdapterSourcesDetected(adapter.cli, detected);
 
       if (!detected) continue;
 
       const sessionPaths = await adapter.discover();
       adapterInfo[adapter.cli].paths = sessionPaths.length;
+      persistDiscoveredSources(adapter.cli, sessionPaths);
 
       for (const sessionPath of sessionPaths) {
         try {
           const checkpoint = registry.getCheckpoint(adapter.cli, sessionPath);
           const rawSessions = await adapter.parse(sessionPath, checkpoint);
+          recordAdapterSource(adapter.cli, sessionPath, {
+            detected: true,
+            sessionCount: rawSessions.length,
+            lastError: null,
+          });
 
           for (const raw of rawSessions) {
             const normalized = adapter.normalize(raw);
@@ -104,6 +168,10 @@ async function runIngestionInternal(): Promise<IngestionStatus> {
             registry.saveCheckpoint(adapter.cli, sessionPath, newCheckpoint);
           }
         } catch (err) {
+          recordAdapterSource(adapter.cli, sessionPath, {
+            detected: true,
+            lastError: String(err),
+          });
           errors.push(`${adapter.cli}/${sessionPath}: ${String(err)}`);
         }
       }
@@ -216,6 +284,9 @@ function upsertSession(raw: RawSession): 'new' | 'updated' | 'skipped' {
   const normalizedProvider = normalizeProvider(raw.provider);
   const normalizedModel = normalizeModel(raw.model);
   const cost = resolveSessionCost({ ...raw, provider: normalizedProvider, model: normalizedModel });
+  const toolCallCount = resolveToolCallCount(raw);
+  const dataQuality = resolveDataQuality(raw, cost.costSource);
+  const sourcePath = normalizePath(raw.sourcePath ?? null);
 
   const existing = db.exec(
     `SELECT id FROM sessions WHERE session_id = ? AND cli = ? AND provider = ?`,
@@ -230,7 +301,8 @@ function upsertSession(raw: RawSession): 'new' | 'updated' | 'skipped' {
       `UPDATE sessions SET
         project_path = ?, model = ?, started_at = ?, ended_at = ?,
         duration_ms = ?, total_cost_usd = ?, cost_source = ?,
-        source_confidence = ?, message_count = ?, tool_call_count = ?
+        source_confidence = ?, message_count = ?, tool_call_count = ?,
+        raw_tool_call_count = ?, source_path = ?, data_quality_json = ?
       WHERE id = ?`,
       [
         normalizePath(raw.projectPath),
@@ -242,7 +314,10 @@ function upsertSession(raw: RawSession): 'new' | 'updated' | 'skipped' {
         cost.costSource,
         raw.sourceConfidence,
         raw.messages.length,
-        raw.usageEvents.reduce((sum, e) => sum + e.toolCallsCount, 0),
+        toolCallCount,
+        toolCallCount,
+        sourcePath,
+        JSON.stringify(dataQuality),
         sessionPk,
       ],
     );
@@ -250,13 +325,19 @@ function upsertSession(raw: RawSession): 'new' | 'updated' | 'skipped' {
     db.run(`DELETE FROM messages WHERE session_fk = ?`, [sessionPk]);
     db.run(`DELETE FROM session_model_usage WHERE session_fk = ?`, [sessionPk]);
     insertEvents(db, sessionPk, raw);
+    persistToolEvents(db, sessionPk, raw.toolEvents ?? []);
+    persistFileEvents(db, sessionPk, raw.fileEvents ?? []);
     persistModelUsage(sessionPk, cost.modelUsage);
     return 'updated';
   }
 
   db.run(
-    `INSERT INTO sessions (provider, cli, session_id, project_path, model, started_at, ended_at, duration_ms, total_cost_usd, cost_source, source_confidence, message_count, tool_call_count)
-     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+    `INSERT INTO sessions (
+      provider, cli, session_id, project_path, model, started_at, ended_at, duration_ms,
+      total_cost_usd, cost_source, source_confidence, message_count, tool_call_count,
+      raw_tool_call_count, source_path, data_quality_json
+    )
+     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
     [
       normalizedProvider,
       raw.cli,
@@ -270,13 +351,18 @@ function upsertSession(raw: RawSession): 'new' | 'updated' | 'skipped' {
       cost.costSource,
       raw.sourceConfidence,
       raw.messages.length,
-      raw.usageEvents.reduce((sum, e) => sum + e.toolCallsCount, 0),
+      toolCallCount,
+      toolCallCount,
+      sourcePath,
+      JSON.stringify(dataQuality),
     ],
   );
 
   const lastId = db.exec(`SELECT last_insert_rowid()`);
   sessionPk = Number(lastId[0].values[0][0]);
   insertEvents(db, sessionPk, raw);
+  persistToolEvents(db, sessionPk, raw.toolEvents ?? []);
+  persistFileEvents(db, sessionPk, raw.fileEvents ?? []);
   persistModelUsage(sessionPk, cost.modelUsage);
   return 'new';
 }
@@ -366,6 +452,79 @@ function insertEvents(
       ],
     );
   }
+}
+
+function markAdapterSourcesDetected(cli: string, detected: boolean): void {
+  const db = getDatabase();
+  db.run(`UPDATE adapter_sources SET detected = ?, last_seen_at = ? WHERE cli = ?`, [
+    detected ? 1 : 0,
+    new Date().toISOString(),
+    cli,
+  ]);
+}
+
+function persistDiscoveredSources(cli: string, sessionPaths: string[]): void {
+  for (const sessionPath of sessionPaths) {
+    recordAdapterSource(cli, sessionPath, {
+      detected: true,
+      fileCount: 1,
+      sourceType: inferSourceType(sessionPath),
+      lastError: null,
+    });
+  }
+}
+
+function recordAdapterSource(
+  cli: string,
+  sessionPath: string,
+  options: {
+    detected: boolean;
+    sourceType?: string;
+    fileCount?: number;
+    sessionCount?: number;
+    lastError?: string | null;
+  },
+): void {
+  const db = getDatabase();
+  const now = new Date().toISOString();
+  db.run(
+    `INSERT INTO adapter_sources (
+      cli, source_path, detected, source_type, last_seen_at, last_ingested_at, last_error, file_count, session_count
+    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+    ON CONFLICT(cli, source_path) DO UPDATE SET
+      detected = excluded.detected,
+      source_type = COALESCE(excluded.source_type, adapter_sources.source_type),
+      last_seen_at = excluded.last_seen_at,
+      last_ingested_at = excluded.last_ingested_at,
+      last_error = excluded.last_error,
+      file_count = CASE
+        WHEN excluded.file_count > 0 THEN excluded.file_count
+        ELSE adapter_sources.file_count
+      END,
+      session_count = CASE
+        WHEN excluded.session_count > 0 THEN excluded.session_count
+        ELSE adapter_sources.session_count
+      END`,
+    [
+      cli,
+      sessionPath,
+      options.detected ? 1 : 0,
+      options.sourceType ?? inferSourceType(sessionPath),
+      now,
+      now,
+      options.lastError ?? null,
+      options.fileCount ?? 0,
+      options.sessionCount ?? 0,
+    ],
+  );
+}
+
+function inferSourceType(sessionPath: string): string {
+  if (sessionPath.endsWith('.jsonl')) return 'jsonl';
+  if (sessionPath.endsWith('.json')) return 'json';
+  if (sessionPath.endsWith('.db') || sessionPath.endsWith('.sqlite')) return 'database';
+  if (sessionPath.includes(':\\') || sessionPath.startsWith('/')) return 'file';
+  return 'record';
 }
 
 function refreshProjects(): void {

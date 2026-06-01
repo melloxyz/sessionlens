@@ -3,15 +3,31 @@ import { dirname, join } from 'node:path';
 import { homedir } from 'node:os';
 import type {
   Adapter,
+  AdapterCapabilities,
   Checkpoint,
-  RawSession,
+  RawFileEvent,
   RawMessage,
-  RawUsageEvent,
   RawModelUsage,
+  RawSession,
+  RawToolEvent,
+  RawUsageEvent,
 } from './types.js';
 import type { CliProvider, SourceConfidence } from '@sessionlens/shared';
 
 const OPENCODE_DB = join(homedir(), '.local', 'share', 'opencode', 'opencode.db');
+const OPENCODE_CAPABILITIES: AdapterCapabilities = {
+  messages: 'real',
+  tokens: 'real',
+  cost: 'real',
+  model: 'real',
+  provider: 'real',
+  projectPath: 'real',
+  duration: 'real',
+  toolCalls: 'real',
+  fileReads: 'partial',
+  fileWrites: 'partial',
+  multiModel: 'real',
+};
 
 let sqlJsStatic: import('sql.js').SqlJsStatic | null = null;
 async function getSqlJs(): Promise<import('sql.js').SqlJsStatic> {
@@ -22,18 +38,32 @@ async function getSqlJs(): Promise<import('sql.js').SqlJsStatic> {
   return sqlJsStatic;
 }
 
-interface _SessionRow {
+interface SessionRow {
   id: string;
   directory: string | null;
   model: string | null;
-  cost: number | null;
-  tokens_input: number | null;
-  tokens_output: number | null;
-  tokens_reasoning: number | null;
-  tokens_cache_read: number | null;
-  tokens_cache_write: number | null;
+  cost: number;
+  tokens_input: number;
+  tokens_output: number;
+  tokens_reasoning: number;
+  tokens_cache_read: number;
+  tokens_cache_write: number;
+  summary_files: number;
+  summary_diffs: string | null;
   time_created: number;
   time_updated: number;
+}
+
+interface MessageRow {
+  id: string;
+  time_created: number;
+  data: string;
+}
+
+interface PartRow {
+  message_id: string;
+  time_created: number;
+  data: string;
 }
 
 export function createOpencodeAdapter(): Adapter {
@@ -53,7 +83,7 @@ export function createOpencodeAdapter(): Adapter {
           `SELECT id FROM session WHERE time_archived IS NULL ORDER BY time_created DESC`,
         );
         if (results.length > 0 && results[0].values) {
-          for (const row of results[0].values) ids.push(row[0] as string);
+          for (const row of results[0].values) ids.push(String(row[0]));
         }
       } finally {
         db.close();
@@ -84,225 +114,202 @@ export function createOpencodeAdapter(): Adapter {
       const db = new sql.Database(readFileSync(OPENCODE_DB));
 
       try {
-        const sessionResults = db.exec(
-          `SELECT id, directory, model, cost, tokens_input, tokens_output,
-                  tokens_reasoning, tokens_cache_read, tokens_cache_write,
-                  time_created, time_updated
-           FROM session WHERE id = ?`,
-          [sessionId],
-        );
-        if (
-          sessionResults.length === 0 ||
-          !sessionResults[0].values ||
-          sessionResults[0].values.length === 0
-        ) {
-          return [];
+        const session = readSessionRow(db, sessionId);
+        if (!session) return [];
+
+        const messageRows = readMessageRows(db, sessionId);
+        const partRows = readPartRows(db, sessionId);
+        const partsByMessage = new Map<string, PartRow[]>();
+        for (const row of partRows) {
+          const current = partsByMessage.get(row.message_id) ?? [];
+          current.push(row);
+          partsByMessage.set(row.message_id, current);
         }
 
-        const cols = sessionResults[0].columns;
-        const row = sessionResults[0].values[0];
-        const s: Record<string, unknown> = {};
-        for (let i = 0; i < cols.length; i++) s[cols[i]] = row[i];
-
-        // Get messages for this session (direct relation via session_id)
-        const msgResults = db.exec(
-          `SELECT id, data, time_created FROM message WHERE session_id = ? ORDER BY time_created`,
-          [sessionId],
-        );
         const messages: RawMessage[] = [];
+        const usageEvents: RawUsageEvent[] = [];
+        const toolEvents: RawToolEvent[] = [];
+        const fileEvents: RawFileEvent[] = buildSummaryFileEvents(session);
         const modelUsage = new Map<string, RawModelUsage>();
+
+        let provider = 'opencode';
+        let model = parseSessionModel(session.model).model;
+        if (parseSessionModel(session.model).provider) {
+          provider = parseSessionModel(session.model).provider!;
+        }
+
         let totalInputTokens = 0;
         let totalOutputTokens = 0;
         let totalReasoningTokens = 0;
         let totalCacheReadTokens = 0;
         let totalCacheWriteTokens = 0;
-        let toolCallCount = 0;
+        let totalCostUsd = session.cost > 0 ? session.cost : 0;
 
-        if (msgResults.length > 0 && msgResults[0].values) {
-          for (const msgRow of msgResults[0].values) {
-            const msgId = msgRow[0] as string;
-            const dataJson = msgRow[1] as string;
-            const timeCreated = Number(msgRow[2]);
-
-            let role = 'unknown';
-            let perMsgInput = 0;
-            let perMsgOutput = 0;
-
-            try {
-              const data = JSON.parse(dataJson);
-              role = data.role ?? 'unknown';
-              const providerID = typeof data.providerID === 'string' ? data.providerID : null;
-              const modelID = typeof data.modelID === 'string' ? data.modelID : null;
-              if (data.tokens) {
-                perMsgInput = data.tokens.input ?? 0;
-                perMsgOutput = data.tokens.output ?? 0;
-                totalInputTokens += perMsgInput;
-                totalOutputTokens += perMsgOutput;
-                totalReasoningTokens += data.tokens.reasoning ?? 0;
-                totalCacheReadTokens += data.tokens.cache?.read ?? 0;
-                totalCacheWriteTokens += data.tokens.cache?.write ?? 0;
-              }
-
-              if (providerID && modelID) {
-                const key = `${providerID}/${modelID}`;
-                const current = modelUsage.get(key) ?? {
-                  provider: providerID,
-                  model: modelID,
-                  messageCount: 0,
-                  inputTokens: 0,
-                  outputTokens: 0,
-                  reasoningTokens: 0,
-                  cacheReadTokens: 0,
-                  cacheWriteTokens: 0,
-                  toolCallsCount: 0,
-                  totalCostUsd: 0,
-                };
-                current.messageCount += 1;
-                current.inputTokens += Number(data.tokens?.input ?? 0) || 0;
-                current.outputTokens += Number(data.tokens?.output ?? 0) || 0;
-                current.reasoningTokens += Number(data.tokens?.reasoning ?? 0) || 0;
-                current.cacheReadTokens += Number(data.tokens?.cache?.read ?? 0) || 0;
-                current.cacheWriteTokens += Number(data.tokens?.cache?.write ?? 0) || 0;
-                current.totalCostUsd += Number(data.cost ?? 0) || 0;
-                if (data.finish === 'tool-calls') current.toolCallsCount += 1;
-                modelUsage.set(key, current);
-              }
-            } catch {
-              /* bad JSON */
-            }
-
-            // Get parts (content) for this message
-            const partResults = db.exec(
-              `SELECT data FROM part WHERE message_id = ? ORDER BY rowid`,
-              [msgId],
-            );
-
-            const contentParts: string[] = [];
-            let hasToolUse = false;
-            if (partResults.length > 0 && partResults[0].values) {
-              for (const partRow of partResults[0].values) {
-                try {
-                  const partData = JSON.parse(partRow[0] as string);
-                  if (partData.type === 'text' && partData.text) {
-                    contentParts.push(partData.text);
-                  } else if (partData.type === 'tool_use' || partData.type === 'tool_call') {
-                    hasToolUse = true;
-                    contentParts.push(
-                      `[${partData.type}] ${partData.text ?? JSON.stringify(partData)}`,
-                    );
-                  }
-                } catch {
-                  /* bad JSON */
-                }
-              }
-            }
-
-            if (hasToolUse) toolCallCount++;
-
-            const content = contentParts.join('\n') || `[${role}]`;
-            if (role === 'user' || role === 'assistant' || role === 'system' || role === 'tool') {
-              messages.push({
-                role,
-                content,
-                timestamp: new Date(timeCreated).toISOString(),
-              });
-            }
-          }
-        }
-
-        // Parse model data from session model field (may contain provider/model format)
-        let model = (s.model as string) ?? null;
-        let provider = 'opencode';
-
-        if (model) {
+        for (const row of messageRows) {
+          let data: Record<string, unknown> | null = null;
           try {
-            const modelObj = JSON.parse(model);
-            if (modelObj.providerID) provider = modelObj.providerID;
-            if (modelObj.id || modelObj.modelID) model = modelObj.id ?? modelObj.modelID;
+            data = JSON.parse(row.data) as Record<string, unknown>;
           } catch {
-            if (model.includes('/')) {
-              [provider, model] = model.split('/');
-            }
+            continue;
           }
-        }
 
-        // Also try to get model from the first assistant message
-        if (!model && msgResults.length > 0 && msgResults[0].values) {
-          for (const msgRow of msgResults[0].values) {
+          const role = normalizeRole(readString(data.role));
+          const timestampMs =
+            readNumber((data.time as Record<string, unknown> | undefined)?.created) ??
+            row.time_created;
+          const timestamp = new Date(timestampMs).toISOString();
+
+          const providerId =
+            readString(data.providerID) ??
+            readString((data.model as Record<string, unknown> | undefined)?.providerID) ??
+            provider;
+          const modelId =
+            readString(data.modelID) ??
+            readString((data.model as Record<string, unknown> | undefined)?.modelID) ??
+            model ??
+            'unknown';
+
+          provider = providerId;
+          model = modelId === 'unknown' ? model : modelId;
+
+          const tokens = parseTokenUsage(data.tokens);
+          totalInputTokens += tokens.inputTokens;
+          totalOutputTokens += tokens.outputTokens;
+          totalReasoningTokens += tokens.reasoningTokens;
+          totalCacheReadTokens += tokens.cacheReadTokens;
+          totalCacheWriteTokens += tokens.cacheWriteTokens;
+
+          const messageCost = readNumber(data.cost) ?? 0;
+          totalCostUsd += messageCost;
+
+          const partList = partsByMessage.get(row.id) ?? [];
+          const contentParts: string[] = [];
+          let messageToolCalls = 0;
+
+          for (const part of partList) {
+            let partData: Record<string, unknown> | null = null;
             try {
-              const data = JSON.parse(msgRow[1] as string);
-              if ((data.role === 'assistant' || data.agent) && data.modelID) {
-                model = data.modelID;
-              }
-              if (data.providerID) provider = data.providerID;
-              if (model) break;
+              partData = JSON.parse(part.data) as Record<string, unknown>;
             } catch {
-              /* skip */
+              continue;
+            }
+
+            const normalized = normalizePart(partData, timestamp, session.directory);
+            if (normalized.text) contentParts.push(normalized.text);
+            if (normalized.toolEvent) {
+              messageToolCalls += 1;
+              toolEvents.push(normalized.toolEvent);
+            }
+            if (normalized.fileEvents.length > 0) {
+              fileEvents.push(...normalized.fileEvents);
             }
           }
+
+          if (contentParts.length > 0 && role) {
+            messages.push({
+              role,
+              content: contentParts.join('\n'),
+              timestamp,
+            });
+          }
+
+          updateModelUsage(modelUsage, {
+            provider: providerId,
+            model: modelId,
+            messageCount: role ? 1 : 0,
+            inputTokens: tokens.inputTokens,
+            outputTokens: tokens.outputTokens,
+            reasoningTokens: tokens.reasoningTokens,
+            cacheReadTokens: tokens.cacheReadTokens,
+            cacheWriteTokens: tokens.cacheWriteTokens,
+            toolCallsCount: messageToolCalls,
+            totalCostUsd: messageCost,
+          });
         }
 
-        const hasCost = (s.cost as number) != null && (s.cost as number) > 0;
+        if (totalInputTokens === 0 && session.tokens_input > 0)
+          totalInputTokens = session.tokens_input;
+        if (totalOutputTokens === 0 && session.tokens_output > 0) {
+          totalOutputTokens = session.tokens_output;
+        }
+        if (totalReasoningTokens === 0 && session.tokens_reasoning > 0) {
+          totalReasoningTokens = session.tokens_reasoning;
+        }
+        if (totalCacheReadTokens === 0 && session.tokens_cache_read > 0) {
+          totalCacheReadTokens = session.tokens_cache_read;
+        }
+        if (totalCacheWriteTokens === 0 && session.tokens_cache_write > 0) {
+          totalCacheWriteTokens = session.tokens_cache_write;
+        }
+        if (totalCostUsd === 0 && session.cost > 0) totalCostUsd = session.cost;
+
         const hasTokens =
           totalInputTokens > 0 ||
           totalOutputTokens > 0 ||
-          ((s.tokens_input as number) ?? 0) > 0 ||
-          ((s.tokens_output as number) ?? 0) > 0;
-        const confidence: SourceConfidence = hasCost ? 'HIGH' : hasTokens ? 'MEDIUM' : 'LOW';
+          totalReasoningTokens > 0 ||
+          totalCacheReadTokens > 0 ||
+          totalCacheWriteTokens > 0;
+        const hasCost = totalCostUsd > 0;
+        const confidence: SourceConfidence =
+          hasCost || hasTokens
+            ? 'HIGH'
+            : messages.length > 0 || toolEvents.length > 0
+              ? 'MEDIUM'
+              : 'LOW';
 
-        const startTime = (s.time_created as number)
-          ? new Date(s.time_created as number).toISOString()
-          : new Date().toISOString();
-        const endTime = (s.time_updated as number)
-          ? new Date(s.time_updated as number).toISOString()
-          : startTime;
-        const durationMs =
-          (s.time_updated as number) && (s.time_created as number)
-            ? (s.time_updated as number) - (s.time_created as number)
-            : null;
+        const startTime = new Date(session.time_created).toISOString();
+        const endTime = new Date(session.time_updated).toISOString();
+        const durationMs = session.time_updated - session.time_created;
 
-        // Aggregate usage events
-        const usageEvents: RawUsageEvent[] = [];
-        const finalInput =
-          totalInputTokens > 0 ? totalInputTokens : ((s.tokens_input as number) ?? 0);
-        const finalOutput =
-          totalOutputTokens > 0 ? totalOutputTokens : ((s.tokens_output as number) ?? 0);
-        if (finalInput > 0 || finalOutput > 0) {
+        if (hasTokens) {
           usageEvents.push({
             timestamp: startTime,
-            inputTokens: Number(finalInput),
-            outputTokens: Number(finalOutput),
-            cacheReadTokens:
-              totalCacheReadTokens > 0
-                ? totalCacheReadTokens
-                : ((s.tokens_cache_read as number) ?? 0),
-            cacheWriteTokens:
-              totalCacheWriteTokens > 0
-                ? totalCacheWriteTokens
-                : ((s.tokens_cache_write as number) ?? 0),
-            reasoningTokens:
-              totalReasoningTokens > 0
-                ? totalReasoningTokens
-                : ((s.tokens_reasoning as number) ?? 0),
-            toolCallsCount: toolCallCount,
+            inputTokens: totalInputTokens,
+            outputTokens: totalOutputTokens,
+            cacheReadTokens: totalCacheReadTokens,
+            cacheWriteTokens: totalCacheWriteTokens,
+            reasoningTokens: totalReasoningTokens,
+            toolCallsCount: toolEvents.length,
           });
+        }
+
+        if (
+          messages.length === 0 &&
+          usageEvents.length === 0 &&
+          toolEvents.length === 0 &&
+          fileEvents.length === 0 &&
+          !hasCost
+        ) {
+          return [];
         }
 
         return [
           {
-            sessionId: s.id as string,
+            sessionId: session.id,
             provider,
             cli: 'opencode',
-            projectPath: (s.directory as string) ?? null,
+            projectPath: session.directory,
+            sourcePath: OPENCODE_DB,
             model,
             startedAt: startTime,
             endedAt: endTime,
             durationMs,
-            totalCostUsd: (s.cost as number) ?? null,
+            totalCostUsd: hasCost ? totalCostUsd : null,
             sourceConfidence: confidence,
             messages,
             usageEvents,
             modelUsage: [...modelUsage.values()],
+            toolEvents,
+            fileEvents: dedupeFileEvents(fileEvents),
+            dataQuality: {
+              messages: messages.length > 0 ? 'real' : 'unavailable',
+              tokens: hasTokens ? 'real' : 'unavailable',
+              cost: hasCost ? 'actual' : 'unknown',
+              tools: toolEvents.length > 0 ? 'real' : 'unavailable',
+              files: fileEvents.length > 0 ? 'real' : 'unavailable',
+              model: model ? 'real' : 'unknown',
+              projectPath: session.directory ? 'real' : 'unknown',
+            },
           },
         ];
       } finally {
@@ -313,5 +320,335 @@ export function createOpencodeAdapter(): Adapter {
     normalize(raw: RawSession): RawSession {
       return raw;
     },
+
+    getCapabilities(): AdapterCapabilities {
+      return OPENCODE_CAPABILITIES;
+    },
   };
+}
+
+function readSessionRow(db: import('sql.js').Database, sessionId: string): SessionRow | null {
+  const result = db.exec(
+    `SELECT id, directory, model, cost, tokens_input, tokens_output, tokens_reasoning,
+            tokens_cache_read, tokens_cache_write, summary_files, summary_diffs,
+            time_created, time_updated
+     FROM session WHERE id = ?`,
+    [sessionId],
+  );
+  const row = result[0]?.values?.[0];
+  if (!row) return null;
+  return {
+    id: String(row[0]),
+    directory: readString(row[1]),
+    model: readString(row[2]),
+    cost: Number(row[3]) || 0,
+    tokens_input: Number(row[4]) || 0,
+    tokens_output: Number(row[5]) || 0,
+    tokens_reasoning: Number(row[6]) || 0,
+    tokens_cache_read: Number(row[7]) || 0,
+    tokens_cache_write: Number(row[8]) || 0,
+    summary_files: Number(row[9]) || 0,
+    summary_diffs: readString(row[10]),
+    time_created: Number(row[11]) || Date.now(),
+    time_updated: Number(row[12]) || Number(row[11]) || Date.now(),
+  };
+}
+
+function readMessageRows(db: import('sql.js').Database, sessionId: string): MessageRow[] {
+  const result = db.exec(
+    `SELECT id, time_created, data FROM message WHERE session_id = ? ORDER BY time_created`,
+    [sessionId],
+  );
+  return (result[0]?.values ?? []).map((row) => ({
+    id: String(row[0]),
+    time_created: Number(row[1]) || Date.now(),
+    data: String(row[2]),
+  }));
+}
+
+function readPartRows(db: import('sql.js').Database, sessionId: string): PartRow[] {
+  const result = db.exec(
+    `SELECT message_id, time_created, data FROM part WHERE session_id = ? ORDER BY time_created, rowid`,
+    [sessionId],
+  );
+  return (result[0]?.values ?? []).map((row) => ({
+    message_id: String(row[0]),
+    time_created: Number(row[1]) || Date.now(),
+    data: String(row[2]),
+  }));
+}
+
+function normalizeRole(value: string | null): RawMessage['role'] | null {
+  if (!value) return null;
+  if (value === 'user' || value === 'assistant' || value === 'system' || value === 'tool') {
+    return value;
+  }
+  return null;
+}
+
+function parseSessionModel(raw: string | null): { provider: string | null; model: string | null } {
+  if (!raw) return { provider: null, model: null };
+  try {
+    const parsed = JSON.parse(raw) as Record<string, unknown>;
+    return {
+      provider: readString(parsed.providerID),
+      model: readString(parsed.id) ?? readString(parsed.modelID),
+    };
+  } catch {
+    if (raw.includes('/')) {
+      const [provider, ...rest] = raw.split('/');
+      return { provider, model: rest.join('/') || null };
+    }
+    return { provider: null, model: raw };
+  }
+}
+
+function parseTokenUsage(value: unknown): {
+  inputTokens: number;
+  outputTokens: number;
+  reasoningTokens: number;
+  cacheReadTokens: number;
+  cacheWriteTokens: number;
+} {
+  if (!value || typeof value !== 'object') {
+    return {
+      inputTokens: 0,
+      outputTokens: 0,
+      reasoningTokens: 0,
+      cacheReadTokens: 0,
+      cacheWriteTokens: 0,
+    };
+  }
+
+  const tokens = value as Record<string, unknown>;
+  const cache = tokens.cache as Record<string, unknown> | undefined;
+  return {
+    inputTokens: Number(tokens.input) || 0,
+    outputTokens: Number(tokens.output) || 0,
+    reasoningTokens: Number(tokens.reasoning) || 0,
+    cacheReadTokens: Number(cache?.read) || 0,
+    cacheWriteTokens: Number(cache?.write) || 0,
+  };
+}
+
+function normalizePart(
+  part: Record<string, unknown>,
+  fallbackTimestamp: string,
+  projectPath: string | null,
+): {
+  text: string | null;
+  toolEvent: RawToolEvent | null;
+  fileEvents: RawFileEvent[];
+} {
+  const type = readString(part.type) ?? 'unknown';
+  if (type === 'text') {
+    return {
+      text: readString(part.text),
+      toolEvent: null,
+      fileEvents: [],
+    };
+  }
+
+  if (type === 'tool' || type === 'tool_use' || type === 'tool_call') {
+    const state = readObject(part.state) ?? {};
+    const input = readObject(state.input) ?? readObject(part.input) ?? {};
+    const metadata = readObject(state.metadata);
+    const outputPreview =
+      readString(state.output) ?? readString(metadata?.output) ?? readString(part.output) ?? null;
+    const toolName =
+      readString(part.tool) ?? readString(part.name) ?? readString(part.toolName) ?? 'unknown';
+    const timestampMs =
+      readNumber((readObject(state.time) ?? {}).start) ?? readNumber(part.time_created) ?? null;
+    const timestamp = timestampMs ? new Date(timestampMs).toISOString() : fallbackTimestamp;
+    const operation = inferToolOperation(toolName);
+    const sourceConfidence = operation === 'shell' ? 'medium' : 'high';
+
+    return {
+      text: `[tool:${toolName}]`,
+      toolEvent: {
+        timestamp,
+        toolName,
+        operation,
+        input,
+        outputPreview,
+        sourceConfidence,
+      },
+      fileEvents: inferFileEvents(toolName, input, timestamp, projectPath),
+    };
+  }
+
+  return {
+    text: null,
+    toolEvent: null,
+    fileEvents: [],
+  };
+}
+
+function inferToolOperation(toolName: string): string {
+  const normalized = toolName.toLowerCase();
+  if (normalized.includes('read')) return 'read';
+  if (normalized.includes('write') || normalized.includes('create')) return 'write';
+  if (normalized.includes('edit') || normalized.includes('patch')) return 'edit';
+  if (normalized.includes('delete') || normalized.includes('remove')) return 'delete';
+  if (
+    normalized.includes('bash') ||
+    normalized.includes('shell') ||
+    normalized.includes('command')
+  ) {
+    return 'shell';
+  }
+  return 'unknown';
+}
+
+function inferFileEvents(
+  toolName: string,
+  input: Record<string, unknown>,
+  timestamp: string,
+  projectPath: string | null,
+): RawFileEvent[] {
+  const directPaths = new Set<string>();
+  for (const key of [
+    'file',
+    'file_path',
+    'filepath',
+    'path',
+    'absolutePath',
+    'target_file',
+    'new_file',
+  ]) {
+    const value = readString(input[key]);
+    if (value) directPaths.add(value);
+  }
+
+  for (const key of ['files', 'paths']) {
+    const values = input[key];
+    if (!Array.isArray(values)) continue;
+    for (const value of values) {
+      if (typeof value === 'string' && value.length > 0) directPaths.add(value);
+    }
+  }
+
+  const operation = inferFileOperation(toolName);
+  const confidence =
+    operation === 'shell_possible' ? 'low' : operation === 'unknown' ? 'medium' : 'high';
+
+  if (operation === 'shell_possible') {
+    return [
+      {
+        path: readString(input.cwd) ?? readString(input.directory) ?? projectPath,
+        operation,
+        toolName,
+        timestamp,
+        confidence,
+        metadata: input,
+      },
+    ];
+  }
+
+  return [...directPaths].map((path) => ({
+    path,
+    operation,
+    toolName,
+    timestamp,
+    confidence,
+    metadata: input,
+  }));
+}
+
+function inferFileOperation(toolName: string): RawFileEvent['operation'] {
+  const normalized = toolName.toLowerCase();
+  if (normalized.includes('read')) return 'read';
+  if (normalized.includes('write') || normalized.includes('create')) return 'write';
+  if (normalized.includes('edit') || normalized.includes('patch')) return 'edit';
+  if (normalized.includes('delete') || normalized.includes('remove')) return 'delete';
+  if (
+    normalized.includes('bash') ||
+    normalized.includes('shell') ||
+    normalized.includes('command')
+  ) {
+    return 'shell_possible';
+  }
+  return 'unknown';
+}
+
+function buildSummaryFileEvents(session: SessionRow): RawFileEvent[] {
+  const files = new Set<string>();
+  if (session.summary_diffs) {
+    for (const match of session.summary_diffs.matchAll(
+      /(?:\+\+\+|---|diff --git a\/)(?:b\/)?([^\n\r\t ]+)/g,
+    )) {
+      const file = match[1]?.trim();
+      if (file && file !== '/dev/null') files.add(file);
+    }
+  }
+
+  return [...files].map((path) => ({
+    path,
+    operation: 'edit',
+    toolName: 'summary_diff',
+    timestamp: new Date(session.time_updated).toISOString(),
+    confidence: 'high',
+    metadata: {
+      summaryFiles: session.summary_files,
+      source: 'summary_diffs',
+    },
+  }));
+}
+
+function dedupeFileEvents(rows: RawFileEvent[]): RawFileEvent[] {
+  const seen = new Set<string>();
+  const deduped: RawFileEvent[] = [];
+  for (const row of rows) {
+    const key = [
+      row.path ?? '',
+      row.operation,
+      row.toolName ?? '',
+      row.timestamp,
+      row.confidence,
+    ].join('|');
+    if (seen.has(key)) continue;
+    seen.add(key);
+    deduped.push(row);
+  }
+  return deduped;
+}
+
+function updateModelUsage(map: Map<string, RawModelUsage>, row: RawModelUsage): void {
+  const key = `${row.provider}/${row.model}`;
+  const current = map.get(key) ?? {
+    provider: row.provider,
+    model: row.model,
+    messageCount: 0,
+    inputTokens: 0,
+    outputTokens: 0,
+    reasoningTokens: 0,
+    cacheReadTokens: 0,
+    cacheWriteTokens: 0,
+    toolCallsCount: 0,
+    totalCostUsd: 0,
+  };
+
+  current.messageCount += row.messageCount;
+  current.inputTokens += row.inputTokens;
+  current.outputTokens += row.outputTokens;
+  current.reasoningTokens += row.reasoningTokens;
+  current.cacheReadTokens += row.cacheReadTokens;
+  current.cacheWriteTokens += row.cacheWriteTokens;
+  current.toolCallsCount += row.toolCallsCount;
+  current.totalCostUsd += row.totalCostUsd;
+  map.set(key, current);
+}
+
+function readString(value: unknown): string | null {
+  return typeof value === 'string' && value.length > 0 ? value : null;
+}
+
+function readNumber(value: unknown): number | null {
+  return typeof value === 'number' && Number.isFinite(value) ? value : null;
+}
+
+function readObject(value: unknown): Record<string, unknown> | null {
+  return value && typeof value === 'object' && !Array.isArray(value)
+    ? (value as Record<string, unknown>)
+    : null;
 }

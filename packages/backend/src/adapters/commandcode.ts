@@ -1,19 +1,36 @@
 import { existsSync, statSync } from 'node:fs';
 import { readFile, readdir } from 'node:fs/promises';
-import { join, basename, dirname } from 'node:path';
+import { basename, dirname, join } from 'node:path';
 import { homedir } from 'node:os';
 import type {
   Adapter,
+  AdapterCapabilities,
   Checkpoint,
-  RawSession,
+  RawFileEvent,
   RawMessage,
-  RawUsageEvent,
   RawModelUsage,
+  RawSession,
+  RawToolEvent,
+  RawUsageEvent,
+  SessionDataQuality,
 } from './types.js';
 import type { CliProvider, SourceConfidence } from '@sessionlens/shared';
 
 const COMMANDCODE_HOME = join(homedir(), '.commandcode');
 const PROJECTS_DIR = join(COMMANDCODE_HOME, 'projects');
+const COMMANDCODE_CAPABILITIES: AdapterCapabilities = {
+  messages: 'real',
+  tokens: 'unavailable',
+  cost: 'unavailable',
+  model: 'partial',
+  provider: 'partial',
+  projectPath: 'partial',
+  duration: 'real',
+  toolCalls: 'real',
+  fileReads: 'partial',
+  fileWrites: 'partial',
+  multiModel: 'unknown',
+};
 
 interface CommandCodeEvent {
   id: string;
@@ -54,6 +71,22 @@ interface MetaJson {
   title?: string;
 }
 
+interface CommandCodeCheckpointLine {
+  type?: string;
+  messageId?: string;
+  snapshot?: {
+    timestamp?: string;
+    trackedFileBackups?: Record<
+      string,
+      {
+        backupFileName?: string | null;
+        version?: number;
+        backupTime?: string;
+      }
+    >;
+  };
+}
+
 function parseProvider(raw: string | null | undefined): string {
   if (!raw) return 'unknown';
   const slash = raw.indexOf('/');
@@ -73,6 +106,144 @@ function decodeProjectPath(dirName: string): string | null {
   return `${drive}:${rest}`;
 }
 
+function summarizeOutput(
+  block: Extract<CommandCodeContentBlock, { type: 'tool-result' }>,
+): string | null {
+  const output = block.output;
+  const text = output?.value ?? output?.text;
+  if (typeof text === 'string' && text.length > 0) {
+    return text.slice(0, 300);
+  }
+  try {
+    return JSON.stringify(output).slice(0, 300);
+  } catch {
+    return null;
+  }
+}
+
+function mapToolOperation(toolName: string): string {
+  switch (toolName) {
+    case 'read_file':
+      return 'read';
+    case 'grep':
+      return 'search';
+    case 'write_file':
+      return 'write';
+    case 'edit_file':
+      return 'edit';
+    case 'shell_command':
+      return 'shell';
+    case 'todo_write':
+      return 'task';
+    case 'explore':
+      return 'delegate';
+    default:
+      return 'unknown';
+  }
+}
+
+function getPathValue(input: Record<string, unknown>, ...keys: string[]): string | null {
+  for (const key of keys) {
+    const value = input[key];
+    if (typeof value === 'string' && value.trim().length > 0) {
+      return value;
+    }
+  }
+  return null;
+}
+
+function extractToolEvents(evt: CommandCodeEvent): RawToolEvent[] {
+  if (!evt.content || evt.content.length === 0) return [];
+  const resultById = new Map<string, string | null>();
+  for (const block of evt.content) {
+    if (block.type === 'tool-result') {
+      resultById.set(block.toolCallId, summarizeOutput(block));
+    }
+  }
+
+  const events: RawToolEvent[] = [];
+  for (const block of evt.content) {
+    if (block.type !== 'tool-call') continue;
+    events.push({
+      timestamp: evt.timestamp,
+      toolName: block.toolName,
+      operation: mapToolOperation(block.toolName),
+      input: block.input ?? null,
+      outputPreview: resultById.get(block.toolCallId) ?? null,
+      sourceConfidence: block.toolName === 'shell_command' ? 'low' : 'high',
+    });
+  }
+  return events;
+}
+
+function extractFileEvents(evt: CommandCodeEvent): RawFileEvent[] {
+  if (!evt.content || evt.content.length === 0) return [];
+  const events: RawFileEvent[] = [];
+  for (const block of evt.content) {
+    if (block.type !== 'tool-call') continue;
+
+    if (block.toolName === 'read_file') {
+      events.push({
+        path: getPathValue(block.input, 'absolutePath', 'filePath', 'path'),
+        operation: 'read',
+        toolName: block.toolName,
+        timestamp: evt.timestamp,
+        confidence: 'high',
+        metadata: block.input,
+      });
+      continue;
+    }
+
+    if (block.toolName === 'grep') {
+      events.push({
+        path: getPathValue(block.input, 'include', 'path'),
+        operation: 'read',
+        toolName: block.toolName,
+        timestamp: evt.timestamp,
+        confidence: 'medium',
+        metadata: block.input,
+      });
+      continue;
+    }
+
+    if (block.toolName === 'write_file') {
+      events.push({
+        path: getPathValue(block.input, 'filePath', 'absolutePath', 'path'),
+        operation: 'write',
+        toolName: block.toolName,
+        timestamp: evt.timestamp,
+        confidence: 'high',
+        metadata: block.input,
+      });
+      continue;
+    }
+
+    if (block.toolName === 'edit_file') {
+      events.push({
+        path: getPathValue(block.input, 'filePath', 'absolutePath', 'path'),
+        operation: 'edit',
+        toolName: block.toolName,
+        timestamp: evt.timestamp,
+        confidence: 'high',
+        metadata: block.input,
+      });
+      continue;
+    }
+
+    if (block.toolName === 'shell_command') {
+      events.push({
+        path: getPathValue(block.input, 'directory', 'cwd'),
+        operation: 'shell_possible',
+        toolName: block.toolName,
+        timestamp: evt.timestamp,
+        confidence: 'low',
+        metadata: block.input,
+      });
+    }
+  }
+  return events;
+}
+
 async function readMeta(sessionPath: string): Promise<MetaJson> {
   const metaPath = sessionPath.replace(/\.jsonl$/, '.meta.json');
   if (!existsSync(metaPath)) return {};
@@ -81,6 +252,49 @@ async function readMeta(sessionPath: string): Promise<MetaJson> {
     return JSON.parse(raw) as MetaJson;
   } catch {
     return {};
+  }
+}
+
+async function readCheckpointFileEvents(sessionPath: string): Promise<RawFileEvent[]> {
+  const checkpointPath = sessionPath.replace(/\.jsonl$/, '.checkpoints.jsonl');
+  if (!existsSync(checkpointPath)) return [];
+
+  try {
+    const raw = await readFile(checkpointPath, 'utf-8');
+    const trimmed = raw.trim();
+    const candidates = trimmed.includes('\n') ? trimmed.split('\n').filter(Boolean) : [trimmed];
+    const events: RawFileEvent[] = [];
+
+    for (const line of candidates) {
+      let parsed: CommandCodeCheckpointLine;
+      try {
+        parsed = JSON.parse(line) as CommandCodeCheckpointLine;
+      } catch {
+        continue;
+      }
+
+      if (parsed.type !== 'file-history-snapshot') continue;
+
+      const backups = parsed.snapshot?.trackedFileBackups ?? {};
+      for (const [path, backup] of Object.entries(backups)) {
+        events.push({
+          path,
+          operation: 'edit',
+          toolName: 'checkpoint',
+          timestamp: backup.backupTime ?? parsed.snapshot?.timestamp ?? new Date().toISOString(),
+          confidence: 'high',
+          metadata: {
+            backupFileName: backup.backupFileName ?? null,
+            version: backup.version ?? null,
+            messageId: parsed.messageId ?? null,
+          },
+        });
+      }
+    }
+
+    return events;
+  } catch {
+    return [];
   }
 }
 
@@ -107,6 +321,8 @@ function buildSession(
   events: CommandCodeEvent[],
   meta: MetaJson,
   projectPath: string | null,
+  sourcePath: string,
+  checkpointFileEvents: RawFileEvent[],
 ): RawSession[] {
   const groups = new Map<string, CommandCodeEvent[]>();
   for (const evt of events) {
@@ -122,7 +338,8 @@ function buildSession(
 
     const messages: RawMessage[] = [];
     const usageEvents: RawUsageEvent[] = [];
-    let toolCallCount = 0;
+    const toolEvents: RawToolEvent[] = [];
+    const fileEvents: RawFileEvent[] = [...checkpointFileEvents];
     let totalInputTokens = 0;
     let totalOutputTokens = 0;
     let totalReasoningTokens = 0;
@@ -138,7 +355,6 @@ function buildSession(
         totalReasoningTokens += tokens.reasoningTokens;
         totalCacheReadTokens += tokens.cacheReadTokens;
         totalCacheWriteTokens += tokens.cacheWriteTokens;
-        toolCallCount += tokens.toolCallsCount;
       }
 
       const msgContent = extractMessageContent(evt);
@@ -157,14 +373,13 @@ function buildSession(
         }
       }
 
-      const tcCount = countToolCalls(evt);
-      if (tcCount > 0) {
-        toolCallCount += tcCount;
-      }
+      toolEvents.push(...extractToolEvents(evt));
+      fileEvents.push(...extractFileEvents(evt));
     }
 
     const model = parseModel(meta.model);
     const provider = parseProvider(meta.model);
+    const toolCallCount = toolEvents.length;
 
     const firstTs = group[0]?.timestamp ?? '';
     const lastTs = group[group.length - 1]?.timestamp ?? '';
@@ -178,14 +393,29 @@ function buildSession(
         totalCacheReadTokens +
         totalCacheWriteTokens >
       0;
-    const confidence: SourceConfidence = hasTokens
-      ? 'HIGH'
-      : messages.length > 0
-        ? 'MEDIUM'
-        : 'LOW';
+    const confidence: SourceConfidence =
+      hasTokens || (messages.length > 0 && toolCallCount > 0)
+        ? 'HIGH'
+        : messages.length > 0
+          ? 'MEDIUM'
+          : 'LOW';
+    const dataQuality: SessionDataQuality = {
+      messages: messages.length > 0 ? 'real' : 'unavailable',
+      tokens: hasTokens ? 'real' : 'unavailable',
+      cost: 'unknown',
+      tools: toolCallCount > 0 ? 'real' : 'unavailable',
+      files:
+        fileEvents.length === 0
+          ? 'unavailable'
+          : fileEvents.some((event) => event.confidence !== 'high')
+            ? 'heuristic'
+            : 'real',
+      model: model ? 'inferred' : 'unknown',
+      projectPath: projectPath ? 'inferred' : 'unknown',
+    };
 
     const modelUsage: RawModelUsage[] =
-      hasTokens || messages.length > 0
+      hasTokens || messages.length > 0 || toolCallCount > 0
         ? [
             {
               provider,
@@ -207,7 +437,7 @@ function buildSession(
       provider,
       cli: 'commandcode' as CliProvider,
       projectPath,
-      sourcePath: undefined,
+      sourcePath,
       model,
       startedAt: firstTs || new Date().toISOString(),
       endedAt: lastTs || null,
@@ -217,6 +447,9 @@ function buildSession(
       messages,
       usageEvents,
       modelUsage,
+      toolEvents,
+      fileEvents,
+      dataQuality,
     });
   }
 
@@ -257,15 +490,6 @@ function extractMessageContent(evt: CommandCodeEvent): string | null {
   return parts.length > 0 ? parts.join('\n') : null;
 }
 
-function countToolCalls(evt: CommandCodeEvent): number {
-  if (!evt.content) return 0;
-  let count = 0;
-  for (const block of evt.content) {
-    if (block.type === 'tool-call') count++;
-  }
-  return count;
-}
-
 function extractToolResults(evt: CommandCodeEvent): RawMessage[] {
   if (!evt.content) return [];
   const results: RawMessage[] = [];
@@ -286,6 +510,9 @@ function extractToolResults(evt: CommandCodeEvent): RawMessage[] {
 export function createCommandCodeAdapter(): Adapter {
   return {
     cli: 'commandcode' as CliProvider,
+    getCapabilities() {
+      return COMMANDCODE_CAPABILITIES;
+    },
 
     async detect(): Promise<boolean> {
       return existsSync(PROJECTS_DIR);
@@ -313,6 +540,7 @@ export function createCommandCodeAdapter(): Adapter {
       if (!existsSync(sessionPath)) return [];
 
       const meta = await readMeta(sessionPath);
+      const checkpointFileEvents = await readCheckpointFileEvents(sessionPath);
 
       const parentDir = basename(dirname(sessionPath));
       const projectPath = decodeProjectPath(parentDir);
@@ -330,7 +558,7 @@ export function createCommandCodeAdapter(): Adapter {
         }
       }
 
-      return buildSession(events, meta, projectPath);
+      return buildSession(events, meta, projectPath, sessionPath, checkpointFileEvents);
     },
 
     normalize(raw: RawSession): RawSession {

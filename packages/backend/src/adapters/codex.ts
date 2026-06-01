@@ -1,12 +1,35 @@
-import { existsSync, statSync, readFileSync } from 'node:fs';
+import { existsSync, readFileSync, statSync } from 'node:fs';
 import { readFile } from 'node:fs/promises';
 import { join } from 'node:path';
 import { homedir } from 'node:os';
-import type { Adapter, Checkpoint, RawSession, RawMessage, RawUsageEvent } from './types.js';
+import type {
+  Adapter,
+  AdapterCapabilities,
+  Checkpoint,
+  RawFileEvent,
+  RawMessage,
+  RawModelUsage,
+  RawSession,
+  RawToolEvent,
+  RawUsageEvent,
+} from './types.js';
 import type { CliProvider, SourceConfidence } from '@sessionlens/shared';
 
 const CODEX_HOME = join(homedir(), '.codex');
 const STATE_DB = join(CODEX_HOME, 'state_5.sqlite');
+const CODEX_CAPABILITIES: AdapterCapabilities = {
+  messages: 'real',
+  tokens: 'estimated',
+  cost: 'estimated',
+  model: 'real',
+  provider: 'real',
+  projectPath: 'real',
+  duration: 'real',
+  toolCalls: 'real',
+  fileReads: 'partial',
+  fileWrites: 'partial',
+  multiModel: 'unavailable',
+};
 
 let sqlJsStatic: import('sql.js').SqlJsStatic | null = null;
 async function getSqlJs(): Promise<import('sql.js').SqlJsStatic> {
@@ -51,10 +74,12 @@ export function createCodexAdapter(): Adapter {
 
       const paths = new Set<string>();
       try {
-        const results = db.exec('SELECT rollout_path FROM threads WHERE archived = 0');
+        const results = db.exec(`SELECT rollout_path FROM threads WHERE rollout_path IS NOT NULL`);
         if (results.length > 0 && results[0].values) {
           for (const row of results[0].values) {
-            paths.add(row[0] as string);
+            if (typeof row[0] === 'string' && row[0].length > 0) {
+              paths.add(row[0]);
+            }
           }
         }
       } finally {
@@ -102,13 +127,18 @@ export function createCodexAdapter(): Adapter {
     normalize(raw: RawSession): RawSession {
       return raw;
     },
+
+    getCapabilities(): AdapterCapabilities {
+      return CODEX_CAPABILITIES;
+    },
   };
 }
 
 function buildSession(events: Record<string, unknown>[], thread: ThreadRow): RawSession[] {
   const messages: RawMessage[] = [];
   const usageEvents: RawUsageEvent[] = [];
-  let toolCallCount = 0;
+  const toolEvents: RawToolEvent[] = [];
+  const fileEvents: RawFileEvent[] = [];
   let firstTs = '';
   let lastTs = '';
 
@@ -131,17 +161,27 @@ function buildSession(events: Record<string, unknown>[], thread: ThreadRow): Raw
           messages.push({ role: role as RawMessage['role'], content, timestamp: ts });
         }
       } else if (pt === 'function_call' || pt === 'custom_tool_call') {
-        toolCallCount++;
+        const toolName = String(payload.name ?? payload.tool_name ?? 'unknown');
+        const input = parseArguments(payload.arguments);
+        toolEvents.push({
+          timestamp: ts,
+          toolName,
+          operation: inferToolOperation(toolName),
+          input,
+          outputPreview: null,
+          sourceConfidence: toolName === 'shell_command' ? 'low' : 'medium',
+        });
+        fileEvents.push(...inferFileEvents(toolName, input, ts));
       }
       if (payload.usage) {
         const usage = payload.usage as Record<string, unknown>;
         usageEvents.push({
           timestamp: ts,
-          inputTokens: (usage.input_tokens as number) ?? 0,
-          outputTokens: (usage.output_tokens as number) ?? 0,
-          cacheReadTokens: (usage.cache_read_input_tokens as number) ?? 0,
-          cacheWriteTokens: (usage.cache_creation_input_tokens as number) ?? 0,
-          reasoningTokens: (usage.reasoning_tokens as number) ?? 0,
+          inputTokens: Number(usage.input_tokens) || 0,
+          outputTokens: Number(usage.output_tokens) || 0,
+          cacheReadTokens: Number(usage.cache_read_input_tokens) || 0,
+          cacheWriteTokens: Number(usage.cache_creation_input_tokens) || 0,
+          reasoningTokens: Number(usage.reasoning_tokens) || 0,
           toolCallsCount: 0,
         });
       }
@@ -165,7 +205,7 @@ function buildSession(events: Record<string, unknown>[], thread: ThreadRow): Raw
       cacheReadTokens: 0,
       cacheWriteTokens: 0,
       reasoningTokens: 0,
-      toolCallsCount: toolCallCount,
+      toolCallsCount: toolEvents.length,
     });
   }
 
@@ -180,8 +220,26 @@ function buildSession(events: Record<string, unknown>[], thread: ThreadRow): Raw
       ? thread.updated_at_ms - thread.created_at_ms
       : null;
 
-  const confidence: SourceConfidence = totalTokens > 0 ? 'MEDIUM' : 'LOW';
+  const confidence: SourceConfidence =
+    messages.length > 0 || toolEvents.length > 0 ? 'HIGH' : totalTokens > 0 ? 'MEDIUM' : 'LOW';
   const totalCostUsd = totalTokens > 0 ? estimateCodexCost(totalTokens, thread.model) : null;
+  const modelUsage: RawModelUsage[] =
+    messages.length > 0 || totalTokens > 0 || toolEvents.length > 0
+      ? [
+          {
+            provider: thread.model_provider ?? 'openai',
+            model: thread.model ?? 'unknown',
+            messageCount: messages.length,
+            inputTokens: usageEvents.reduce((sum, item) => sum + item.inputTokens, 0),
+            outputTokens: usageEvents.reduce((sum, item) => sum + item.outputTokens, 0),
+            reasoningTokens: usageEvents.reduce((sum, item) => sum + item.reasoningTokens, 0),
+            cacheReadTokens: usageEvents.reduce((sum, item) => sum + item.cacheReadTokens, 0),
+            cacheWriteTokens: usageEvents.reduce((sum, item) => sum + item.cacheWriteTokens, 0),
+            toolCallsCount: toolEvents.length,
+            totalCostUsd: totalCostUsd ?? 0,
+          },
+        ]
+      : [];
 
   return [
     {
@@ -189,6 +247,7 @@ function buildSession(events: Record<string, unknown>[], thread: ThreadRow): Raw
       provider: thread.model_provider ?? 'openai',
       cli: 'codex',
       projectPath: thread.cwd ? thread.cwd.replace(/^\\\\\?\\/, '') : null,
+      sourcePath: thread.rollout_path,
       model: thread.model,
       startedAt: startTime,
       endedAt: endTime,
@@ -197,6 +256,18 @@ function buildSession(events: Record<string, unknown>[], thread: ThreadRow): Raw
       sourceConfidence: confidence,
       messages,
       usageEvents,
+      modelUsage,
+      toolEvents,
+      fileEvents,
+      dataQuality: {
+        messages: messages.length > 0 ? 'real' : 'unavailable',
+        tokens: totalTokens > 0 ? 'estimated' : 'unavailable',
+        cost: totalTokens > 0 ? 'estimated' : 'unknown',
+        tools: toolEvents.length > 0 ? 'real' : 'unavailable',
+        files: fileEvents.length > 0 ? 'heuristic' : 'unavailable',
+        model: thread.model ? 'real' : 'unknown',
+        projectPath: thread.cwd ? 'real' : 'unknown',
+      },
     },
   ];
 }
@@ -210,6 +281,79 @@ function extractContent(content: unknown): string {
       .join('\n');
   }
   return '';
+}
+
+function parseArguments(raw: unknown): Record<string, unknown> | null {
+  if (typeof raw === 'string') {
+    try {
+      return JSON.parse(raw) as Record<string, unknown>;
+    } catch {
+      return { raw };
+    }
+  }
+  if (raw && typeof raw === 'object' && !Array.isArray(raw)) {
+    return raw as Record<string, unknown>;
+  }
+  return null;
+}
+
+function inferToolOperation(toolName: string): string {
+  const normalized = toolName.toLowerCase();
+  if (normalized.includes('read') || normalized.includes('view')) return 'read';
+  if (normalized.includes('write')) return 'write';
+  if (normalized.includes('edit') || normalized.includes('patch')) return 'edit';
+  if (normalized.includes('shell') || normalized.includes('command')) return 'shell';
+  return 'unknown';
+}
+
+function inferFileEvents(
+  toolName: string,
+  input: Record<string, unknown> | null,
+  timestamp: string,
+): RawFileEvent[] {
+  if (!input) return [];
+
+  const directPath =
+    readString(input.absolutePath) ??
+    readString(input.filePath) ??
+    readString(input.path) ??
+    readString(input.imagePath) ??
+    readString(input.directory) ??
+    readString(input.workdir) ??
+    null;
+  const paths = Array.isArray(input.paths)
+    ? input.paths.filter((item): item is string => typeof item === 'string')
+    : [];
+  const operation = inferFileOperation(toolName);
+  const confidence =
+    operation === 'shell_possible' ? 'low' : operation === 'unknown' ? 'medium' : 'high';
+  const results: RawFileEvent[] = [];
+
+  for (const path of directPath ? [directPath, ...paths] : paths) {
+    results.push({
+      path,
+      operation,
+      toolName,
+      timestamp,
+      confidence,
+      metadata: input,
+    });
+  }
+
+  return results;
+}
+
+function inferFileOperation(toolName: string): RawFileEvent['operation'] {
+  const normalized = toolName.toLowerCase();
+  if (normalized.includes('read') || normalized.includes('view')) return 'read';
+  if (normalized.includes('write')) return 'write';
+  if (normalized.includes('edit') || normalized.includes('patch')) return 'edit';
+  if (normalized.includes('shell') || normalized.includes('command')) return 'shell_possible';
+  return 'unknown';
+}
+
+function readString(value: unknown): string | null {
+  return typeof value === 'string' && value.length > 0 ? value : null;
 }
 
 async function getThreadData(sessionPath: string): Promise<ThreadRow | null> {

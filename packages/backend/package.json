@@ -10,6 +10,9 @@
     "dev": "tsx watch src/index.ts",
     "build": "tsc",
     "start": "node dist/index.js",
+    "test": "node --import tsx --test src/**/*.test.ts",
+    "diagnose:adapters": "node --import tsx src/scripts/adapter-diagnostics.ts",
+    "backfill:quality": "node --import tsx src/scripts/backfill-adapter-quality.ts",
     "typecheck": "tsc --noEmit",
     "lint": "eslint src/"
   },

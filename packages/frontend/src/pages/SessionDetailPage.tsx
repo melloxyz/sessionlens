@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { Link, useParams } from 'react-router-dom';
-import { ArrowLeft, Bot, MessageSquare, Terminal } from 'lucide-react';
+import { ArrowLeft, Bot, FileCode2, MessageSquare, Terminal, Wrench } from 'lucide-react';
 import { BrandBadge, BrandMark } from '../components/brand/BrandMark.js';
 import { Badge } from '../components/ui/Badge.js';
 import { Button } from '../components/ui/Button.js';
@@ -47,6 +47,7 @@ interface SessionDetail {
   provider: string;
   model: string | null;
   project_path: string | null;
+  source_path?: string | null;
   started_at: string;
   ended_at: string | null;
   duration_ms: number | null;
@@ -55,11 +56,15 @@ interface SessionDetail {
   source_confidence: string;
   message_count: number;
   tool_call_count: number;
+  raw_tool_call_count?: number;
   session_id: string;
   project_exists: boolean;
+  data_quality?: SessionDataQuality | null;
   messages: Message[];
   usageEvents: UsageEvent[];
   modelUsage?: ModelUsage[];
+  tools?: ToolEvent[];
+  files?: FileEvent[];
 }
 
 interface ModelUsage {
@@ -73,6 +78,34 @@ interface ModelUsage {
   cache_write_tokens: number;
   tool_calls_count: number;
   total_cost_usd: number;
+}
+
+interface SessionDataQuality {
+  messages: 'real' | 'partial' | 'unavailable';
+  tokens: 'real' | 'estimated' | 'unavailable';
+  cost: 'actual' | 'estimated' | 'unknown';
+  tools: 'real' | 'partial' | 'unavailable';
+  files: 'real' | 'heuristic' | 'unavailable';
+  model: 'real' | 'inferred' | 'unknown';
+  projectPath: 'real' | 'inferred' | 'unknown';
+}
+
+interface ToolEvent {
+  id: number;
+  timestamp: string;
+  tool_name: string;
+  operation: string;
+  output_preview?: string | null;
+  source_confidence: 'high' | 'medium' | 'low';
+}
+
+interface FileEvent {
+  id: number;
+  path?: string | null;
+  operation: 'read' | 'write' | 'edit' | 'delete' | 'shell_possible' | 'unknown';
+  tool_name?: string | null;
+  timestamp: string;
+  confidence: 'high' | 'medium' | 'low';
 }
 
 export function SessionDetailPage() {
@@ -123,6 +156,8 @@ export function SessionDetailPage() {
   const reasoning = usageEvents.reduce((sum, event) => sum + (event.reasoning_tokens ?? 0), 0);
   const totalTokens = totalInput + totalOutput + cacheRead + cacheWrite + reasoning;
   const modelUsage = session.modelUsage ?? [];
+  const tools = session.tools ?? [];
+  const files = session.files ?? [];
 
   async function openProject() {
     if (!id || !session?.project_exists) return;
@@ -211,7 +246,11 @@ export function SessionDetailPage() {
           <CompactStat
             label={t('common.tools')}
             value={String(session.tool_call_count ?? 0)}
-            meta={t('common.tools').toLowerCase()}
+            meta={
+              session.raw_tool_call_count && session.raw_tool_call_count > 0
+                ? `${session.raw_tool_call_count} raw`
+                : t('common.tools').toLowerCase()
+            }
             tone="warning"
           />
           <CompactStat
@@ -302,9 +341,132 @@ export function SessionDetailPage() {
             )}
           </DataPanel>
 
+          <DataPanel title={t('session.dataQuality')} contentClassName="space-y-3 pt-3 text-sm">
+            <DetailRow
+              label={t('session.sourcePath')}
+              value={compactPath(session.source_path ?? null) || '—'}
+            />
+            <DetailRow
+              label={t('common.messages')}
+              value={formatQualityValue(t, session.data_quality?.messages)}
+            />
+            <DetailRow
+              label={t('common.tokens')}
+              value={formatQualityValue(t, session.data_quality?.tokens)}
+            />
+            <DetailRow
+              label={t('common.cost')}
+              value={formatQualityValue(t, session.data_quality?.cost)}
+            />
+            <DetailRow
+              label={t('common.tools')}
+              value={formatQualityValue(t, session.data_quality?.tools)}
+            />
+            <DetailRow
+              label={t('common.files')}
+              value={formatQualityValue(t, session.data_quality?.files)}
+            />
+            <DetailRow
+              label={t('common.model')}
+              value={formatQualityValue(t, session.data_quality?.model)}
+            />
+            <DetailRow
+              label={t('common.project')}
+              value={formatQualityValue(t, session.data_quality?.projectPath)}
+            />
+          </DataPanel>
+
+          <DataPanel
+            title={t('session.toolsCaptured')}
+            description={`${tools.length} ${t('common.tools').toLowerCase()}`}
+            contentClassName="space-y-2 pt-3"
+          >
+            {tools.length > 0 ? (
+              <div className="max-h-72 space-y-2 overflow-y-auto">
+                {tools.map((tool) => (
+                  <div
+                    key={tool.id}
+                    className="rounded-md border border-border bg-surface-elevated p-3 text-sm"
+                  >
+                    <div className="flex items-start justify-between gap-3">
+                      <div className="min-w-0">
+                        <div className="flex items-center gap-2 font-medium text-foreground">
+                          <Wrench className="h-3.5 w-3.5 text-subtle-foreground" />
+                          <span className="truncate">{tool.tool_name}</span>
+                        </div>
+                        <div className="mt-1 text-xs text-subtle-foreground">
+                          {tool.operation} · {formatDateTime(tool.timestamp)}
+                        </div>
+                      </div>
+                      <Badge variant={tool.source_confidence === 'high' ? 'success' : 'neutral'}>
+                        {tool.source_confidence}
+                      </Badge>
+                    </div>
+                    {tool.output_preview && (
+                      <pre className="mt-3 whitespace-pre-wrap break-words rounded-md border border-border bg-surface px-2.5 py-2 font-sans text-xs text-muted-foreground [overflow-wrap:anywhere]">
+                        {tool.output_preview}
+                      </pre>
+                    )}
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <EmptyState
+                title={t('session.noTools.title')}
+                description={t('session.noTools.description')}
+                icon={Wrench}
+              />
+            )}
+          </DataPanel>
+
+          <DataPanel
+            title={t('session.filesTouched')}
+            description={`${files.length} ${t('common.files').toLowerCase()}`}
+            contentClassName="space-y-2 pt-3"
+          >
+            {files.length > 0 ? (
+              <div className="max-h-72 space-y-2 overflow-y-auto">
+                {files.map((file) => (
+                  <div
+                    key={file.id}
+                    className="rounded-md border border-border bg-surface-elevated p-3 text-sm"
+                  >
+                    <div className="flex items-start justify-between gap-3">
+                      <div className="min-w-0">
+                        <div className="flex items-center gap-2 font-medium text-foreground">
+                          <FileCode2 className="h-3.5 w-3.5 text-subtle-foreground" />
+                          <span className="truncate">
+                            {compactPath(file.path ?? null) || t('common.unknown')}
+                          </span>
+                        </div>
+                        <div className="mt-1 text-xs text-subtle-foreground">
+                          {file.operation} · {file.tool_name ?? t('common.unknown')} ·{' '}
+                          {formatDateTime(file.timestamp)}
+                        </div>
+                      </div>
+                      <Badge variant={file.confidence === 'high' ? 'success' : 'neutral'}>
+                        {file.confidence}
+                      </Badge>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <EmptyState
+                title={t('session.noFiles.title')}
+                description={t('session.noFiles.description')}
+                icon={FileCode2}
+              />
+            )}
+          </DataPanel>
+
           <DataPanel title={t('session.metadata')} contentClassName="space-y-3 pt-3 text-sm">
             <DetailRow label={t('common.project')} value={basename(session.project_path)} />
             <DetailRow label={t('common.path')} value={compactPath(session.project_path)} />
+            <DetailRow
+              label={t('session.sourcePath')}
+              value={compactPath(session.source_path ?? null) || '—'}
+            />
             <DetailRow label={t('common.cli')} value={session.cli} />
             <DetailRow label={t('common.provider')} value={session.provider} />
             <DetailRow label={t('common.model')} value={session.model ?? t('common.unknown')} />
@@ -324,6 +486,32 @@ export function SessionDetailPage() {
       </div>
     </div>
   );
+}
+
+function formatQualityValue(
+  t: ReturnType<typeof useI18n>['t'],
+  value: string | null | undefined,
+): string {
+  switch (value) {
+    case 'real':
+      return t('common.real');
+    case 'partial':
+      return t('common.partial');
+    case 'unavailable':
+      return t('common.unavailable');
+    case 'actual':
+      return t('common.actual');
+    case 'estimated':
+      return t('common.estimated');
+    case 'unknown':
+      return t('common.unknown');
+    case 'inferred':
+      return t('common.inferred');
+    case 'heuristic':
+      return t('common.heuristic');
+    default:
+      return '—';
+  }
 }
 
 function DetailMetric({ label, value }: { label: string; value: string }) {

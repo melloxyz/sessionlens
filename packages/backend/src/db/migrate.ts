@@ -37,6 +37,7 @@ export function runMigrations(): void {
     '0005_app_settings',
     '0006_budget_alerts',
     '0007_commandcode_cli',
+    '0008_adapter_data_quality',
   ];
 
   for (const name of migrations) {
@@ -82,6 +83,72 @@ function ensureMigrationSatisfied(name: string): boolean {
     return true;
   }
 
+  if (name === '0008_adapter_data_quality') {
+    if (!columnExists('sessions', 'source_path')) {
+      db.run(`ALTER TABLE sessions ADD COLUMN source_path TEXT`);
+    }
+    if (!columnExists('sessions', 'data_quality_json')) {
+      db.run(`ALTER TABLE sessions ADD COLUMN data_quality_json TEXT`);
+    }
+    if (!columnExists('sessions', 'raw_tool_call_count')) {
+      db.run(`ALTER TABLE sessions ADD COLUMN raw_tool_call_count INTEGER NOT NULL DEFAULT 0`);
+    }
+
+    if (!tableExists('session_tools')) {
+      db.run(`
+        CREATE TABLE session_tools (
+          id INTEGER PRIMARY KEY AUTOINCREMENT,
+          session_fk INTEGER NOT NULL REFERENCES sessions(id) ON DELETE CASCADE,
+          timestamp TEXT NOT NULL,
+          tool_name TEXT NOT NULL,
+          operation TEXT NOT NULL,
+          input_json TEXT,
+          output_preview TEXT,
+          source_confidence TEXT NOT NULL CHECK(source_confidence IN ('high', 'medium', 'low'))
+        )
+      `);
+      db.run(`CREATE INDEX idx_session_tools_session ON session_tools(session_fk)`);
+      db.run(`CREATE INDEX idx_session_tools_timestamp ON session_tools(timestamp)`);
+    }
+
+    if (!tableExists('session_files')) {
+      db.run(`
+        CREATE TABLE session_files (
+          id INTEGER PRIMARY KEY AUTOINCREMENT,
+          session_fk INTEGER NOT NULL REFERENCES sessions(id) ON DELETE CASCADE,
+          path TEXT,
+          operation TEXT NOT NULL CHECK(operation IN ('read', 'write', 'edit', 'delete', 'shell_possible', 'unknown')),
+          tool_name TEXT,
+          timestamp TEXT NOT NULL,
+          confidence TEXT NOT NULL CHECK(confidence IN ('high', 'medium', 'low')),
+          metadata_json TEXT
+        )
+      `);
+      db.run(`CREATE INDEX idx_session_files_session ON session_files(session_fk)`);
+      db.run(`CREATE INDEX idx_session_files_path ON session_files(path)`);
+    }
+
+    if (!tableExists('adapter_sources')) {
+      db.run(`
+        CREATE TABLE adapter_sources (
+          cli TEXT NOT NULL,
+          source_path TEXT NOT NULL,
+          detected INTEGER NOT NULL DEFAULT 0,
+          source_type TEXT,
+          last_seen_at TEXT,
+          last_ingested_at TEXT,
+          last_error TEXT,
+          file_count INTEGER NOT NULL DEFAULT 0,
+          session_count INTEGER NOT NULL DEFAULT 0,
+          PRIMARY KEY (cli, source_path)
+        )
+      `);
+      db.run(`CREATE INDEX idx_adapter_sources_cli ON adapter_sources(cli)`);
+    }
+
+    return true;
+  }
+
   return false;
 }
 
@@ -89,4 +156,12 @@ function columnExists(table: string, column: string): boolean {
   const db = getDatabase();
   const result = db.exec(`PRAGMA table_info(${table})`);
   return (result[0]?.values ?? []).some((row) => row[1] === column);
+}
+
+function tableExists(table: string): boolean {
+  const db = getDatabase();
+  const result = db.exec(`SELECT name FROM sqlite_master WHERE type = 'table' AND name = ?`, [
+    table,
+  ]);
+  return (result[0]?.values ?? []).length > 0;
 }

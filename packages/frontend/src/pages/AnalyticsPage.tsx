@@ -77,6 +77,7 @@ interface AnalyticsReport {
   trend: { date: string; spend: number }[];
   productivity: {
     totalToolCalls: number;
+    avgFilesPerSession: number;
     avgToolCallsPerSession: number;
     avgToolCallsPerMinute: number | null;
     avgTokensPerToolCall: number | null;
@@ -872,8 +873,8 @@ export function AnalyticsPage() {
             />
             <MetricLine
               label={t('analytics.filesModifiedSession')}
-              value={t('analytics.pendingSource')}
-              muted
+              value={formatNumber(productivity?.avgFilesPerSession)}
+              muted={!productivity?.filesModifiedSupported}
             />
             <div className="rounded-lg border border-dashed border-border p-4 font-mono text-xs text-subtle-foreground">
               {productivity?.notes?.[0] ?? t('analytics.filesNote')}

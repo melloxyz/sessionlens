@@ -1,5 +1,49 @@
 import type { CliProvider, SourceConfidence } from '@sessionlens/shared';
 
+export type CapabilityLevel = 'real' | 'estimated' | 'partial' | 'unavailable' | 'unknown';
+
+export interface AdapterCapabilities {
+  messages: CapabilityLevel;
+  tokens: CapabilityLevel;
+  cost: CapabilityLevel;
+  model: CapabilityLevel;
+  provider: CapabilityLevel;
+  projectPath: CapabilityLevel;
+  duration: CapabilityLevel;
+  toolCalls: CapabilityLevel;
+  fileReads: CapabilityLevel;
+  fileWrites: CapabilityLevel;
+  multiModel: CapabilityLevel;
+}
+
+export interface SessionDataQuality {
+  messages: 'real' | 'partial' | 'unavailable';
+  tokens: 'real' | 'estimated' | 'unavailable';
+  cost: 'actual' | 'estimated' | 'unknown';
+  tools: 'real' | 'partial' | 'unavailable';
+  files: 'real' | 'heuristic' | 'unavailable';
+  model: 'real' | 'inferred' | 'unknown';
+  projectPath: 'real' | 'inferred' | 'unknown';
+}
+
+export interface RawToolEvent {
+  timestamp: string;
+  toolName: string;
+  operation: string;
+  input: Record<string, unknown> | null;
+  outputPreview?: string | null;
+  sourceConfidence: 'high' | 'medium' | 'low';
+}
+
+export interface RawFileEvent {
+  path: string | null;
+  operation: 'read' | 'write' | 'edit' | 'delete' | 'shell_possible' | 'unknown';
+  toolName: string | null;
+  timestamp: string;
+  confidence: 'high' | 'medium' | 'low';
+  metadata?: Record<string, unknown> | null;
+}
+
 export interface RawSession {
   sessionId: string;
   provider: string;
@@ -15,6 +59,9 @@ export interface RawSession {
   messages: RawMessage[];
   usageEvents: RawUsageEvent[];
   modelUsage?: RawModelUsage[];
+  toolEvents?: RawToolEvent[];
+  fileEvents?: RawFileEvent[];
+  dataQuality?: SessionDataQuality;
 }
 
 export interface RawModelUsage {
@@ -66,4 +113,6 @@ export interface Adapter {
   parse(sessionPath: string, checkpoint: Checkpoint | null): Promise<RawSession[]>;
 
   normalize(raw: RawSession): RawSession;
+
+  getCapabilities?(): AdapterCapabilities;
 }

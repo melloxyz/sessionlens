@@ -2,11 +2,32 @@ import { existsSync, statSync } from 'node:fs';
 import { readFile, readdir } from 'node:fs/promises';
 import { join } from 'node:path';
 import { homedir } from 'node:os';
-import type { Adapter, Checkpoint, RawSession, RawMessage } from './types.js';
+import type {
+  Adapter,
+  AdapterCapabilities,
+  Checkpoint,
+  RawFileEvent,
+  RawMessage,
+  RawSession,
+  RawToolEvent,
+} from './types.js';
 import type { CliProvider, SourceConfidence } from '@sessionlens/shared';
 
 const CLAUDE_HOME = join(homedir(), '.claude');
 const PROJECTS_DIR = join(CLAUDE_HOME, 'projects');
+const CLAUDE_CAPABILITIES: AdapterCapabilities = {
+  messages: 'real',
+  tokens: 'real',
+  cost: 'estimated',
+  model: 'unknown',
+  provider: 'real',
+  projectPath: 'real',
+  duration: 'real',
+  toolCalls: 'real',
+  fileReads: 'partial',
+  fileWrites: 'partial',
+  multiModel: 'unavailable',
+};
 
 export function createClaudeAdapter(): Adapter {
   return {
@@ -60,7 +81,7 @@ export function createClaudeAdapter(): Adapter {
         try {
           events.push(JSON.parse(line));
         } catch {
-          // skip
+          // skip malformed lines
         }
       }
 
@@ -70,10 +91,14 @@ export function createClaudeAdapter(): Adapter {
     normalize(raw: RawSession): RawSession {
       return raw;
     },
+
+    getCapabilities(): AdapterCapabilities {
+      return CLAUDE_CAPABILITIES;
+    },
   };
 }
 
-function buildClaudeSessions(events: Record<string, unknown>[], _filePath: string): RawSession[] {
+function buildClaudeSessions(events: Record<string, unknown>[], filePath: string): RawSession[] {
   const sessionMap = new Map<
     string,
     {
@@ -85,8 +110,8 @@ function buildClaudeSessions(events: Record<string, unknown>[], _filePath: strin
       totalOutputTokens: number;
       totalCacheRead: number;
       totalCacheWrite: number;
-      toolCallCount: number;
-      totalCost: number | null;
+      toolEvents: RawToolEvent[];
+      fileEvents: RawFileEvent[];
     }
   >();
 
@@ -107,25 +132,22 @@ function buildClaudeSessions(events: Record<string, unknown>[], _filePath: strin
         totalOutputTokens: 0,
         totalCacheRead: 0,
         totalCacheWrite: 0,
-        toolCallCount: 0,
-        totalCost: null,
+        toolEvents: [],
+        fileEvents: [],
       });
     }
     const sess = sessionMap.get(sessionId)!;
 
     if (ts && (sess.firstTs === '' || ts < sess.firstTs)) sess.firstTs = ts;
     if (ts && ts > sess.lastTs) sess.lastTs = ts;
-    if (evt.cwd) sess.cwd = evt.cwd as string;
+    if (typeof evt.cwd === 'string') sess.cwd = evt.cwd;
 
     switch (type) {
       case 'user': {
-        // Skip meta/system messages (like /clear, local-command-caveat)
         if (evt.isMeta === true) break;
-
         const message = evt.message as Record<string, unknown> | undefined;
-        if (message && message.role === 'user') {
-          const content = extractContent(message.content);
-          // Skip command-only messages
+        if (message?.role === 'user') {
+          const content = extractTextBlocks(message.content);
           if (content && !content.includes('<command-name>')) {
             sess.messages.push({ role: 'user', content, timestamp: ts });
           }
@@ -135,25 +157,39 @@ function buildClaudeSessions(events: Record<string, unknown>[], _filePath: strin
 
       case 'assistant': {
         const message = evt.message as Record<string, unknown> | undefined;
-        if (message) {
-          const content = extractContent(message.content);
-          if (content) {
-            sess.messages.push({ role: 'assistant', content, timestamp: ts });
-          }
+        if (!message) break;
 
-          const usage = message.usage as Record<string, unknown> | undefined;
-          if (usage) {
-            sess.totalInputTokens += (usage.input_tokens as number) ?? 0;
-            sess.totalOutputTokens += (usage.output_tokens as number) ?? 0;
-            sess.totalCacheRead += (usage.cache_read_input_tokens as number) ?? 0;
-            sess.totalCacheWrite += (usage.cache_creation_input_tokens as number) ?? 0;
+        const text = extractTextBlocks(message.content);
+        if (text) {
+          sess.messages.push({ role: 'assistant', content: text, timestamp: ts });
+        }
+
+        const usage = message.usage as Record<string, unknown> | undefined;
+        if (usage) {
+          sess.totalInputTokens += Number(usage.input_tokens) || 0;
+          sess.totalOutputTokens += Number(usage.output_tokens) || 0;
+          sess.totalCacheRead += Number(usage.cache_read_input_tokens) || 0;
+          sess.totalCacheWrite += Number(usage.cache_creation_input_tokens) || 0;
+        }
+
+        const blocks = Array.isArray(message.content) ? message.content : [];
+        for (const block of blocks) {
+          if (!block || typeof block !== 'object') continue;
+          const normalized = normalizeClaudeToolBlock(block as Record<string, unknown>, ts);
+          if (normalized) {
+            sess.toolEvents.push(normalized.toolEvent);
+            sess.fileEvents.push(...normalized.fileEvents);
           }
         }
         break;
       }
 
       case 'tool_use': {
-        sess.toolCallCount++;
+        const normalized = normalizeClaudeToolBlock(evt, ts);
+        if (normalized) {
+          sess.toolEvents.push(normalized.toolEvent);
+          sess.fileEvents.push(...normalized.fileEvents);
+        }
         break;
       }
 
@@ -171,7 +207,12 @@ function buildClaudeSessions(events: Record<string, unknown>[], _filePath: strin
   for (const [sessionId, data] of sessionMap) {
     const totalTokens = data.totalInputTokens + data.totalOutputTokens;
     const hasTokenData = totalTokens > 0;
-    const confidence: SourceConfidence = hasTokenData ? 'HIGH' : 'MEDIUM';
+    const confidence: SourceConfidence =
+      hasTokenData || data.toolEvents.length > 0
+        ? 'HIGH'
+        : data.messages.length > 0
+          ? 'MEDIUM'
+          : 'LOW';
 
     const startTime = data.firstTs || new Date().toISOString();
     const endTime = data.lastTs || startTime;
@@ -180,13 +221,17 @@ function buildClaudeSessions(events: Record<string, unknown>[], _filePath: strin
         ? new Date(data.lastTs).getTime() - new Date(data.firstTs).getTime()
         : null;
 
-    // Calculate cost from pricing table if we have tokens
-    let totalCostUsd: number | null = data.totalCost;
-    if (!totalCostUsd && hasTokenData) {
+    let totalCostUsd: number | null = null;
+    if (hasTokenData) {
       totalCostUsd = estimateCost(data.totalInputTokens, data.totalOutputTokens);
     }
 
-    if (data.messages.length === 0 && !hasTokenData && data.toolCallCount === 0 && !totalCostUsd) {
+    if (
+      data.messages.length === 0 &&
+      !hasTokenData &&
+      data.toolEvents.length === 0 &&
+      !totalCostUsd
+    ) {
       continue;
     }
 
@@ -195,7 +240,8 @@ function buildClaudeSessions(events: Record<string, unknown>[], _filePath: strin
       provider: 'anthropic',
       cli: 'claude',
       projectPath: data.cwd,
-      model: null, // Claude JSONL doesn't reliably include model info
+      sourcePath: filePath,
+      model: null,
       startedAt: startTime,
       endedAt: endTime,
       durationMs,
@@ -211,10 +257,21 @@ function buildClaudeSessions(events: Record<string, unknown>[], _filePath: strin
               cacheReadTokens: data.totalCacheRead,
               cacheWriteTokens: data.totalCacheWrite,
               reasoningTokens: 0,
-              toolCallsCount: data.toolCallCount,
+              toolCallsCount: data.toolEvents.length,
             },
           ]
         : [],
+      toolEvents: data.toolEvents,
+      fileEvents: data.fileEvents,
+      dataQuality: {
+        messages: data.messages.length > 0 ? 'real' : 'unavailable',
+        tokens: hasTokenData ? 'real' : 'unavailable',
+        cost: hasTokenData ? 'estimated' : 'unknown',
+        tools: data.toolEvents.length > 0 ? 'real' : 'unavailable',
+        files: data.fileEvents.length > 0 ? 'heuristic' : 'unavailable',
+        model: 'unknown',
+        projectPath: data.cwd ? 'real' : 'unknown',
+      },
     });
   }
 
@@ -222,18 +279,111 @@ function buildClaudeSessions(events: Record<string, unknown>[], _filePath: strin
 }
 
 function estimateCost(inputTokens: number, outputTokens: number): number {
-  const INPUT_RATE = 3.0 / 1_000_000;
-  const OUTPUT_RATE = 15.0 / 1_000_000;
-  return inputTokens * INPUT_RATE + outputTokens * OUTPUT_RATE;
+  const inputRate = 3.0 / 1_000_000;
+  const outputRate = 15.0 / 1_000_000;
+  return inputTokens * inputRate + outputTokens * outputRate;
 }
 
-function extractContent(content: unknown): string {
+function extractTextBlocks(content: unknown): string {
   if (typeof content === 'string') return content;
-  if (Array.isArray(content)) {
-    return content
-      .filter((c: Record<string, unknown>) => c.type === 'text')
-      .map((c: Record<string, unknown>) => String(c.text ?? ''))
-      .join('\n');
+  if (!Array.isArray(content)) return '';
+  return content
+    .filter((item: Record<string, unknown>) => item.type === 'text')
+    .map((item: Record<string, unknown>) => String(item.text ?? ''))
+    .join('\n');
+}
+
+function normalizeClaudeToolBlock(
+  block: Record<string, unknown>,
+  timestamp: string,
+): { toolEvent: RawToolEvent; fileEvents: RawFileEvent[] } | null {
+  const type = String(block.type ?? '');
+  if (type !== 'tool_use') return null;
+
+  const toolName = String(block.name ?? block.tool_name ?? 'tool_use');
+  const input =
+    block.input && typeof block.input === 'object' && !Array.isArray(block.input)
+      ? (block.input as Record<string, unknown>)
+      : {};
+  const operation = inferToolOperation(toolName);
+  const confidence = toolName === 'Bash' ? 'low' : 'medium';
+
+  return {
+    toolEvent: {
+      timestamp,
+      toolName,
+      operation,
+      input,
+      outputPreview: null,
+      sourceConfidence: confidence,
+    },
+    fileEvents: inferFileEvents(toolName, input, timestamp, confidence),
+  };
+}
+
+function inferToolOperation(toolName: string): string {
+  switch (toolName.toLowerCase()) {
+    case 'read':
+      return 'read';
+    case 'write':
+      return 'write';
+    case 'edit':
+    case 'multiedit':
+      return 'edit';
+    case 'bash':
+      return 'shell';
+    default:
+      return 'unknown';
   }
-  return '';
+}
+
+function inferFileEvents(
+  toolName: string,
+  input: Record<string, unknown>,
+  timestamp: string,
+  confidence: RawToolEvent['sourceConfidence'],
+): RawFileEvent[] {
+  const candidates = [
+    readString(input.file_path),
+    readString(input.path),
+    readString(input.absolute_path),
+  ].filter((value): value is string => Boolean(value));
+  const operation =
+    toolName === 'Read'
+      ? 'read'
+      : toolName === 'Write'
+        ? 'write'
+        : toolName === 'Edit' || toolName === 'MultiEdit'
+          ? 'edit'
+          : toolName === 'Bash'
+            ? 'shell_possible'
+            : 'unknown';
+
+  if (candidates.length === 0 && operation !== 'shell_possible') return [];
+
+  if (operation === 'shell_possible') {
+    return [
+      {
+        path: readString(input.cwd) ?? readString(input.directory) ?? null,
+        operation,
+        toolName,
+        timestamp,
+        confidence,
+        metadata: input,
+      },
+    ];
+  }
+
+  return candidates.map((path) => ({
+    path,
+    operation,
+    toolName,
+    timestamp,
+    confidence,
+    metadata: input,
+  }));
+}
+
+function readString(value: unknown): string | null {
+  return typeof value === 'string' && value.length > 0 ? value : null;
 }
