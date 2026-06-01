@@ -5,7 +5,7 @@
 **Observabilidade local-first para AI Coding CLIs — multi-CLI, open-source, privado.**
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-00c853.svg?style=flat-square)](LICENSE)
-[![v0.8.0](https://img.shields.io/badge/v0.8.0-00c853?style=flat-square)](https://github.com/melloxyz/sessionlens/releases)
+[![v0.9.0](https://img.shields.io/badge/v0.9.0-00c853?style=flat-square)](https://github.com/melloxyz/sessionlens/releases)
 [![Node.js](https://img.shields.io/badge/node-%3E%3D20-339933?style=flat-square&logo=node.js&logoColor=white)](https://nodejs.org)
 [![pnpm](https://img.shields.io/badge/pnpm-%3E%3D9-f69220?style=flat-square&logo=pnpm&logoColor=white)](https://pnpm.io)
 [![TypeScript](https://img.shields.io/badge/TypeScript-5.9-3178c6?style=flat-square&logo=typescript&logoColor=white)](https://www.typescriptlang.org)
@@ -40,19 +40,28 @@
 
 | Recurso | Descrição |
 |---|---|
-| **Multi-CLI** | Suporte para 8 CLIs: Codex, Claude Code, OpenCode, Gemini CLI, Kimi, Aider, Qwen e Antigravity |
+| **Multi-CLI** | Suporte para 9 CLIs: Codex, Claude Code, OpenCode, Gemini CLI, Kimi, Aider, Qwen, Antigravity e CommandCode |
 | **Rastreamento de custos** | Custo real da CLI, estimativa por tokens e sync com OpenRouter para pricing atualizado |
 | **Sessões inteligentes** | Tokens (input/output/cache/reasoning), tool calls, duração, contexto do projeto |
-| **Analytics** | Dashboard com trends de gastos, breakdown por modelo/provider/projeto, insights e anomalias |
-| **Orçamentos** | Defina limites de gasto e acompanhe alertas por projeto ou período |
+| **Analytics** | Dashboard com filtros contextuais, trends de gastos, breakdown por modelo/provider/projeto, páginas dedicadas de insight e anomalias |
+| **Orçamentos** | Defina limites globais, por projeto, CLI, provider ou modelo, com histórico de alertas locais |
 | **Privacidade local-first** | SQLite via sql.js WASM — zero dados enviados externamente, zero telemetria |
 | **Auto-ingestão** | Filesystem watcher com debounce observa diretórios das CLIs e atualiza automaticamente |
-| **UI premium** | Design system OpenCode/Linear com DataPanel, DataTable, FilterBar, MetricTile, skeleton/loading states e tooltips |
-| **Temas** | Modo escuro OLED puro (#000000) e modo claro com alto contraste, persistente via localStorage |
+| **UI premium** | Design system próprio do Sessionlens, inspirado em interfaces editoriais e técnicas, com DataPanel, DataTable, CompactStat, ControlField, skeleton/loading states e tooltips |
+| **Temas** | Modo escuro e modo claro com contraste refinado, chart palette acessível e persistência via localStorage |
 | **i18n** | Inglês e Português (PT-BR) com formatação localizada de datas, durações e moedas |
 | **System Tray** | Ícone na bandeja do Windows com auto-start, ingestão rápida e status ao vivo |
-| **Controles de projeto** | Oculte projetos sem deletar dados, abra pasta do projeto, timeline de commits git |
+| **Controles de projeto** | Oculte/restaure projetos sem deletar dados, abra pasta do projeto, acompanhe timeline git e sessões relacionadas |
 | **API com cache** | Requisições com cache e validação para respostas mais rápidas e consistentes |
+
+### Destaques da v0.9.0
+
+- Redesign global do Sessionlens com shell desktop-first, sidebar refinada, topbar consistente e componentes mais densos para leitura em monitores.
+- Analytics com filtros realmente aplicados, páginas dedicadas de insight, drill-downs para projetos/sessões e melhor leitura de gráficos em light/dark.
+- Budgets redesenhado com melhor distribuição de limites, alertas, progresso e estados de configuração.
+- Projects e Project Detail com layout mais claro, correção de navegação para detalhes e integração melhor com sessões e histórico local.
+- Changelog dentro do app atualizado para acompanhar entregas, status do projeto, contribuidores e roadmap local-first.
+- Integração CommandCode adicionada a partir de arquivos locais em `~/.commandcode/projects`.
 
 ---
 
@@ -120,7 +129,7 @@ sessionlens/
 │   └── screenshots/       # Prints da interface para documentação
 ├── packages/
 │   ├── backend/           # Fastify + sql.js + OpenRouter sync + adapters + tray
-│   ├── frontend/          # React + Vite + Tailwind v4 + Recharts
+│   ├── frontend/          # React + Vite + Tailwind v4 + Recharts + shadcn-like UI
 │   └── shared/            # Tipos TypeScript compartilhados
 ├── scripts/               # Dev scripts (Windows-safe orchestration)
 ├── .github/workflows/     # CI + Release (git-cliff)
@@ -141,10 +150,10 @@ sessionlens/
 ### Frontend (`@sessionlens/frontend`)
 
 - **Dev server:** Vite em `5173` com proxy `/api` → backend
-- **Componentes:** DataPanel, DataTable, FilterBar, MetricTile, SectionHeader, Tooltip, Skeleton
-- **Estilo:** Tailwind v4 com CSS variables, design system OpenCode/Linear
+- **Componentes:** DataPanel, DataTable, CompactStat, ControlField, SectionHeader, Tooltip, Skeleton
+- **Estilo:** Tailwind v4 com CSS variables e design system próprio do Sessionlens
 - **Gráficos:** Recharts (AreaChart, LineChart, PieChart, BarChart) com tooltips customizados
-- **Temas:** OLED escuro (`#000000`) e claro com alto contraste, persistente via localStorage
+- **Temas:** Escuro/claro com contraste refinado, superfícies planas e chart palette acessível
 - **Idiomas:** English e Português (PT-BR) via `LanguageProvider` com locale-aware formatting
 - **Cache:** Camada de API com cache e validação para respostas consistentes
 
@@ -167,8 +176,10 @@ sessionlens/
 | **Aider** | ✅ Suportado | `.aider.chat.history.md` | LOW |
 | **Qwen CLI** | ✅ Suportado | `~/.qwen/`, `~/.config/qwen/`, `~/.local/share/qwen/` | MEDIUM |
 | **Antigravity** | ✅ Suportado | `~/.gemini/antigravity/` | MEDIUM |
+| **CommandCode** | ✅ Suportado | `~/.commandcode/projects/**/*.jsonl` + `.meta.json` | MEDIUM |
 
 > Cada adapter é isolado — uma mudança no schema de uma CLI não afeta as outras.
+> A confiança representa a qualidade dos dados disponíveis por fonte. Algumas CLIs não expõem custo, tokens ou ferramentas de forma completa; nesses casos o Sessionlens preserva os dados reais disponíveis e marca lacunas para melhoria.
 
 ---
 
@@ -203,14 +214,15 @@ O Sessionlens oferece um ícone de bandeja no Windows com:
 |---|---|---|
 | Fase 0-2 | ✅ Concluído | Bootstrap, Foundation, Core Product |
 | Fase 3 | ✅ Concluído | Multi-CLI (Codex, Claude, OpenCode) |
-| Fase 3.5 | ✅ Concluído | UI/UX Premium (OpenCode/Linear style) |
+| Fase 3.5 | ✅ Concluído | UI/UX Premium inicial |
 | Fase 4 | ✅ Concluído | Advanced Analytics (insights, anomalias, multi-model) |
 | Fase 5 | ✅ Concluído | CLI Expansion (Gemini, Kimi, Aider, Qwen, Antigravity) |
 | Fase 6 | ✅ Concluído | UI Polish & Brand Assets |
 | Fase 7 | ✅ Concluído | Runtime & Ingestion (auto-ingestão, filesystem watcher) |
 | Fase 8 | ✅ Concluído | Controls & Alerts (budget limits, alertas locais) |
 | Fase 9 | ✅ Concluído | Tray & Runtime (system tray, CI/CD, auto-start) |
-| Fase 10 | 🚧 Em progresso | UI v2 + i18n (DataPanel system, temas OLED, tradução PT-BR) |
+| Fase 9.7 | ✅ Concluído | Design System & UI Redesign (Sessionlens visual language, shell, páginas principais, QA visual) |
+| Fase 10 | 📋 Planejado | Sharing & Webhooks (export local-first, Discord webhooks, templates de compartilhamento) |
 | Fase 11 | 📋 Planejado | Extensibility (plugin SDK, IDE integration) |
 | Fase 12 | 📋 Planejado | Future / Cloud Optional (opt-in sync, team analytics) |
 
