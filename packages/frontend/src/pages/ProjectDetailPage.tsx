@@ -1,12 +1,10 @@
-import { useMemo } from 'react';
+import { useMemo, useState } from 'react';
 import { useParams, Link, useNavigate } from 'react-router-dom';
 import {
   ArrowLeft,
-  Clock3,
   FolderOpen,
   GitBranch,
   GitCommitHorizontal,
-  Layers3,
   ShieldAlert,
   WalletCards,
 } from 'lucide-react';
@@ -33,6 +31,7 @@ import {
 import { chartColor } from '../lib/chart-colors.js';
 import { Badge } from '../components/ui/Badge.js';
 import { Button } from '../components/ui/Button.js';
+import { CompactStat } from '../components/ui/CompactStat.js';
 import { DataPanel } from '../components/ui/DataPanel.js';
 import {
   DataTable,
@@ -46,7 +45,6 @@ import {
 import { EmptyState } from '../components/ui/EmptyState.js';
 import { ErrorState } from '../components/ui/ErrorState.js';
 import { DetailPageSkeleton } from '../components/ui/LoadingState.js';
-import { MetricTile } from '../components/ui/MetricTile.js';
 import { chartTooltipProps } from '../components/ui/ChartTooltip.js';
 import { useI18n } from '../components/i18n/LanguageProvider.js';
 
@@ -65,6 +63,7 @@ interface ProjectDetailResponse {
 export function ProjectDetailPage() {
   const { t } = useI18n();
   const { id } = useParams<{ id: string }>();
+  const [openingProject, setOpeningProject] = useState(false);
   const { data, loading, validating, error, refetch } = useApi<ProjectDetailResponse>(
     `/api/projects/${id}`,
   );
@@ -115,6 +114,16 @@ export function ProjectDetailPage() {
     value: Number(d.cost) || 0,
   }));
 
+  async function openProjectFolder() {
+    if (!id || !p.exists || openingProject) return;
+    setOpeningProject(true);
+    try {
+      await fetch(`/api/projects/${id}/open`, { method: 'POST' });
+    } finally {
+      setOpeningProject(false);
+    }
+  }
+
   return (
     <div className="space-y-5 p-4 lg:p-6" aria-busy={validating}>
       <Link
@@ -125,14 +134,14 @@ export function ProjectDetailPage() {
       </Link>
 
       <DataPanel className="overflow-hidden" contentClassName="p-4 lg:p-5">
-        <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
-          <div className="min-w-0">
+        <div className="grid gap-4 xl:grid-cols-[minmax(0,1.15fr)_minmax(360px,0.85fr)] xl:items-start">
+          <div className="min-w-0 space-y-4">
             <div className="flex items-center gap-3">
               <div className="grid h-10 w-10 place-items-center rounded-md border border-border bg-transparent text-subtle-foreground">
                 <FolderOpen className="h-4.5 w-4.5" />
               </div>
               <div className="min-w-0">
-                <h1 className="truncate font-mono text-xl font-semibold tracking-[-0.05em] text-foreground lg:text-2xl">
+                <h1 className="truncate text-xl font-semibold text-foreground lg:text-2xl">
                   {basename(String(p.path))}
                 </h1>
                 <p className="mt-1 truncate text-xs text-subtle-foreground lg:text-sm">
@@ -141,7 +150,9 @@ export function ProjectDetailPage() {
               </div>
             </div>
             <div className="mt-3 flex flex-wrap items-center gap-2">
-              <Badge variant="success">{t('common.available')}</Badge>
+              <Badge variant={p.exists ? 'success' : 'warning'}>
+                {p.exists ? t('common.available') : t('common.missing')}
+              </Badge>
               {p.git_remote ? (
                 <Badge variant="neutral">
                   <GitBranch className="h-3 w-3" /> git
@@ -151,62 +162,57 @@ export function ProjectDetailPage() {
               )}
               {data.commits?.branch && <Badge variant="default">{data.commits.branch}</Badge>}
             </div>
+
+            <div className="grid gap-2 md:grid-cols-2">
+              <CompactStat
+                label={t('project.topProvider')}
+                value={derived.topProvider}
+                meta={t('common.provider')}
+              />
+              <CompactStat
+                label={t('project.gitRemote')}
+                value={String(p.git_remote ?? '—')}
+                meta={data.commits?.branch ?? t('projects.noRemote')}
+                tone={p.git_remote ? 'default' : 'warning'}
+                valueClassName="font-mono text-[13px]"
+              />
+            </div>
           </div>
-          <div className="grid w-full max-w-[420px] grid-cols-1 gap-3 sm:grid-cols-2">
-            <HeroMetric label={t('common.sessions')} value={String(p.total_sessions)} compact />
-            <HeroMetric
-              label={t('project.totalCost')}
-              value={formatCurrency(p.total_cost as number)}
-              compact
-            />
-            <HeroMetric
-              label={t('project.lastActivity')}
-              value={derived.last?.started_at ? formatDate(String(derived.last.started_at)) : '—'}
-              compact
-            />
-            <HeroMetric label={t('project.topModel')} value={derived.topModel} compact wrap />
+
+          <div className="flex w-full flex-col gap-3">
+            <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
+              <CompactStat label={t('common.sessions')} value={String(p.total_sessions)} />
+              <CompactStat
+                label={t('project.totalCost')}
+                value={formatCurrency(p.total_cost as number)}
+              />
+              <CompactStat
+                label={t('project.lastActivity')}
+                value={derived.last?.started_at ? formatDate(String(derived.last.started_at)) : '—'}
+              />
+              <CompactStat
+                label={t('project.topModel')}
+                value={derived.topModel}
+                meta={t('common.model')}
+                valueClassName="truncate text-[13px]"
+              />
+            </div>
+            <Button
+              variant="outline"
+              onClick={openProjectFolder}
+              disabled={!p.exists || openingProject}
+              className="self-start"
+            >
+              <FolderOpen className="h-4 w-4" />
+              {openingProject
+                ? t('project.opening')
+                : p.exists
+                  ? t('project.openFolder')
+                  : t('project.folderMissing')}
+            </Button>
           </div>
         </div>
       </DataPanel>
-
-      <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-4">
-        <MetricTile
-          icon={WalletCards}
-          label={t('project.avgCost')}
-          value={formatCurrency((Number(p.total_cost) || 0) / (Number(p.total_sessions) || 1))}
-          tone="info"
-          compact
-          iconVariant="neutral"
-        />
-        <MetricTile
-          icon={Layers3}
-          label={t('project.topProvider')}
-          value={derived.topProvider}
-          tone="info"
-          compact
-          iconVariant="neutral"
-          valueWrap
-          valueClassName="text-[1rem] leading-tight lg:text-[1.05rem]"
-        />
-        <MetricTile
-          icon={Clock3}
-          label={t('common.duration')}
-          value={formatDuration(Number(derived.last?.duration_ms ?? 0))}
-          tone="success"
-          compact
-          iconVariant="neutral"
-        />
-        <MetricTile
-          icon={GitBranch}
-          label={t('project.gitRemote')}
-          value={String(p.git_remote ?? '—')}
-          tone="warning"
-          compact
-          iconVariant="neutral"
-          valueWrap
-          valueClassName="text-[1rem] leading-tight lg:text-[1.05rem]"
-        />
-      </div>
 
       <div className="grid grid-cols-1 gap-4 xl:grid-cols-[1.2fr_0.8fr]">
         <DataPanel title={t('project.spendOverTime')}>
@@ -247,7 +253,7 @@ export function ProjectDetailPage() {
         </DataPanel>
 
         <DistributionCard
-          title={t('project.distribution')}
+          title={modelData.length ? t('project.modelDistribution') : t('project.distribution')}
           data={modelData.length ? modelData : providerData}
         />
       </div>
@@ -303,31 +309,6 @@ export function ProjectDetailPage() {
   );
 }
 
-function HeroMetric({
-  label,
-  value,
-  compact,
-  wrap,
-}: {
-  label: string;
-  value: string;
-  compact?: boolean;
-  wrap?: boolean;
-}) {
-  return (
-    <div className="rounded-md border border-border bg-surface-muted p-3">
-      <div className="font-mono text-[9px] uppercase tracking-[0.14em] text-subtle-foreground">
-        {label}
-      </div>
-      <div
-        className={`${compact ? 'text-sm lg:text-[1.05rem]' : 'text-lg'} ${wrap ? 'whitespace-normal break-words' : 'truncate'} mt-1 font-mono font-semibold leading-tight text-foreground`}
-      >
-        {value}
-      </div>
-    </div>
-  );
-}
-
 function DistributionCard({
   title,
   data,
@@ -372,7 +353,8 @@ function DistributionCard({
 }
 
 function BudgetControl({ projectPath, projectCost }: { projectPath: string; projectCost: number }) {
-  const { data: budgets } = useApi<
+  const { t } = useI18n();
+  const { data: budgets, refetch: refetchBudgets } = useApi<
     {
       id: number;
       scope_type: string;
@@ -381,7 +363,7 @@ function BudgetControl({ projectPath, projectCost }: { projectPath: string; proj
       period: string;
     }[]
   >('/api/budgets', { initialData: [] });
-  const { data: status } = useApi<
+  const { data: status, refetch: refetchStatus } = useApi<
     {
       id: number;
       scope_value: string | null;
@@ -399,9 +381,9 @@ function BudgetControl({ projectPath, projectCost }: { projectPath: string; proj
 
   if (!projectBudget) {
     return (
-      <DataPanel title="Budget" contentClassName="p-3 space-y-3">
+      <DataPanel title={t('budget.title')} contentClassName="space-y-3 p-3">
         <div className="flex items-center justify-between">
-          <span className="text-sm text-muted-foreground">No budget set for this project</span>
+          <span className="text-sm text-muted-foreground">{t('budget.project.empty')}</span>
         </div>
         <Button
           size="sm"
@@ -416,20 +398,22 @@ function BudgetControl({ projectPath, projectCost }: { projectPath: string; proj
                 period: 'monthly',
               }),
             });
-            window.location.reload();
+            await Promise.all([refetchBudgets(), refetchStatus()]);
           }}
         >
           <WalletCards className="h-3.5 w-3.5" />
-          Set Budget
+          {t('budget.project.create')}
         </Button>
       </DataPanel>
     );
   }
 
   return (
-    <DataPanel title="Budget" contentClassName="p-3 space-y-3">
+    <DataPanel title={t('budget.title')} contentClassName="space-y-3 p-3">
       <div className="flex items-center justify-between">
-        <span className="text-sm text-muted-foreground">{projectBudget.period} limit</span>
+        <span className="text-sm capitalize text-muted-foreground">
+          {t(`budget.period.${projectBudget.period}`)} {t('budget.limit')}
+        </span>
         <Badge
           variant={
             projectStatus?.status === 'exceeded'
@@ -439,14 +423,18 @@ function BudgetControl({ projectPath, projectCost }: { projectPath: string; proj
                 : 'success'
           }
         >
-          {projectStatus?.status === 'ok' ? 'OK' : `${projectStatus?.percentage ?? 0}%`}
+          {projectStatus?.status === 'ok'
+            ? t('budget.status.ok')
+            : `${projectStatus?.percentage ?? 0}%`}
         </Badge>
       </div>
 
       <div className="space-y-1">
         <div className="flex justify-between font-mono text-sm">
           <span className="text-foreground">${(projectStatus?.current_spend ?? 0).toFixed(2)}</span>
-          <span className="text-subtle-foreground">of ${projectBudget.limit_usd.toFixed(2)}</span>
+          <span className="text-subtle-foreground">
+            {t('common.of')} ${projectBudget.limit_usd.toFixed(2)}
+          </span>
         </div>
         <div className="h-1.5 w-full overflow-hidden rounded-full bg-surface-muted">
           <div
@@ -466,7 +454,9 @@ function BudgetControl({ projectPath, projectCost }: { projectPath: string; proj
         <div className="flex items-center gap-2 rounded-lg border border-danger/20 bg-danger/5 px-3 py-2 text-sm">
           <ShieldAlert className="h-4 w-4 text-danger" />
           <span className="text-danger">
-            {projectStatus.status === 'exceeded' ? 'Budget exceeded!' : 'Approaching limit'}
+            {projectStatus.status === 'exceeded'
+              ? t('budget.status.exceeded')
+              : t('budget.status.approaching')}
           </span>
         </div>
       )}
@@ -477,10 +467,10 @@ function BudgetControl({ projectPath, projectCost }: { projectPath: string; proj
           variant="outline"
           onClick={async () => {
             await fetch(`/api/budgets/${projectBudget.id}`, { method: 'DELETE' });
-            window.location.reload();
+            await Promise.all([refetchBudgets(), refetchStatus()]);
           }}
         >
-          Remove
+          {t('common.remove')}
         </Button>
       </div>
     </DataPanel>
@@ -490,15 +480,16 @@ function BudgetControl({ projectPath, projectCost }: { projectPath: string; proj
 function SessionRow({ session }: { session: Record<string, unknown> }) {
   const { t } = useI18n();
   const navigate = useNavigate();
+  const sessionTarget = String(session.session_id ?? session.id);
 
   return (
     <DataTableRow
       className="cursor-pointer border-b border-border transition-colors hover:bg-surface-hover"
-      onClick={() => navigate(`/sessions/${session.id}`)}
+      onClick={() => navigate(`/sessions/${sessionTarget}`)}
       onKeyDown={(event) => {
         if (event.key === 'Enter' || event.key === ' ') {
           event.preventDefault();
-          navigate(`/sessions/${session.id}`);
+          navigate(`/sessions/${sessionTarget}`);
         }
       }}
       tabIndex={0}
@@ -513,9 +504,7 @@ function SessionRow({ session }: { session: Record<string, unknown> }) {
       <DataTableCell className="text-right font-mono tabular-nums text-foreground">
         <div>{formatCurrency(Number(session.total_cost_usd))}</div>
         {session.cost_source === 'estimated' && (
-          <div className="mt-1 text-[10px] uppercase tracking-[0.12em] text-warning">
-            {t('common.estimated')}
-          </div>
+          <div className="mt-1 text-[10px] uppercase text-warning">{t('common.estimated')}</div>
         )}
       </DataTableCell>
       <DataTableCell className="text-right font-mono text-muted-foreground">
@@ -549,9 +538,7 @@ function CommitRow({
         <GitCommitHorizontal className="h-4 w-4" />
       </div>
       <div className="min-w-0 flex-1">
-        <div className="truncate font-mono text-sm font-medium text-foreground">
-          {commit.message}
-        </div>
+        <div className="truncate text-sm font-medium text-foreground">{commit.message}</div>
         <div className="mt-1 font-mono text-xs text-subtle-foreground">
           {commit.hash} · {commit.author} · {formatDate(commit.date)}
         </div>

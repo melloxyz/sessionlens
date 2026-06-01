@@ -26,6 +26,7 @@ import { StatCard } from '../components/StatCard.js';
 import { BrandBadge, BrandMark, getBrandMeta } from '../components/brand/BrandMark.js';
 import { Badge } from '../components/ui/Badge.js';
 import { Button } from '../components/ui/Button.js';
+import { CompactStat } from '../components/ui/CompactStat.js';
 import { DataPanel } from '../components/ui/DataPanel.js';
 import {
   DataTable,
@@ -115,7 +116,7 @@ interface BudgetStatusItem {
 export function DashboardPage() {
   const { t } = useI18n();
   const navigate = useNavigate();
-  const { queryString } = useDateRange();
+  const { queryString, range } = useDateRange();
   const [selectedId, setSelectedId] = useState<number | null>(null);
   const queryPrefix = queryString ? `?${queryString}` : '';
   const querySuffix = queryString ? `&${queryString}` : '';
@@ -232,6 +233,14 @@ export function DashboardPage() {
     modelValidating ||
     recentSessionsValidating ||
     selectedSessionValidating;
+  const rangeLabel =
+    range === '7d'
+      ? t('common.last7')
+      : range === '90d'
+        ? t('common.last90')
+        : range === 'all'
+          ? t('common.allTime')
+          : t('common.last30');
 
   return (
     <div
@@ -250,7 +259,7 @@ export function DashboardPage() {
         </section>
       )}
       <div className="min-w-0 space-y-3">
-        <div className="grid grid-cols-1 gap-3 md:grid-cols-2 xl:flex xl:flex-wrap xl:items-stretch xl:justify-between">
+        <div className="grid grid-cols-1 gap-3 md:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-5">
           <StatCard
             label={t('dashboard.totalSpend')}
             value={formatCurrency(overview?.totalSpend)}
@@ -261,7 +270,7 @@ export function DashboardPage() {
             sparkline
             compact
             iconVariant="neutral"
-            className="w-full xl:w-[230px]"
+            className="w-full"
           />
           <StatCard
             label={t('dashboard.totalTokens')}
@@ -273,7 +282,7 @@ export function DashboardPage() {
             sparkline
             compact
             iconVariant="neutral"
-            className="w-full xl:w-[230px]"
+            className="w-full"
           />
           <StatCard
             label={t('dashboard.totalSessions')}
@@ -285,7 +294,7 @@ export function DashboardPage() {
             sparkline
             compact
             iconVariant="neutral"
-            className="w-full xl:w-[230px]"
+            className="w-full"
           />
           <StatCard
             label={t('dashboard.avgCostSession')}
@@ -297,7 +306,7 @@ export function DashboardPage() {
             sparkline
             compact
             iconVariant="neutral"
-            className="w-full xl:w-[230px]"
+            className="w-full"
           />
           <StatCard
             label={t('dashboard.totalDuration')}
@@ -309,7 +318,7 @@ export function DashboardPage() {
             sparkline
             compact
             iconVariant="neutral"
-            className="w-full xl:w-[230px]"
+            className="w-full"
           />
         </div>
 
@@ -324,10 +333,12 @@ export function DashboardPage() {
                 <ShieldAlert className="h-5 w-5 shrink-0 text-danger" />
                 <div className="min-w-0 flex-1">
                   <span className="text-sm font-semibold text-danger">
-                    {b.status === 'exceeded' ? 'Budget exceeded' : 'Budget limit approaching'}
+                    {b.status === 'exceeded'
+                      ? t('budget.status.exceeded')
+                      : t('budget.status.approaching')}
                   </span>
                   <span className="ml-2 text-sm text-muted-foreground">
-                    {b.scope_value ?? 'Global'} ({b.period}):{' '}
+                    {b.scope_value ?? t('budget.scope.global')} ({t(`budget.period.${b.period}`)}):{' '}
                     <span className="font-mono font-medium text-foreground">
                       ${b.current_spend.toFixed(2)}
                     </span>{' '}
@@ -344,7 +355,7 @@ export function DashboardPage() {
             ))}
             {exceededBudgets.length > 3 && (
               <Link to="/budgets" className="text-center text-xs text-accent hover:underline">
-                +{exceededBudgets.length - 3} more budget alerts
+                +{exceededBudgets.length - 3} {t('budget.alerts.more')}
               </Link>
             )}
           </div>
@@ -356,11 +367,7 @@ export function DashboardPage() {
               className="lg:col-span-2 2xl:col-span-1"
               title={t('project.spendOverTime')}
               description={t('dashboard.spendTrendDescription')}
-              action={
-                <Button variant="outline" size="sm">
-                  {t('common.daily')}
-                </Button>
-              }
+              action={<Badge variant="neutral">{rangeLabel}</Badge>}
               contentClassName="pt-4"
             >
               {spendLoading && !spendData ? (
@@ -483,7 +490,7 @@ export function DashboardPage() {
                           <div className="flex items-center gap-3">
                             <BrandMark value={session.cli} size="sm" />
                             <div>
-                              <div className="font-mono text-sm font-medium text-foreground">
+                              <div className="text-sm font-medium text-foreground">
                                 {session.session_id.slice(0, 8)}
                               </div>
                               <div className="text-xs text-subtle-foreground">
@@ -507,7 +514,7 @@ export function DashboardPage() {
                         <DataTableCell className="text-right font-mono tabular-nums font-medium text-foreground">
                           <div>{formatCurrency(session.total_cost_usd)}</div>
                           {session.cost_source === 'estimated' && (
-                            <div className="mt-1 text-[10px] uppercase tracking-[0.12em] text-warning">
+                            <div className="mt-1 text-[10px] uppercase text-warning">
                               {t('common.estimated')}
                             </div>
                           )}
@@ -537,7 +544,7 @@ export function DashboardPage() {
               <BrandMark value={selectedSession?.cli} size="lg" />
               <div className="min-w-0 flex-1">
                 <div className="flex items-center justify-between gap-2">
-                  <h2 className="truncate font-mono text-base font-semibold text-foreground">
+                  <h2 className="truncate text-base font-semibold text-foreground">
                     {selectedSession?.session_id?.slice(0, 8) ?? t('common.session')}
                   </h2>
                   <Badge
@@ -573,34 +580,37 @@ export function DashboardPage() {
               />
             ) : (
               <>
-                <div className="grid grid-cols-1 gap-2 rounded-lg border border-border bg-surface-muted p-2.5 text-center sm:grid-cols-3">
-                  <MiniMetric
+                <div className="grid gap-2 md:grid-cols-2">
+                  <CompactStat
                     label={t('common.cost')}
                     value={formatCurrency(selectedSession?.total_cost_usd)}
+                    meta={t('common.total')}
                   />
-                  <MiniMetric
+                  <CompactStat
                     label={t('common.tokens')}
                     value={formatTokens(selectedUsage.input + selectedUsage.output)}
+                    meta={t('dashboard.allSources')}
                   />
-                  <MiniMetric
+                  <CompactStat
                     label={t('common.tools')}
                     value={String(selectedSession?.tool_call_count ?? 0)}
+                    meta={t('analytics.totalAcrossSessions')}
                   />
-                </div>
-
-                <div className="grid grid-cols-1 gap-2 rounded-lg border border-border bg-surface-muted p-2.5 text-center sm:grid-cols-2">
-                  <MiniMetric
+                  <CompactStat
                     label={t('common.messages')}
                     value={String(selectedSession?.message_count ?? 0)}
+                    meta={t('common.messages').toLowerCase()}
                   />
-                  <MiniMetric
+                  <CompactStat
                     label={t('common.duration')}
                     value={formatDuration(selectedSession?.duration_ms)}
+                    meta={t('common.activity')}
+                    className="md:col-span-2"
                   />
                 </div>
 
                 <div className="rounded-md border border-border p-3">
-                  <div className="mb-3 font-mono text-sm font-semibold text-foreground">
+                  <div className="mb-3 text-sm font-semibold text-foreground">
                     {t('session.tokenUsage')}
                   </div>
                   <TokenUsageBar
@@ -612,7 +622,7 @@ export function DashboardPage() {
                 </div>
 
                 <div className="rounded-md border border-border p-3 text-sm">
-                  <div className="mb-3 font-mono text-sm font-semibold text-foreground">
+                  <div className="mb-3 text-sm font-semibold text-foreground">
                     {t('session.metadata')}
                   </div>
                   <InfoRow
@@ -700,8 +710,8 @@ function DonutCard({
                   innerRadius={54}
                   outerRadius={76}
                   paddingAngle={2}
-                  stroke="var(--surface)"
-                  strokeWidth={2}
+                  stroke="var(--background)"
+                  strokeWidth={3}
                 >
                   {data.map((item, index) => (
                     <Cell key={item.label} fill={colorFor(item.label, index)} />
@@ -715,10 +725,8 @@ function DonutCard({
             </ResponsiveContainer>
             <div className="pointer-events-none absolute inset-0 grid place-items-center text-center">
               <div>
-                <div className="font-mono text-sm font-semibold text-foreground">{center}</div>
-                <div className="font-mono text-[10px] uppercase tracking-[0.1em] text-subtle-foreground">
-                  {centerLabel}
-                </div>
+                <div className="text-sm font-semibold text-foreground">{center}</div>
+                <div className="text-[10px] uppercase text-subtle-foreground">{centerLabel}</div>
               </div>
             </div>
           </div>
@@ -754,19 +762,6 @@ function DonutCard({
         </>
       )}
     </DataPanel>
-  );
-}
-
-function MiniMetric({ label, value }: { label: string; value: string }) {
-  return (
-    <div>
-      <div className="font-mono text-[9px] uppercase tracking-[0.14em] text-subtle-foreground">
-        {label}
-      </div>
-      <div className="mt-1 truncate font-mono text-sm font-semibold leading-tight text-foreground">
-        {value}
-      </div>
-    </div>
   );
 }
 

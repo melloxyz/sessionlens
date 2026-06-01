@@ -1,4 +1,3 @@
-import { useMemo } from 'react';
 import { Link, useParams } from 'react-router-dom';
 import {
   ArrowLeft,
@@ -29,7 +28,6 @@ import { Card, CardContent, CardHeader, CardTitle } from '../components/ui/Card.
 import { ErrorState } from '../components/ui/ErrorState.js';
 import { MetricTile } from '../components/ui/MetricTile.js';
 import { SectionHeader } from '../components/ui/SectionHeader.js';
-import { ChartSkeleton } from '../components/ui/LoadingState.js';
 import { Skeleton } from '../components/ui/Skeleton.js';
 import { chartTooltipProps } from '../components/ui/ChartTooltip.js';
 import { useI18n } from '../components/i18n/LanguageProvider.js';
@@ -49,6 +47,7 @@ interface InsightDetailData {
     previous7DaySpend?: number;
     growthPercent?: number | null;
     baselineDailySpend?: number;
+    projectId?: number;
     projectPath?: string;
     projectSpend?: number;
     projectSessions?: number;
@@ -93,19 +92,30 @@ export function InsightDetailPage() {
     error,
   } = useApi<InsightDetailData>(`/api/analytics/insights/${id}${queryPrefix}`);
 
-  const recKey = detail?.kind ?? '';
   const recs = detail?.recommendations ?? [];
+  const localizedRecs = detail ? localizeRecommendations(detail.kind, recs, t) : recs;
 
-  const insightTypeLabel = detail?.type === 'anomaly' ? t('analytics.anomaly') : t('analytics.insight');
+  const insightTypeLabel =
+    detail?.type === 'anomaly' ? t('analytics.anomaly') : t('analytics.insight');
 
   const backLink = queryString ? `/analytics${queryPrefix}` : '/analytics';
+  const projectLink =
+    detail?.context.projectId != null
+      ? `/projects/${detail.context.projectId}`
+      : detail?.context.projectPath
+        ? `/projects/${encodeURIComponent(detail.context.projectPath)}`
+        : null;
 
   return (
     <div className="space-y-5 p-4 lg:p-6">
       {error && (
         <ErrorState
           title={t('insightDetail.notFound.title')}
-          message={error.code === 'INSIGHT_NOT_FOUND' ? t('insightDetail.notFound.description') : error.message}
+          message={
+            error.code === 'INSIGHT_NOT_FOUND'
+              ? t('insightDetail.notFound.description')
+              : error.message
+          }
           code={error.code}
           details={error.details}
           onRetry={() => window.location.reload()}
@@ -154,9 +164,7 @@ export function InsightDetailPage() {
               </div>
               <CardTitle>{detail.title}</CardTitle>
               <p className="mt-2 text-sm text-subtle-foreground">{detail.description}</p>
-              <div className="mt-4 font-mono text-xl font-semibold text-foreground">
-                {detail.value}
-              </div>
+              <div className="mt-4 text-xl font-semibold text-foreground">{detail.value}</div>
             </CardHeader>
           </Card>
 
@@ -212,7 +220,7 @@ export function InsightDetailPage() {
             )}
 
             {((detail.kind === 'growth' && detail.context.trend) ||
-              (detail.kind === 'spend' && (detail.context.spikeSpend != null))) && (
+              (detail.kind === 'spend' && detail.context.spikeSpend != null)) && (
               <div className="grid grid-cols-1 gap-3 md:grid-cols-3">
                 <SummaryCard
                   icon={TrendingUp}
@@ -274,7 +282,7 @@ export function InsightDetailPage() {
                   />
                   <div className="rounded-lg border border-border bg-surface-elevated p-4">
                     <Link
-                      to={`/projects/${encodeURIComponent(detail.context.projectPath)}`}
+                      to={projectLink ?? '/projects'}
                       className="inline-flex items-center gap-1.5 text-sm text-accent hover:underline"
                     >
                       {t('insightDetail.viewProject')}
@@ -343,7 +351,8 @@ export function InsightDetailPage() {
                 </div>
                 {detail.context.overallAvgCost != null && (
                   <div className="mt-4 rounded-lg border border-dashed border-border p-4 font-mono text-xs text-subtle-foreground">
-                    {t('insightDetail.average')} {t('common.cost').toLowerCase()}/{t('common.session').toLowerCase()}:{' '}
+                    {t('insightDetail.average')} {t('common.cost').toLowerCase()}/
+                    {t('common.session').toLowerCase()}:{' '}
                     <span className="font-medium text-foreground">
                       {formatCurrency(detail.context.overallAvgCost)}
                     </span>
@@ -366,7 +375,7 @@ export function InsightDetailPage() {
                     value={formatCurrency(detail.context.outlierCost)}
                     sub={
                       detail.context.overallAvgCost != null
-                        ? `${((((detail.context.outlierCost ?? 0) / Math.max(detail.context.overallAvgCost, 0.01)) - 1) * 100).toFixed(0)}% ${t('insightDetail.vsBaseline')}`
+                        ? `${(((detail.context.outlierCost ?? 0) / Math.max(detail.context.overallAvgCost, 0.01) - 1) * 100).toFixed(0)}% ${t('insightDetail.vsBaseline')}`
                         : ''
                     }
                     tone="warning"
@@ -404,12 +413,20 @@ export function InsightDetailPage() {
                   <SummaryCard
                     icon={CircleAlert}
                     label={t('insightDetail.cacheMissRate')}
-                    value={detail.context.cacheMissRate != null ? `${(detail.context.cacheMissRate * 100).toFixed(0)}%` : '—'}
+                    value={
+                      detail.context.cacheMissRate != null
+                        ? `${(detail.context.cacheMissRate * 100).toFixed(0)}%`
+                        : '—'
+                    }
                     tone="danger"
                   />
                   <SummaryCard
                     icon={Gauge}
-                    label={t('insightDetail.average') + ' ' + t('insightDetail.cacheMissRate').toLowerCase()}
+                    label={
+                      t('insightDetail.average') +
+                      ' ' +
+                      t('insightDetail.cacheMissRate').toLowerCase()
+                    }
                     value={
                       detail.context.overallAvgCacheMiss != null
                         ? `${(detail.context.overallAvgCacheMiss * 100).toFixed(0)}%`
@@ -452,7 +469,7 @@ export function InsightDetailPage() {
                         </div>
                         <div className="flex items-center gap-4">
                           <span className="text-subtle-foreground">
-                            {s.missRate.toFixed(0)}% miss
+                            {s.missRate.toFixed(0)}% {t('insightDetail.miss')}
                           </span>
                           <span className="font-mono text-foreground">
                             {formatTokens(s.tokens)}
@@ -490,7 +507,7 @@ export function InsightDetailPage() {
                   />
                   <SummaryCard
                     icon={Sparkles}
-                    label="Multiplier"
+                    label={t('insightDetail.multiplier')}
                     value={
                       detail.context.baselineDailySpend && detail.context.baselineDailySpend > 0
                         ? `${((detail.context.spikeSpend ?? 0) / detail.context.baselineDailySpend).toFixed(1)}x`
@@ -648,7 +665,7 @@ export function InsightDetailPage() {
                 description={t('analytics.actionableFindings')}
               />
               <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
-                {recs.map((rec, i) => (
+                {localizedRecs.map((rec, i) => (
                   <Card key={i}>
                     <CardHeader>
                       <div className="mb-2">
@@ -693,9 +710,7 @@ export function InsightDetailPage() {
             </>
           )}
 
-          <SectionHeader
-            title={t('insightDetail.explore')}
-          />
+          <SectionHeader title={t('insightDetail.explore')} />
           <div className="flex flex-wrap gap-3">
             <Link to={backLink}>
               <Button variant="outline" size="sm">
@@ -709,8 +724,8 @@ export function InsightDetailPage() {
                 </Button>
               </Link>
             )}
-            {detail.context.projectPath && (
-              <Link to={`/projects/${encodeURIComponent(detail.context.projectPath)}`}>
+            {projectLink && (
+              <Link to={projectLink}>
                 <Button variant="outline" size="sm">
                   {t('insightDetail.viewProject')}
                 </Button>
@@ -721,6 +736,100 @@ export function InsightDetailPage() {
       )}
     </div>
   );
+}
+
+function localizeRecommendations(
+  kind: string,
+  recs: InsightDetailData['recommendations'],
+  t: (key: string) => string,
+) {
+  const keyMap: Record<string, [string, string, string][]> = {
+    growth: [
+      ['insightDetail.rec.growth.budget', 'insightDetail.rec.growth.budgetDesc', 'budget'],
+      ['insightDetail.rec.growth.review', 'insightDetail.rec.growth.reviewDesc', 'review'],
+      [
+        'insightDetail.rec.growth.cheaperModel',
+        'insightDetail.rec.growth.cheaperModelDesc',
+        'compare',
+      ],
+    ],
+    project: [
+      ['insightDetail.rec.project.budget', 'insightDetail.rec.project.budgetDesc', 'budget'],
+      ['insightDetail.rec.project.detail', 'insightDetail.rec.project.detailDesc', 'detail'],
+      ['insightDetail.rec.project.review', 'insightDetail.rec.project.reviewDesc', 'review'],
+    ],
+    model: [
+      ['insightDetail.rec.model.cheaper', 'insightDetail.rec.model.cheaperDesc', 'compare'],
+      ['insightDetail.rec.model.cap', 'insightDetail.rec.model.capDesc', 'budget'],
+      ['insightDetail.rec.model.audit', 'insightDetail.rec.model.auditDesc', 'review'],
+    ],
+    session: [
+      ['insightDetail.rec.session.review', 'insightDetail.rec.session.reviewDesc', 'review'],
+      ['insightDetail.rec.session.alert', 'insightDetail.rec.session.alertDesc', 'budget'],
+      ['insightDetail.rec.session.cheaper', 'insightDetail.rec.session.cheaperDesc', 'compare'],
+    ],
+    cache: [
+      ['insightDetail.rec.cache.prompts', 'insightDetail.rec.cache.promptsDesc', 'review'],
+      ['insightDetail.rec.cache.context', 'insightDetail.rec.cache.contextDesc', 'review'],
+      ['insightDetail.rec.cache.review', 'insightDetail.rec.cache.reviewDesc', 'review'],
+    ],
+    spend: [
+      ['insightDetail.rec.spend.planned', 'insightDetail.rec.spend.plannedDesc', 'review'],
+      ['insightDetail.rec.spend.dailyBudget', 'insightDetail.rec.spend.dailyBudgetDesc', 'budget'],
+      ['insightDetail.rec.spend.reviewDay', 'insightDetail.rec.spend.reviewDayDesc', 'review'],
+    ],
+    token: [
+      ['insightDetail.rec.token.context', 'insightDetail.rec.token.contextDesc', 'review'],
+      ['insightDetail.rec.token.caching', 'insightDetail.rec.token.cachingDesc', 'learn'],
+      ['insightDetail.rec.token.alert', 'insightDetail.rec.token.alertDesc', 'budget'],
+    ],
+    costOutlier: [
+      [
+        'insightDetail.rec.costOutlier.review',
+        'insightDetail.rec.costOutlier.reviewDesc',
+        'review',
+      ],
+      ['insightDetail.rec.costOutlier.alert', 'insightDetail.rec.costOutlier.alertDesc', 'budget'],
+      ['insightDetail.rec.costOutlier.model', 'insightDetail.rec.costOutlier.modelDesc', 'compare'],
+    ],
+    cacheBasin: [
+      [
+        'insightDetail.rec.cacheBasin.systemPrompt',
+        'insightDetail.rec.cacheBasin.systemPromptDesc',
+        'review',
+      ],
+      [
+        'insightDetail.rec.cacheBasin.consistency',
+        'insightDetail.rec.cacheBasin.consistencyDesc',
+        'review',
+      ],
+      [
+        'insightDetail.rec.cacheBasin.reviewPattern',
+        'insightDetail.rec.cacheBasin.reviewPatternDesc',
+        'review',
+      ],
+    ],
+  };
+
+  const actionMap: Record<string, string> = {
+    budget: t('insightDetail.action.openBudgets'),
+    review: t('insightDetail.action.review'),
+    compare: t('insightDetail.action.compareModels'),
+    detail: t('insightDetail.action.openProject'),
+    learn: t('insightDetail.action.learnMore'),
+  };
+
+  return recs.map((rec, index) => {
+    const mapping = keyMap[kind]?.[index];
+    if (!mapping) return rec;
+    const [titleKey, descriptionKey, actionKey] = mapping;
+    return {
+      ...rec,
+      title: t(titleKey),
+      description: t(descriptionKey),
+      action: rec.action ? (actionMap[actionKey] ?? rec.action) : rec.action,
+    };
+  });
 }
 
 function SummaryCard({

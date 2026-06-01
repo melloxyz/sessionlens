@@ -4,6 +4,7 @@ import { ArrowUpDown, Search } from 'lucide-react';
 import { BrandBadge, BrandMark } from '../components/brand/BrandMark.js';
 import { Badge } from '../components/ui/Badge.js';
 import { Button } from '../components/ui/Button.js';
+import { ControlField } from '../components/ui/ControlField.js';
 import { DataPanel } from '../components/ui/DataPanel.js';
 import {
   DataTable,
@@ -98,34 +99,39 @@ export function SessionsPage() {
       <FilterBar
         className="gap-3"
         actions={
-          <Select
-            value={cli}
-            onChange={(event) => updateParam('cli', event.target.value)}
-            options={[
-              { label: t('sessions.allClis'), value: '' },
-              { label: 'Codex', value: 'codex' },
-              { label: 'OpenCode', value: 'opencode' },
-              { label: 'Claude', value: 'claude' },
-              { label: 'Gemini', value: 'gemini' },
-              { label: 'Kimi', value: 'kimi' },
-              { label: 'Aider', value: 'aider' },
-              { label: 'Qwen', value: 'qwen' },
-              { label: 'Antigravity', value: 'antigravity' },
-              { label: 'CommandCode', value: 'commandcode' },
-            ]}
-          />
+          <ControlField label={t('common.cli')} className="min-w-[220px]">
+            <Select
+              className="h-10"
+              value={cli}
+              onChange={(event) => updateParam('cli', event.target.value)}
+              options={[
+                { label: t('sessions.allClis'), value: '' },
+                { label: 'Codex', value: 'codex' },
+                { label: 'OpenCode', value: 'opencode' },
+                { label: 'Claude', value: 'claude' },
+                { label: 'Gemini', value: 'gemini' },
+                { label: 'Kimi', value: 'kimi' },
+                { label: 'Aider', value: 'aider' },
+                { label: 'Qwen', value: 'qwen' },
+                { label: 'Antigravity', value: 'antigravity' },
+                { label: 'CommandCode', value: 'commandcode' },
+              ]}
+            />
+          </ControlField>
         }
       >
-        <div className="relative min-w-0 flex-1 max-w-md">
-          <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-subtle-foreground" />
-          <Input
-            value={searchInput}
-            onChange={(event) => setSearchInput(event.target.value)}
-            onKeyDown={(event) => event.key === 'Enter' && updateParam('search', searchInput)}
-            placeholder={t('sessions.search.placeholder')}
-            className="pl-9"
-          />
-        </div>
+        <ControlField label={t('common.search')} className="max-w-md flex-1">
+          <div className="relative min-w-0 flex-1">
+            <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-subtle-foreground" />
+            <Input
+              value={searchInput}
+              onChange={(event) => setSearchInput(event.target.value)}
+              onKeyDown={(event) => event.key === 'Enter' && updateParam('search', searchInput)}
+              placeholder={t('sessions.search.placeholder')}
+              className="h-10 pl-9"
+            />
+          </div>
+        </ControlField>
         <Button variant="secondary" onClick={() => updateParam('search', searchInput)}>
           {t('common.search')}
         </Button>
@@ -170,7 +176,7 @@ export function SessionsPage() {
                           className="group-hover:border-accent/30"
                         />
                         <div>
-                          <div className="font-mono text-sm font-medium text-foreground group-hover:text-accent">
+                          <div className="text-sm font-medium text-foreground group-hover:text-accent">
                             {session.session_id.slice(0, 10)}
                           </div>
                           <div className="text-xs text-subtle-foreground">
@@ -186,7 +192,7 @@ export function SessionsPage() {
                       {session.model ?? t('common.unknown')}
                     </DataTableCell>
                     <DataTableCell>
-                      <div className="font-mono text-sm font-medium text-foreground">
+                      <div className="text-sm font-medium text-foreground">
                         {basename(session.project_path)}
                       </div>
                       <div className="text-xs text-subtle-foreground">
@@ -202,7 +208,7 @@ export function SessionsPage() {
                     <DataTableCell className="text-right font-mono font-medium tabular-nums text-foreground">
                       <div>{formatCurrency(session.total_cost_usd)}</div>
                       {session.cost_source === 'estimated' && (
-                        <div className="mt-1 text-[10px] uppercase tracking-[0.12em] text-warning">
+                        <div className="mt-1 text-[10px] uppercase text-warning">
                           {t('common.estimated')}
                         </div>
                       )}

@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
 import {
   AlertTriangle,
@@ -9,9 +9,12 @@ import {
   WalletCards,
   X,
 } from 'lucide-react';
-import { useApi } from '../hooks/useApi.js';
+import { getBrandMeta } from '../components/brand/BrandMark.js';
+import { useI18n } from '../components/i18n/LanguageProvider.js';
 import { Badge } from '../components/ui/Badge.js';
 import { Button } from '../components/ui/Button.js';
+import { CompactStat } from '../components/ui/CompactStat.js';
+import { ControlField } from '../components/ui/ControlField.js';
 import { DataPanel } from '../components/ui/DataPanel.js';
 import {
   DataTable,
@@ -24,8 +27,11 @@ import {
 } from '../components/ui/DataTable.js';
 import { EmptyState } from '../components/ui/EmptyState.js';
 import { ErrorState } from '../components/ui/ErrorState.js';
+import { Input } from '../components/ui/Input.js';
 import { SectionHeader } from '../components/ui/SectionHeader.js';
-import { formatCurrency, formatDateTime } from '../lib/format.js';
+import { Select } from '../components/ui/Select.js';
+import { useApi } from '../hooks/useApi.js';
+import { compactPath, formatCurrency, formatDateTime } from '../lib/format.js';
 
 interface BudgetLimit {
   id: number;
@@ -58,40 +64,108 @@ interface AlertRow {
   created_at: string;
 }
 
+interface FilterOption {
+  label: string;
+  value: string;
+  count: number;
+}
+
+interface FilterOptionsResponse {
+  clis: FilterOption[];
+  providers: FilterOption[];
+  models: FilterOption[];
+  projects: FilterOption[];
+}
+
+type BudgetScope = BudgetLimit['scope_type'];
+
 export function BudgetsPage() {
+  const { t } = useI18n();
   const {
     data: budgets,
-    loading: budgetsLoading,
+    loading: _budgetsLoading,
     error: budgetsError,
     refetch: refetchBudgets,
   } = useApi<BudgetLimit[]>('/api/budgets', { initialData: [] });
 
   const {
     data: status,
-    loading: statusLoading,
+    loading: _statusLoading,
     refetch: refetchStatus,
   } = useApi<BudgetStatus[]>('/api/budgets/status', { initialData: [] });
 
   const {
     data: alertsData,
-    loading: alertsLoading,
+    loading: _alertsLoading,
     refetch: refetchAlerts,
   } = useApi<{ alerts: AlertRow[]; total: number }>('/api/alerts', {
     initialData: { alerts: [], total: 0 },
   });
 
+  const { data: filterOptions } = useApi<FilterOptionsResponse>('/api/analytics/filter-options', {
+    initialData: { clis: [], providers: [], models: [], projects: [] },
+  });
+
   const [showForm, setShowForm] = useState(false);
-  const [formScope, setFormScope] = useState('global');
+  const [formScope, setFormScope] = useState<BudgetScope>('global');
   const [formScopeValue, setFormScopeValue] = useState('');
   const [formLimit, setFormLimit] = useState('');
-  const [formPeriod, setFormPeriod] = useState('monthly');
+  const [formPeriod, setFormPeriod] = useState<BudgetLimit['period']>('monthly');
   const [saving, setSaving] = useState(false);
   const [formError, setFormError] = useState<string | null>(null);
 
+  const unacknowledgedAlerts = (alertsData?.alerts ?? []).filter((a) => !a.acknowledged);
+
+  const summary = useMemo(
+    () => ({
+      activeBudgets: (budgets ?? []).filter((budget) => budget.enabled).length,
+      exceeded: (status ?? []).filter((item) => item.status === 'exceeded').length,
+      approaching: (status ?? []).filter((item) => item.status === 'approaching').length,
+      monitoredSpend: (status ?? []).reduce(
+        (sum, item) => sum + Number(item.current_spend || 0),
+        0,
+      ),
+    }),
+    [budgets, status],
+  );
+
+  const scopedOptions = useMemo(() => {
+    if (formScope === 'project') {
+      return (filterOptions?.projects ?? []).map((item) => ({
+        label: `${compactPath(item.label)} (${item.count})`,
+        value: item.value,
+      }));
+    }
+    if (formScope === 'cli') {
+      return (filterOptions?.clis ?? []).map((item) => ({
+        label: `${getBrandMeta(item.value, 'cli').label} (${item.count})`,
+        value: item.value,
+      }));
+    }
+    if (formScope === 'provider') {
+      return (filterOptions?.providers ?? []).map((item) => ({
+        label: `${item.label} (${item.count})`,
+        value: item.value,
+      }));
+    }
+    if (formScope === 'model') {
+      return (filterOptions?.models ?? []).map((item) => ({
+        label: `${item.label} (${item.count})`,
+        value: item.value,
+      }));
+    }
+    return [];
+  }, [filterOptions, formScope]);
+
   async function handleCreate() {
     const limitUsd = parseFloat(formLimit);
-    if (isNaN(limitUsd) || limitUsd <= 0) {
-      setFormError('Enter a valid amount greater than 0');
+    if (Number.isNaN(limitUsd) || limitUsd <= 0) {
+      setFormError(t('budget.form.invalid'));
+      return;
+    }
+
+    if (formScope !== 'global' && !formScopeValue.trim()) {
+      setFormError(t('budget.form.scopeRequired'));
       return;
     }
 
@@ -103,17 +177,13 @@ export function BudgetsPage() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           scope_type: formScope,
-          scope_value: formScopeValue || null,
+          scope_value: formScope === 'global' ? null : formScopeValue || null,
           limit_usd: limitUsd,
           period: formPeriod,
         }),
       });
       if (!res.ok) throw new Error(await res.text());
-      setShowForm(false);
-      setFormScope('global');
-      setFormScopeValue('');
-      setFormLimit('');
-      setFormPeriod('monthly');
+      resetForm();
       await Promise.all([refetchBudgets(), refetchStatus()]);
     } catch (err) {
       setFormError(err instanceof Error ? err.message : String(err));
@@ -127,430 +197,431 @@ export function BudgetsPage() {
     await Promise.all([refetchBudgets(), refetchStatus()]);
   }
 
-  const unacknowledgedAlerts = (alertsData?.alerts ?? []).filter((a) => !a.acknowledged);
+  function resetForm() {
+    setShowForm(false);
+    setFormScope('global');
+    setFormScopeValue('');
+    setFormLimit('');
+    setFormPeriod('monthly');
+    setFormError(null);
+  }
 
-  const scopeLabels: Record<string, string> = {
-    global: 'Global',
-    project: 'Project',
-    cli: 'CLI',
-    model: 'Model',
-    provider: 'Provider',
-  };
-
-  const periodLabels: Record<string, string> = {
-    daily: 'Daily',
-    weekly: 'Weekly',
-    monthly: 'Monthly',
-    all_time: 'All time',
-  };
+  if (budgetsError) {
+    return (
+      <div className="p-4 lg:p-6">
+        <ErrorState
+          title={t('budget.failed')}
+          message={budgetsError.message}
+          code={budgetsError.code}
+          details={budgetsError.details}
+          onRetry={refetchBudgets}
+        />
+      </div>
+    );
+  }
 
   return (
-    <div className="grid gap-4 p-4 lg:p-6 xl:grid-cols-[minmax(0,1fr)_360px]">
-      <section className="space-y-5">
+    <div className="mx-auto w-full max-w-[1800px] space-y-5 p-4 lg:p-6">
+      <DataPanel contentClassName="grid gap-4 p-4 xl:grid-cols-[minmax(0,1fr)_360px] xl:items-start">
         <SectionHeader
-          title="Budget Limits"
-          description="Set spending limits per project, CLI, model or globally."
+          title={t('budget.title')}
+          description={t('budget.description')}
           action={
             <Button onClick={() => setShowForm(true)} disabled={showForm}>
               <Plus className="h-4 w-4" />
-              Add Budget
+              {t('budget.add')}
             </Button>
           }
         />
 
-        {budgetsError ? (
-          <ErrorState
-            title="Failed to load budgets"
-            message={budgetsError.message}
-            code={budgetsError.code}
-            details={budgetsError.details}
-            onRetry={refetchBudgets}
+        <div className="grid gap-3 sm:grid-cols-2">
+          <CompactStat label={t('budget.summary.active')} value={String(summary.activeBudgets)} />
+          <CompactStat
+            label={t('budget.summary.approaching')}
+            value={String(summary.approaching)}
+            tone="warning"
           />
-        ) : budgetsLoading && !budgets ? (
-          <DataPanel contentClassName="p-3">
-            <DataTableContainer>
-              <DataTable>
-                <DataTableHead>
-                  <DataTableHeaderCell>Scope</DataTableHeaderCell>
-                  <DataTableHeaderCell>Value</DataTableHeaderCell>
-                  <DataTableHeaderCell>Limit</DataTableHeaderCell>
-                  <DataTableHeaderCell>Period</DataTableHeaderCell>
-                  <DataTableHeaderCell />
-                </DataTableHead>
-              </DataTable>
-            </DataTableContainer>
-          </DataPanel>
-        ) : (budgets ?? []).length === 0 ? (
-          <DataPanel contentClassName="p-3">
-            <EmptyState
-              title="No budget limits"
-              description="Create your first budget limit to track spending."
-              icon={WalletCards}
-            />
-          </DataPanel>
-        ) : (
-          <DataPanel contentClassName="p-0">
-            <DataTableContainer>
-              <DataTable>
-                <DataTableHead>
-                  <DataTableHeaderCell>Scope</DataTableHeaderCell>
-                  <DataTableHeaderCell>Value</DataTableHeaderCell>
-                  <DataTableHeaderCell>Limit</DataTableHeaderCell>
-                  <DataTableHeaderCell>Period</DataTableHeaderCell>
-                  <DataTableHeaderCell />
-                </DataTableHead>
-                <DataTableBody>
-                  {(budgets ?? []).map((b) => (
-                    <DataTableRow key={b.id}>
-                      <DataTableCell>
-                        <Badge variant="neutral">{scopeLabels[b.scope_type] ?? b.scope_type}</Badge>
-                      </DataTableCell>
-                      <DataTableCell>
-                        <span className="font-mono text-sm text-foreground">
-                          {b.scope_value ? (
-                            b.scope_type === 'project' ? (
-                              <Link to="/projects" className="text-accent hover:underline">
-                                {b.scope_value.split(/[/\\]/).pop() ?? b.scope_value}
-                              </Link>
-                            ) : (
-                              b.scope_value
-                            )
-                          ) : (
-                            <span className="text-subtle-foreground">—</span>
-                          )}
-                        </span>
-                      </DataTableCell>
-                      <DataTableCell>
-                        <span className="font-mono text-sm font-semibold text-foreground">
-                          {formatCurrency(b.limit_usd)}
-                        </span>
-                      </DataTableCell>
-                      <DataTableCell>
-                        <span className="text-sm text-muted-foreground">
-                          {periodLabels[b.period] ?? b.period}
-                        </span>
-                      </DataTableCell>
-                      <DataTableCell>
-                        <button
-                          onClick={() => handleDelete(b.id)}
-                          className="rounded p-1 text-subtle-foreground transition-colors hover:text-danger"
-                          aria-label="Delete budget"
-                        >
-                          <Trash2 className="h-4 w-4" />
-                        </button>
-                      </DataTableCell>
-                    </DataTableRow>
-                  ))}
-                </DataTableBody>
-              </DataTable>
-            </DataTableContainer>
-          </DataPanel>
-        )}
-
-        {showForm && (
-          <DataPanel title="New Budget Limit" contentClassName="space-y-4">
-            {formError && (
-              <div className="rounded-lg border border-danger/30 bg-danger/5 p-3 font-mono text-sm text-danger">
-                {formError}
-              </div>
-            )}
-
-            <div className="grid gap-3 sm:grid-cols-2">
-              <div className="space-y-1.5">
-                <label className="text-xs font-semibold text-foreground">Scope Type</label>
-                <select
-                  value={formScope}
-                  onChange={(e) => setFormScope(e.target.value)}
-                  className="w-full rounded-md border border-border bg-surface px-3 py-2 text-sm text-foreground focus:border-accent focus:outline-none"
-                >
-                  <option value="global">Global</option>
-                  <option value="project">Project</option>
-                  <option value="cli">CLI</option>
-                  <option value="model">Model</option>
-                  <option value="provider">Provider</option>
-                </select>
-              </div>
-
-              <div className="space-y-1.5">
-                <label className="text-xs font-semibold text-foreground">Period</label>
-                <select
-                  value={formPeriod}
-                  onChange={(e) => setFormPeriod(e.target.value)}
-                  className="w-full rounded-md border border-border bg-surface px-3 py-2 text-sm text-foreground focus:border-accent focus:outline-none"
-                >
-                  <option value="daily">Daily</option>
-                  <option value="weekly">Weekly</option>
-                  <option value="monthly">Monthly</option>
-                  <option value="all_time">All time</option>
-                </select>
-              </div>
-            </div>
-
-            {formScope !== 'global' && (
-              <div className="space-y-1.5">
-                <label className="text-xs font-semibold text-foreground">
-                  {formScope === 'project'
-                    ? 'Project path'
-                    : formScope === 'cli'
-                      ? 'CLI name (e.g. codex, claude)'
-                      : formScope === 'model'
-                        ? 'Model name (e.g. claude-opus-4)'
-                        : 'Provider name (e.g. anthropic)'}
-                </label>
-                <input
-                  type="text"
-                  value={formScopeValue}
-                  onChange={(e) => setFormScopeValue(e.target.value)}
-                  placeholder={
-                    formScope === 'project'
-                      ? '/path/to/project'
-                      : formScope === 'cli'
-                        ? 'codex'
-                        : 'claude-opus-4'
-                  }
-                  className="w-full rounded-md border border-border bg-surface px-3 py-2 text-sm text-foreground placeholder:text-subtle-foreground focus:border-accent focus:outline-none"
-                />
-              </div>
-            )}
-
-            <div className="space-y-1.5">
-              <label className="text-xs font-semibold text-foreground">Limit (USD)</label>
-              <input
-                type="number"
-                step="0.01"
-                min="0"
-                value={formLimit}
-                onChange={(e) => setFormLimit(e.target.value)}
-                placeholder="50.00"
-                className="w-full rounded-md border border-border bg-surface px-3 py-2 text-sm text-foreground placeholder:text-subtle-foreground focus:border-accent focus:outline-none"
-              />
-            </div>
-
-            <div className="flex gap-2">
-              <Button onClick={handleCreate} disabled={saving}>
-                {saving ? 'Saving' : 'Create Budget'}
-              </Button>
-              <Button
-                variant="outline"
-                onClick={() => {
-                  setShowForm(false);
-                  setFormError(null);
-                }}
-              >
-                <X className="h-4 w-4" />
-                Cancel
-              </Button>
-            </div>
-          </DataPanel>
-        )}
-
-        <div className="flex items-end justify-between gap-2 px-1">
-          <SectionHeader
-            title="Status"
-            description="Current spending against your budget limits."
+          <CompactStat
+            label={t('budget.summary.alerts')}
+            value={String(unacknowledgedAlerts.length)}
+            tone="warning"
+          />
+          <CompactStat
+            label={t('budget.summary.monitoredSpend')}
+            value={formatCurrency(summary.monitoredSpend)}
+            tone="success"
           />
         </div>
+      </DataPanel>
 
-        {statusLoading && (!status || status.length === 0) ? (
-          <DataPanel contentClassName="p-3">
-            <EmptyState
-              title="Loading"
-              description="Checking budget status..."
-              icon={WalletCards}
-            />
-          </DataPanel>
-        ) : (status ?? []).length === 0 ? (
-          <DataPanel contentClassName="p-3">
-            <EmptyState
-              title="No budget status"
-              description="Create a budget limit to see spending status."
-              icon={WalletCards}
-            />
-          </DataPanel>
-        ) : (
-          <DataPanel contentClassName="p-0">
-            <DataTableContainer>
-              <DataTable>
-                <DataTableHead>
-                  <DataTableHeaderCell>Scope</DataTableHeaderCell>
-                  <DataTableHeaderCell>Spent / Limit</DataTableHeaderCell>
-                  <DataTableHeaderCell>Period</DataTableHeaderCell>
-                  <DataTableHeaderCell>Status</DataTableHeaderCell>
-                </DataTableHead>
-                <DataTableBody>
-                  {(status ?? []).map((s) => (
-                    <DataTableRow key={`${s.id}-${s.scope_type}-${s.scope_value}`}>
-                      <DataTableCell>
-                        <div className="flex flex-col">
-                          <span className="text-sm text-foreground">
-                            {scopeLabels[s.scope_type] ?? s.scope_type}
-                          </span>
-                          {s.scope_value && (
-                            <span className="font-mono text-xs text-subtle-foreground">
-                              {s.scope_value}
-                            </span>
-                          )}
-                        </div>
-                      </DataTableCell>
-                      <DataTableCell>
-                        <div className="flex flex-col">
-                          <span className="font-mono text-sm font-semibold text-foreground">
-                            {formatCurrency(s.current_spend)} / {formatCurrency(s.limit_usd)}
-                          </span>
-                          <div className="mt-1 h-1.5 w-full overflow-hidden rounded-full bg-surface-muted">
-                            <div
-                              className={`h-full rounded-full transition-all ${
-                                s.status === 'exceeded'
-                                  ? 'bg-danger'
-                                  : s.status === 'approaching'
-                                    ? 'bg-warning'
-                                    : s.status === 'warning'
-                                      ? 'bg-amber-400'
-                                      : 'bg-accent'
-                              }`}
-                              style={{ width: `${Math.min(s.percentage, 100)}%` }}
-                            />
-                          </div>
-                        </div>
-                      </DataTableCell>
-                      <DataTableCell>
-                        <span className="text-sm text-muted-foreground">
-                          {periodLabels[s.period] ?? s.period}
-                        </span>
-                      </DataTableCell>
-                      <DataTableCell>
-                        <Badge
-                          variant={
-                            s.status === 'exceeded'
-                              ? 'danger'
-                              : s.status === 'approaching'
-                                ? 'warning'
-                                : s.status === 'warning'
-                                  ? 'warning'
-                                  : 'success'
-                          }
-                        >
-                          {s.status === 'ok'
-                            ? 'OK'
-                            : s.status === 'warning'
-                              ? `${s.percentage}%`
-                              : s.status === 'approaching'
-                                ? `${s.percentage}%`
-                                : 'Exceeded'}
-                        </Badge>
-                      </DataTableCell>
-                    </DataTableRow>
-                  ))}
-                </DataTableBody>
-              </DataTable>
-            </DataTableContainer>
-          </DataPanel>
-        )}
-      </section>
-
-      <aside className="space-y-5">
-        <DataPanel
-          title="Alert History"
-          action={
-            unacknowledgedAlerts.length > 0 ? (
-              <Badge variant="danger">{unacknowledgedAlerts.length}</Badge>
-            ) : (
-              <Badge variant="success">{alertsData?.alerts.length ?? 0}</Badge>
-            )
-          }
-          contentClassName="p-3 space-y-3"
-        >
-          {alertsLoading && !alertsData ? (
-            <div className="space-y-2">
-              {Array.from({ length: 3 }).map((_, i) => (
-                <div key={i} className="rounded-lg border border-border bg-surface-muted p-3">
-                  <div className="h-4 w-24 animate-pulse rounded bg-surface-hover" />
-                  <div className="mt-1 h-3 w-48 animate-pulse rounded bg-surface-hover" />
+      <div className="grid gap-4 xl:grid-cols-[minmax(0,1fr)_380px]">
+        <section className="space-y-5">
+          {showForm && (
+            <DataPanel title={t('budget.form.title')} contentClassName="space-y-4 p-4">
+              {formError && (
+                <div className="rounded-lg border border-danger/30 bg-danger/5 p-3 text-sm text-danger">
+                  {formError}
                 </div>
-              ))}
-            </div>
-          ) : alertsData && alertsData.total === 0 ? (
-            <div className="py-2 text-center text-sm text-muted-foreground">
-              <CheckCircle2 className="mx-auto mb-2 h-5 w-5 text-subtle-foreground" />
-              No alerts yet
-            </div>
-          ) : (
-            <div className="max-h-[400px] space-y-2 overflow-y-auto">
-              {(alertsData?.alerts ?? []).slice(0, 20).map((a) => (
-                <div
-                  key={a.id}
-                  className={`rounded-lg border p-2.5 text-sm ${
-                    a.acknowledged
-                      ? 'border-border bg-surface-muted'
-                      : a.type === 'exceeded'
-                        ? 'border-danger/30 bg-danger/5'
-                        : a.type === 'approaching'
-                          ? 'border-warning/30 bg-warning/5'
-                          : 'border-amber-400/30 bg-amber-50/5'
-                  }`}
-                >
-                  <div className="flex items-start justify-between gap-2">
-                    <div className="min-w-0">
-                      <div className="flex items-center gap-1.5">
-                        {a.type === 'exceeded' ? (
-                          <ShieldAlert className="h-3.5 w-3.5 text-danger" />
-                        ) : (
-                          <AlertTriangle className="h-3.5 w-3.5 text-warning" />
-                        )}
-                        <span className="font-mono text-xs font-semibold text-foreground">
-                          {a.title}
-                        </span>
-                        {a.acknowledged ? (
-                          <Badge variant="neutral">Seen</Badge>
-                        ) : (
-                          <Badge variant={a.type === 'exceeded' ? 'danger' : 'warning'}>New</Badge>
-                        )}
-                      </div>
-                      <div className="mt-1 text-xs text-muted-foreground">{a.message}</div>
-                      <div className="mt-1 font-mono text-[10px] text-subtle-foreground">
-                        {formatDateTime(a.created_at)}
-                      </div>
-                    </div>
-                    {!a.acknowledged && (
-                      <button
-                        onClick={async () => {
-                          await fetch(`/api/alerts/${a.id}/acknowledge`, { method: 'POST' });
-                          await refetchAlerts();
-                        }}
-                        className="shrink-0 rounded p-1 text-subtle-foreground transition-colors hover:text-accent"
-                        aria-label="Acknowledge"
-                      >
-                        <X className="h-3.5 w-3.5" />
-                      </button>
+              )}
+
+              <div className="grid gap-3 md:grid-cols-2 2xl:grid-cols-3">
+                <ControlField label={t('budget.scope')}>
+                  <Select
+                    value={formScope}
+                    onChange={(event) => {
+                      setFormScope(event.target.value as BudgetScope);
+                      setFormScopeValue('');
+                    }}
+                    options={[
+                      { label: t('budget.scope.global'), value: 'global' },
+                      { label: t('budget.scope.project'), value: 'project' },
+                      { label: t('budget.scope.cli'), value: 'cli' },
+                      { label: t('budget.scope.model'), value: 'model' },
+                      { label: t('budget.scope.provider'), value: 'provider' },
+                    ]}
+                  />
+                </ControlField>
+                <ControlField label={t('budget.period')}>
+                  <Select
+                    value={formPeriod}
+                    onChange={(event) => setFormPeriod(event.target.value as BudgetLimit['period'])}
+                    options={[
+                      { label: t('budget.period.daily'), value: 'daily' },
+                      { label: t('budget.period.weekly'), value: 'weekly' },
+                      { label: t('budget.period.monthly'), value: 'monthly' },
+                      { label: t('budget.period.all_time'), value: 'all_time' },
+                    ]}
+                  />
+                </ControlField>
+              </div>
+
+              <div className="grid gap-3 md:grid-cols-2 2xl:grid-cols-[minmax(0,1fr)_220px]">
+                {formScope !== 'global' && (
+                  <ControlField label={t(`budget.form.scopeValue.${formScope}`)}>
+                    {scopedOptions.length > 0 ? (
+                      <Select
+                        value={formScopeValue}
+                        onChange={(event) => setFormScopeValue(event.target.value)}
+                        options={[
+                          { label: t('budget.form.selectValue'), value: '' },
+                          ...scopedOptions,
+                        ]}
+                      />
+                    ) : (
+                      <Input
+                        value={formScopeValue}
+                        onChange={(event) => setFormScopeValue(event.target.value)}
+                        placeholder={t(`budget.form.placeholder.${formScope}`)}
+                      />
                     )}
-                  </div>
-                </div>
-              ))}
-            </div>
-          )}
-        </DataPanel>
+                  </ControlField>
+                )}
 
-        <DataPanel title="Quick Summary" contentClassName="p-3 space-y-3 text-sm">
-          <div className="flex justify-between">
-            <span className="text-muted-foreground">Active budgets</span>
-            <span className="font-mono font-medium text-foreground">
-              {(budgets ?? []).filter((b) => b.enabled).length}
-            </span>
+                <ControlField label={t('budget.form.limit')}>
+                  <Input
+                    type="number"
+                    step="0.01"
+                    min="0"
+                    value={formLimit}
+                    onChange={(event) => setFormLimit(event.target.value)}
+                    placeholder="50.00"
+                  />
+                </ControlField>
+              </div>
+
+              <div className="flex flex-wrap gap-2">
+                <Button onClick={handleCreate} disabled={saving}>
+                  {saving ? t('common.loading') : t('budget.form.create')}
+                </Button>
+                <Button variant="outline" onClick={resetForm}>
+                  <X className="h-4 w-4" />
+                  {t('common.cancel')}
+                </Button>
+              </div>
+            </DataPanel>
+          )}
+
+          <div className="grid gap-4 2xl:grid-cols-2">
+            <DataPanel
+              title={t('budget.table.title')}
+              description={t('budget.table.description')}
+              contentClassName="p-0"
+            >
+              {(budgets ?? []).length === 0 ? (
+                <div className="p-4">
+                  <EmptyState
+                    title={t('budget.empty.title')}
+                    description={t('budget.empty.description')}
+                    icon={WalletCards}
+                  />
+                </div>
+              ) : (
+                <DataTableContainer>
+                  <DataTable>
+                    <DataTableHead>
+                      <DataTableHeaderCell>{t('budget.scope')}</DataTableHeaderCell>
+                      <DataTableHeaderCell>{t('common.value')}</DataTableHeaderCell>
+                      <DataTableHeaderCell>{t('budget.limit')}</DataTableHeaderCell>
+                      <DataTableHeaderCell>{t('budget.period')}</DataTableHeaderCell>
+                      <DataTableHeaderCell />
+                    </DataTableHead>
+                    <DataTableBody>
+                      {(budgets ?? []).map((budget) => (
+                        <DataTableRow key={budget.id}>
+                          <DataTableCell>
+                            <Badge variant="neutral">
+                              {t(`budget.scope.${budget.scope_type}`)}
+                            </Badge>
+                          </DataTableCell>
+                          <DataTableCell className="font-mono text-sm text-foreground">
+                            {renderScopeValue(budget.scope_type, budget.scope_value)}
+                          </DataTableCell>
+                          <DataTableCell className="text-sm font-semibold text-foreground">
+                            {formatCurrency(budget.limit_usd)}
+                          </DataTableCell>
+                          <DataTableCell className="text-sm text-muted-foreground">
+                            {t(`budget.period.${budget.period}`)}
+                          </DataTableCell>
+                          <DataTableCell>
+                            <button
+                              type="button"
+                              onClick={() => handleDelete(budget.id)}
+                              className="rounded p-1 text-subtle-foreground transition-colors hover:text-danger"
+                              aria-label={t('budget.delete')}
+                            >
+                              <Trash2 className="h-4 w-4" />
+                            </button>
+                          </DataTableCell>
+                        </DataTableRow>
+                      ))}
+                    </DataTableBody>
+                  </DataTable>
+                </DataTableContainer>
+              )}
+            </DataPanel>
+
+            <DataPanel
+              title={t('budget.status.title')}
+              description={t('budget.status.description')}
+              contentClassName="p-0"
+            >
+              {(status ?? []).length === 0 ? (
+                <div className="p-4">
+                  <EmptyState
+                    title={t('budget.status.empty.title')}
+                    description={t('budget.status.empty.description')}
+                    icon={WalletCards}
+                  />
+                </div>
+              ) : (
+                <DataTableContainer>
+                  <DataTable>
+                    <DataTableHead>
+                      <DataTableHeaderCell>{t('budget.scope')}</DataTableHeaderCell>
+                      <DataTableHeaderCell>{t('budget.status.progress')}</DataTableHeaderCell>
+                      <DataTableHeaderCell>{t('budget.period')}</DataTableHeaderCell>
+                      <DataTableHeaderCell>{t('budget.status.label')}</DataTableHeaderCell>
+                    </DataTableHead>
+                    <DataTableBody>
+                      {(status ?? []).map((item) => (
+                        <DataTableRow key={`${item.id}-${item.scope_type}-${item.scope_value}`}>
+                          <DataTableCell>
+                            <div className="flex flex-col gap-1">
+                              <span className="text-sm text-foreground">
+                                {t(`budget.scope.${item.scope_type}`)}
+                              </span>
+                              {item.scope_value ? (
+                                <span className="font-mono text-xs text-subtle-foreground">
+                                  {item.scope_type === 'project'
+                                    ? compactPath(item.scope_value)
+                                    : item.scope_value}
+                                </span>
+                              ) : null}
+                            </div>
+                          </DataTableCell>
+                          <DataTableCell>
+                            <div className="flex flex-col gap-2">
+                              <span className="text-sm font-semibold text-foreground">
+                                {formatCurrency(item.current_spend)} /{' '}
+                                {formatCurrency(item.limit_usd)}
+                              </span>
+                              <div className="h-1.5 w-full overflow-hidden rounded-full bg-surface-muted">
+                                <div
+                                  className={statusBarClass(item.status)}
+                                  style={{ width: `${Math.min(item.percentage, 100)}%` }}
+                                />
+                              </div>
+                            </div>
+                          </DataTableCell>
+                          <DataTableCell className="text-sm text-muted-foreground">
+                            {t(`budget.period.${item.period}`)}
+                          </DataTableCell>
+                          <DataTableCell>
+                            <Badge variant={statusVariant(item.status)}>
+                              {item.status === 'ok'
+                                ? t('budget.status.ok')
+                                : item.status === 'exceeded'
+                                  ? t('budget.status.exceeded')
+                                  : `${item.percentage}%`}
+                            </Badge>
+                          </DataTableCell>
+                        </DataTableRow>
+                      ))}
+                    </DataTableBody>
+                  </DataTable>
+                </DataTableContainer>
+              )}
+            </DataPanel>
           </div>
-          <div className="flex justify-between">
-            <span className="text-muted-foreground">Exceeded</span>
-            <span className="font-mono font-medium text-danger">
-              {(status ?? []).filter((s) => s.status === 'exceeded').length}
-            </span>
-          </div>
-          <div className="flex justify-between">
-            <span className="text-muted-foreground">Unread alerts</span>
-            <span className="font-mono font-medium text-warning">
-              {unacknowledgedAlerts.length}
-            </span>
-          </div>
-        </DataPanel>
-      </aside>
+        </section>
+
+        <aside className="space-y-5 xl:sticky xl:top-6 xl:self-start">
+          <DataPanel
+            title={t('budget.alerts.title')}
+            description={t('budget.alerts.description')}
+            action={
+              unacknowledgedAlerts.length > 0 ? (
+                <Badge variant="danger">{unacknowledgedAlerts.length}</Badge>
+              ) : (
+                <Badge variant="success">{alertsData?.alerts.length ?? 0}</Badge>
+              )
+            }
+            contentClassName="space-y-3 p-3"
+          >
+            {alertsData && alertsData.total === 0 ? (
+              <EmptyState
+                title={t('budget.alerts.empty.title')}
+                description={t('budget.alerts.empty.description')}
+                icon={CheckCircle2}
+              />
+            ) : (
+              <div className="max-h-[520px] space-y-2 overflow-y-auto">
+                {(alertsData?.alerts ?? []).slice(0, 20).map((alert) => (
+                  <div
+                    key={alert.id}
+                    className={`rounded-lg border p-3 text-sm ${
+                      alert.acknowledged
+                        ? 'border-border bg-surface-muted'
+                        : alert.type === 'exceeded'
+                          ? 'border-danger/30 bg-danger/5'
+                          : 'border-warning/30 bg-warning/5'
+                    }`}
+                  >
+                    <div className="flex items-start justify-between gap-3">
+                      <div className="min-w-0">
+                        <div className="flex flex-wrap items-center gap-1.5">
+                          {alert.type === 'exceeded' ? (
+                            <ShieldAlert className="h-3.5 w-3.5 text-danger" />
+                          ) : (
+                            <AlertTriangle className="h-3.5 w-3.5 text-warning" />
+                          )}
+                          <span className="font-medium text-foreground">{alert.title}</span>
+                          <Badge variant={alert.acknowledged ? 'neutral' : 'warning'}>
+                            {alert.acknowledged ? t('budget.alerts.seen') : t('budget.alerts.new')}
+                          </Badge>
+                        </div>
+                        <div className="mt-1 text-xs leading-5 text-muted-foreground">
+                          {alert.message}
+                        </div>
+                        <div className="mt-2 font-mono text-[10px] text-subtle-foreground">
+                          {formatDateTime(alert.created_at)}
+                        </div>
+                      </div>
+                      {!alert.acknowledged && (
+                        <button
+                          type="button"
+                          onClick={async () => {
+                            await fetch(`/api/alerts/${alert.id}/acknowledge`, { method: 'POST' });
+                            await refetchAlerts();
+                          }}
+                          className="rounded p-1 text-subtle-foreground transition-colors hover:text-accent"
+                          aria-label={t('budget.alerts.acknowledge')}
+                        >
+                          <X className="h-3.5 w-3.5" />
+                        </button>
+                      )}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </DataPanel>
+
+          <DataPanel
+            title={t('budget.summary.title')}
+            contentClassName="grid gap-3 p-3 text-sm sm:grid-cols-2 xl:grid-cols-1"
+          >
+            <SummaryRow label={t('budget.summary.active')} value={String(summary.activeBudgets)} />
+            <SummaryRow
+              label={t('budget.summary.exceeded')}
+              value={String(summary.exceeded)}
+              tone="danger"
+            />
+            <SummaryRow
+              label={t('budget.summary.approaching')}
+              value={String(summary.approaching)}
+              tone="warning"
+            />
+            <SummaryRow
+              label={t('budget.summary.alerts')}
+              value={String(unacknowledgedAlerts.length)}
+              tone="warning"
+            />
+          </DataPanel>
+        </aside>
+      </div>
     </div>
   );
+}
+
+function SummaryRow({
+  label,
+  value,
+  tone,
+}: {
+  label: string;
+  value: string;
+  tone?: 'danger' | 'warning';
+}) {
+  return (
+    <div className="flex items-center justify-between gap-3">
+      <span className="text-muted-foreground">{label}</span>
+      <span
+        className={`font-mono font-medium ${
+          tone === 'danger'
+            ? 'text-danger'
+            : tone === 'warning'
+              ? 'text-warning'
+              : 'text-foreground'
+        }`}
+      >
+        {value}
+      </span>
+    </div>
+  );
+}
+
+function renderScopeValue(scope: BudgetScope, value: string | null) {
+  if (!value) return <span className="text-subtle-foreground">—</span>;
+  if (scope === 'project') {
+    return (
+      <Link to="/projects" className="text-accent hover:underline">
+        {compactPath(value)}
+      </Link>
+    );
+  }
+  return value;
+}
+
+function statusVariant(status: BudgetStatus['status']) {
+  if (status === 'exceeded') return 'danger';
+  if (status === 'approaching' || status === 'warning') return 'warning';
+  return 'success';
+}
+
+function statusBarClass(status: BudgetStatus['status']) {
+  if (status === 'exceeded') return 'h-full rounded-full bg-danger transition-all';
+  if (status === 'approaching') return 'h-full rounded-full bg-warning transition-all';
+  if (status === 'warning') return 'h-full rounded-full bg-amber-400 transition-all';
+  return 'h-full rounded-full bg-accent transition-all';
 }

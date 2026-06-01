@@ -4,6 +4,7 @@ import { BrandBadge, BrandMark } from '../components/brand/BrandMark.js';
 import { Badge } from '../components/ui/Badge.js';
 import { Button } from '../components/ui/Button.js';
 import { Card, CardContent } from '../components/ui/Card.js';
+import { ControlField } from '../components/ui/ControlField.js';
 import { DataPanel } from '../components/ui/DataPanel.js';
 import {
   DataTable,
@@ -110,33 +111,41 @@ export function ModelsPage() {
           </>
         }
       >
-        <div className="relative min-w-0 flex-1 sm:min-w-[260px]">
-          <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-subtle-foreground" />
-          <Input
-            value={search}
-            onChange={(event) => setSearch(event.target.value)}
-            placeholder={t('models.search.placeholder')}
-            className="pl-9"
+        <ControlField label={t('common.search')} className="min-w-[280px] flex-1">
+          <div className="relative min-w-0 flex-1">
+            <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-subtle-foreground" />
+            <Input
+              value={search}
+              onChange={(event) => setSearch(event.target.value)}
+              placeholder={t('models.search.placeholder')}
+              className="h-10 pl-9"
+            />
+          </div>
+        </ControlField>
+        <ControlField label={t('common.provider')} className="min-w-[220px]">
+          <Select
+            className="h-10"
+            value={provider}
+            onChange={(event) => setProvider(event.target.value)}
+            options={[
+              { label: t('models.allProviders'), value: '' },
+              ...(providers?.providers ?? []).map((item) => ({ label: item, value: item })),
+            ]}
           />
-        </div>
-        <Select
-          value={provider}
-          onChange={(event) => setProvider(event.target.value)}
-          options={[
-            { label: t('models.allProviders'), value: '' },
-            ...(providers?.providers ?? []).map((item) => ({ label: item, value: item })),
-          ]}
-        />
-        <Select
-          value={sort}
-          onChange={(event) => setSort(event.target.value)}
-          options={[
-            { label: t('models.sortRecommended'), value: 'recommended' },
-            { label: t('models.sortName'), value: 'name' },
-            { label: t('models.sortInput'), value: 'price-input' },
-            { label: t('models.sortOutput'), value: 'price-output' },
-          ]}
-        />
+        </ControlField>
+        <ControlField label={t('common.sort')} className="min-w-[220px]">
+          <Select
+            className="h-10"
+            value={sort}
+            onChange={(event) => setSort(event.target.value)}
+            options={[
+              { label: t('models.sortRecommended'), value: 'recommended' },
+              { label: t('models.sortName'), value: 'name' },
+              { label: t('models.sortInput'), value: 'price-input' },
+              { label: t('models.sortOutput'), value: 'price-output' },
+            ]}
+          />
+        </ControlField>
       </FilterBar>
 
       {usedModels.length > 0 && (
@@ -289,9 +298,7 @@ function UsedModelCard({
 function Metric({ label, value }: { label: string; value: string }) {
   return (
     <div>
-      <div className="font-mono text-[9px] uppercase tracking-[0.1em] text-subtle-foreground">
-        {label}
-      </div>
+      <div className="text-[9px] uppercase text-subtle-foreground">{label}</div>
       <div className="mt-1 truncate font-mono font-semibold text-foreground">{value}</div>
     </div>
   );

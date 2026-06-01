@@ -48,15 +48,15 @@ export function MetricTile({
       <CardContent
         className={cn(
           'relative flex flex-col justify-between',
-          isCompact ? 'min-h-[112px] p-3' : 'min-h-[132px] p-4',
+          isCompact ? 'min-h-[116px] p-4' : 'min-h-[140px] p-5',
         )}
       >
         <div className="flex items-start justify-between gap-3">
           <div className={cn('min-w-0', isCompact ? 'space-y-2' : 'space-y-3')}>
             <p
               className={cn(
-                'truncate font-mono font-medium uppercase text-subtle-foreground',
-                isCompact ? 'text-[9px] tracking-[0.18em]' : 'text-[10px] tracking-[0.16em]',
+                'truncate text-xs font-medium uppercase text-subtle-foreground',
+                isCompact ? 'text-[11px]' : 'text-xs',
               )}
             >
               {label}
@@ -67,8 +67,8 @@ export function MetricTile({
               <div
                 className={cn(
                   valueWrap ? 'whitespace-normal break-words' : 'truncate',
-                  'font-mono font-semibold leading-none tracking-[-0.06em] text-foreground',
-                  isCompact ? 'text-[1.55rem]' : 'text-[1.85rem]',
+                  'font-semibold leading-none text-foreground',
+                  isCompact ? 'text-[1.55rem]' : 'text-[1.9rem]',
                   valueClassName,
                 )}
               >
@@ -79,8 +79,8 @@ export function MetricTile({
           {Icon && (
             <div
               className={cn(
-                'grid shrink-0 place-items-center rounded-md border',
-                isCompact ? 'h-8 w-8' : 'h-9 w-9',
+                'grid shrink-0 place-items-center rounded-full border',
+                isCompact ? 'h-8 w-8' : 'h-10 w-10',
                 iconVariant === 'neutral'
                   ? 'border-border bg-transparent text-subtle-foreground'
                   : toneMap[tone],
@@ -94,8 +94,8 @@ export function MetricTile({
         {(meta || loading) && (
           <div
             className={cn(
-              'relative z-10 w-fit rounded border font-mono font-medium uppercase leading-none tracking-[0.08em]',
-              isCompact ? 'mt-3 px-1.5 py-0.5 text-[9px]' : 'mt-5 px-2 py-1 text-[10px]',
+              'relative z-10 w-fit rounded-full border font-medium leading-none',
+              isCompact ? 'mt-3 px-2 py-1 text-xs' : 'mt-5 px-2.5 py-1 text-xs',
               toneMap[tone],
             )}
           >

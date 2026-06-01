@@ -1,22 +1,11 @@
 import { useState } from 'react';
 import { Link, useParams } from 'react-router-dom';
-import type { LucideIcon } from 'lucide-react';
-import {
-  ArrowLeft,
-  Bot,
-  Clock,
-  Database,
-  DollarSign,
-  MessageSquare,
-  Terminal,
-  Wrench,
-  Zap,
-} from 'lucide-react';
+import { ArrowLeft, Bot, MessageSquare, Terminal } from 'lucide-react';
 import { BrandBadge, BrandMark } from '../components/brand/BrandMark.js';
 import { Badge } from '../components/ui/Badge.js';
 import { Button } from '../components/ui/Button.js';
+import { CompactStat } from '../components/ui/CompactStat.js';
 import { DataPanel } from '../components/ui/DataPanel.js';
-import { MetricTile } from '../components/ui/MetricTile.js';
 import { TokenUsageBar } from '../components/session/TokenUsageBar.js';
 import { EmptyState } from '../components/ui/EmptyState.js';
 import { ErrorState } from '../components/ui/ErrorState.js';
@@ -167,78 +156,77 @@ export function SessionDetailPage() {
         </Badge>
       </div>
 
-      <DataPanel contentClassName="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
-        <div className="flex min-w-0 items-start gap-4">
-          <BrandMark value={session.cli} size="lg" />
-          <div className="min-w-0">
-            <div className="mb-2 flex flex-wrap items-center gap-2">
-              <BrandBadge value={session.cli} />
-              <BrandBadge value={session.provider} kind="provider" />
-              <span className="text-xs text-subtle-foreground">
-                {formatRelativeTime(session.started_at)}
-              </span>
+      <DataPanel contentClassName="space-y-4">
+        <div className="flex flex-col gap-4 xl:flex-row xl:items-start xl:justify-between">
+          <div className="flex min-w-0 items-start gap-4">
+            <BrandMark value={session.cli} size="lg" />
+            <div className="min-w-0">
+              <div className="mb-2 flex flex-wrap items-center gap-2">
+                <BrandBadge value={session.cli} />
+                <BrandBadge value={session.provider} kind="provider" />
+                <span className="text-xs text-subtle-foreground">
+                  {formatRelativeTime(session.started_at)}
+                </span>
+              </div>
+              <h1 className="truncate text-xl font-semibold text-foreground lg:text-2xl">
+                {t('common.session')} {session.session_id.slice(0, 12)}
+              </h1>
+              <p className="mt-1 truncate text-sm text-muted-foreground">
+                {compactPath(session.project_path)}
+              </p>
             </div>
-            <h1 className="truncate font-mono text-xl font-semibold tracking-[-0.04em] text-foreground lg:text-2xl">
-              {t('common.session')} {session.session_id.slice(0, 12)}
-            </h1>
-            <p className="mt-1 truncate text-sm text-muted-foreground">
-              {compactPath(session.project_path)}
-            </p>
           </div>
+          <Button
+            variant="outline"
+            onClick={openProject}
+            disabled={!session.project_exists || openingProject}
+          >
+            {openingProject
+              ? t('session.opening')
+              : session.project_exists
+                ? t('session.openFolder')
+                : t('session.folderMissing')}
+          </Button>
         </div>
-        <Button
-          variant="outline"
-          onClick={openProject}
-          disabled={!session.project_exists || openingProject}
-        >
-          {openingProject
-            ? t('session.opening')
-            : session.project_exists
-              ? t('session.openFolder')
-              : t('session.folderMissing')}
-        </Button>
-      </DataPanel>
 
-      <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 md:grid-cols-3 xl:grid-cols-6">
-        <MetricBadge
-          icon={DollarSign}
-          label={
-            session.cost_source === 'estimated' ? t('session.costEstimated') : t('common.cost')
-          }
-          value={formatCurrency(session.total_cost_usd)}
-          tone="success"
-        />
-        <MetricBadge
-          icon={Database}
-          label={t('common.tokens')}
-          value={formatTokens(totalTokens)}
-          tone="info"
-        />
-        <MetricBadge
-          icon={MessageSquare}
-          label={t('common.messages')}
-          value={String(session.message_count ?? messages.length)}
-          tone="info"
-        />
-        <MetricBadge
-          icon={Wrench}
-          label={t('common.tools')}
-          value={String(session.tool_call_count ?? 0)}
-          tone="warning"
-        />
-        <MetricBadge
-          icon={Clock}
-          label={t('common.duration')}
-          value={formatDuration(session.duration_ms)}
-          tone="success"
-        />
-        <MetricBadge
-          icon={Zap}
-          label={t('common.model')}
-          value={session.model ?? t('common.unknown')}
-          tone="warning"
-        />
-      </div>
+        <div className="grid gap-2 md:grid-cols-2 xl:grid-cols-3">
+          <CompactStat
+            label={
+              session.cost_source === 'estimated' ? t('session.costEstimated') : t('common.cost')
+            }
+            value={formatCurrency(session.total_cost_usd)}
+            meta={t('common.total')}
+            tone="success"
+          />
+          <CompactStat
+            label={t('common.tokens')}
+            value={formatTokens(totalTokens)}
+            meta={t('dashboard.allSources')}
+          />
+          <CompactStat
+            label={t('common.messages')}
+            value={String(session.message_count ?? messages.length)}
+            meta={t('session.normalizedMessages')}
+          />
+          <CompactStat
+            label={t('common.tools')}
+            value={String(session.tool_call_count ?? 0)}
+            meta={t('common.tools').toLowerCase()}
+            tone="warning"
+          />
+          <CompactStat
+            label={t('common.duration')}
+            value={formatDuration(session.duration_ms)}
+            meta={t('common.activity')}
+          />
+          <CompactStat
+            label={t('common.model')}
+            value={session.model ?? t('common.unknown')}
+            meta={session.provider}
+            tone="warning"
+          />
+        </div>
+      </DataPanel>
 
       <div className="grid grid-cols-1 gap-6 lg:grid-cols-[minmax(0,1fr)_380px]">
         <DataPanel
@@ -247,17 +235,19 @@ export function SessionDetailPage() {
           description={`${messages.length} ${t('session.normalizedMessages')}`}
           contentClassName="p-0"
         >
-          <div className="max-h-[68vh] space-y-4 overflow-y-auto p-5">
-            {messages.map((message) => (
-              <MessageBubble key={message.id} message={message} />
-            ))}
-            {messages.length === 0 && (
-              <EmptyState
-                title={t('session.noMessages.title')}
-                description={t('session.noMessages.description')}
-                icon={MessageSquare}
-              />
-            )}
+          <div className="max-h-[68vh] overflow-y-auto p-4">
+            <div className="space-y-3 rounded-md border border-border bg-surface-muted/40 p-3">
+              {messages.map((message) => (
+                <MessageBubble key={message.id} message={message} />
+              ))}
+              {messages.length === 0 && (
+                <EmptyState
+                  title={t('session.noMessages.title')}
+                  description={t('session.noMessages.description')}
+                  icon={MessageSquare}
+                />
+              )}
+            </div>
           </div>
         </DataPanel>
 
@@ -271,7 +261,7 @@ export function SessionDetailPage() {
                 >
                   <div className="flex items-center justify-between gap-3">
                     <div className="min-w-0">
-                      <div className="font-mono text-sm font-medium text-foreground">
+                      <div className="text-sm font-medium text-foreground">
                         {item.provider}/{item.model}
                       </div>
                       <div className="text-xs text-subtle-foreground">
@@ -339,37 +329,9 @@ export function SessionDetailPage() {
 function DetailMetric({ label, value }: { label: string; value: string }) {
   return (
     <div className="rounded-md border border-border bg-surface p-2">
-      <div className="font-mono text-[10px] uppercase tracking-[0.12em] text-subtle-foreground">
-        {label}
-      </div>
+      <div className="text-[10px] uppercase text-subtle-foreground">{label}</div>
       <div className="mt-1 font-mono font-medium text-foreground">{value}</div>
     </div>
-  );
-}
-
-function MetricBadge({
-  icon: Icon,
-  label,
-  value,
-  tone,
-}: {
-  icon: LucideIcon;
-  label: string;
-  value: string;
-  tone: 'success' | 'warning' | 'info';
-}) {
-  return (
-    <MetricTile
-      label={label}
-      value={value}
-      tone={tone}
-      icon={Icon}
-      className="min-h-[92px]"
-      compact
-      iconVariant="neutral"
-      valueWrap
-      valueClassName="text-[1.05rem] leading-tight lg:text-[1.1rem]"
-    />
   );
 }
 
@@ -389,17 +351,19 @@ function MessageBubble({ message }: { message: Message }) {
         <div
           className={
             isUser
-              ? 'rounded-md border border-accent bg-accent px-4 py-3 text-sm text-accent-foreground'
+              ? 'rounded-md border border-accent/40 bg-accent-soft px-4 py-3 text-sm text-foreground'
               : isAssistant
-                ? 'rounded-md border border-border bg-surface-elevated px-4 py-3 text-sm text-foreground'
+                ? 'rounded-md border border-border bg-surface-elevated px-4 py-3 text-sm text-foreground shadow-[var(--shadow-card)]'
                 : 'rounded-md border border-border bg-surface-muted px-4 py-3 text-sm text-muted-foreground'
           }
         >
-          <div className="mb-2 flex items-center justify-between gap-4 text-[11px] uppercase tracking-[0.14em] opacity-60">
-            <span>{message.role}</span>
-            <span className="normal-case tracking-normal">{formatDateTime(message.timestamp)}</span>
+          <div className="mb-2 flex items-center justify-between gap-4 text-[11px]">
+            <span className="rounded-full border border-border bg-surface px-2 py-0.5 uppercase tracking-wide text-subtle-foreground">
+              {message.role}
+            </span>
+            <span className="text-subtle-foreground">{formatDateTime(message.timestamp)}</span>
           </div>
-          <pre className="whitespace-pre-wrap break-words font-mono text-xs leading-6 [overflow-wrap:anywhere]">
+          <pre className="whitespace-pre-wrap break-words font-sans text-[13px] leading-6 [overflow-wrap:anywhere]">
             {message.content}
           </pre>
         </div>

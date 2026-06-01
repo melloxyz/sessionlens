@@ -4,7 +4,6 @@ import {
   ArrowUpRight,
   FolderOpen,
   GitBranch,
-  HardDrive,
   Search,
   SlidersHorizontal,
   Trash2,
@@ -12,9 +11,10 @@ import {
 import { Badge } from '../components/ui/Badge.js';
 import { Button } from '../components/ui/Button.js';
 import { Card, CardContent } from '../components/ui/Card.js';
-import { FilterBar } from '../components/ui/FilterBar.js';
+import { CompactStat } from '../components/ui/CompactStat.js';
+import { ControlField } from '../components/ui/ControlField.js';
+import { DataPanel } from '../components/ui/DataPanel.js';
 import { Input } from '../components/ui/Input.js';
-import { MetricTile } from '../components/ui/MetricTile.js';
 import { Select } from '../components/ui/Select.js';
 import { SectionHeader } from '../components/ui/SectionHeader.js';
 import { ErrorState } from '../components/ui/ErrorState.js';
@@ -30,6 +30,7 @@ interface Project {
   total_sessions: number;
   total_cost: number;
   exists: boolean;
+  hidden?: number;
 }
 
 type StatusFilter = 'all' | 'available' | 'missing';
@@ -40,9 +41,10 @@ export function ProjectsPage() {
   const [search, setSearch] = useState('');
   const [status, setStatus] = useState<StatusFilter>('all');
   const [sort, setSort] = useState<SortMode>('cost');
+  const [showHidden, setShowHidden] = useState(false);
   const [hidingId, setHidingId] = useState<number | null>(null);
   const { data, loading, validating, error, refetch } = useApi<{ data: Project[] }>(
-    '/api/projects',
+    '/api/projects?includeHidden=1',
   );
   const isInitialLoading = loading && !data;
 
@@ -57,7 +59,7 @@ export function ProjectsPage() {
           basename(project.path).toLowerCase().includes(term);
         const matchesStatus =
           status === 'all' || (status === 'available' ? project.exists : !project.exists);
-        return matchesSearch && matchesStatus;
+        return matchesSearch && matchesStatus && (!project.hidden || showHidden);
       })
       .sort((a, b) => {
         if (sort === 'sessions') return b.total_sessions - a.total_sessions;
@@ -71,13 +73,15 @@ export function ProjectsPage() {
       visible: projects.length,
       available: projects.filter((project) => project.exists).length,
       missing: projects.filter((project) => !project.exists).length,
+      hidden: allProjects.filter((project) => project.hidden).length,
       spend: projects.reduce((sum, project) => sum + Number(project.total_cost || 0), 0),
       maxCost: Math.max(1, ...projects.map((project) => Number(project.total_cost || 0))),
     }),
-    [projects],
+    [allProjects, projects],
   );
 
   const topProjects = projects
+    .filter((project) => !project.hidden)
     .filter((project) => project.total_cost > 0 || project.total_sessions > 0)
     .slice(0, 3);
 
@@ -85,6 +89,16 @@ export function ProjectsPage() {
     setHidingId(id);
     try {
       await fetch(`/api/projects/${id}`, { method: 'DELETE' });
+      await refetch();
+    } finally {
+      setHidingId(null);
+    }
+  }
+
+  async function restoreProject(id: number) {
+    setHidingId(id);
+    try {
+      await fetch(`/api/projects/${id}/restore`, { method: 'POST' });
       await refetch();
     } finally {
       setHidingId(null);
@@ -106,86 +120,95 @@ export function ProjectsPage() {
   }
 
   return (
-    <div className="space-y-5 p-4 lg:p-6">
-      <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-4">
-        <MetricTile
-          icon={FolderOpen}
-          label={t('projects.summary.visible')}
-          value={String(summary.visible)}
-          tone="info"
-          loading={isInitialLoading}
-          compact
-          iconVariant="neutral"
-        />
-        <MetricTile
-          icon={HardDrive}
-          label={t('projects.summary.available')}
-          value={String(summary.available)}
-          tone="success"
-          loading={isInitialLoading}
-          compact
-          iconVariant="neutral"
-        />
-        <MetricTile
-          icon={HardDrive}
-          label={t('projects.summary.missing')}
-          value={String(summary.missing)}
-          tone="warning"
-          loading={isInitialLoading}
-          compact
-          iconVariant="neutral"
-        />
-        <MetricTile
-          icon={SlidersHorizontal}
-          label={t('projects.summary.spend')}
-          value={formatCurrency(summary.spend)}
-          tone="info"
-          loading={isInitialLoading}
-          compact
-          iconVariant="neutral"
-        />
-      </div>
-
-      <FilterBar
-        actions={
-          <>
-            <Select
-              value={status}
-              onChange={(event) => setStatus(event.target.value as StatusFilter)}
-              options={[
-                { label: t('projects.allStatuses'), value: 'all' },
-                { label: t('common.available'), value: 'available' },
-                { label: t('common.missing'), value: 'missing' },
-              ]}
-            />
-            <Select
-              value={sort}
-              onChange={(event) => setSort(event.target.value as SortMode)}
-              options={[
-                { label: t('projects.sortCost'), value: 'cost' },
-                { label: t('projects.sortSessions'), value: 'sessions' },
-                { label: t('projects.sortName'), value: 'name' },
-              ]}
-            />
-            <div className="hidden items-center gap-2 rounded-md border border-border px-3 py-2 font-mono text-xs text-muted-foreground md:flex">
-              <SlidersHorizontal className="h-4 w-4" />
-              {validating && !isInitialLoading
-                ? t('common.loading')
-                : `${projects.length} ${t('projects.shown')}`}
-            </div>
-          </>
-        }
+    <div className="mx-auto w-full max-w-[1800px] space-y-5 p-4 lg:p-6">
+      <DataPanel
+        title={t('projects.all.title')}
+        description={t('projects.all.description')}
+        contentClassName="space-y-4 p-4"
       >
-        <div className="relative w-full min-w-0 max-w-xl flex-1">
-          <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-subtle-foreground" />
-          <Input
-            value={search}
-            onChange={(event) => setSearch(event.target.value)}
-            placeholder={t('projects.search.placeholder')}
-            className="pl-9"
-          />
+        <div className="grid gap-4 2xl:grid-cols-[minmax(0,1.2fr)_minmax(420px,0.8fr)]">
+          <div className="space-y-3">
+            <div className="relative w-full min-w-0">
+              <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-subtle-foreground" />
+              <Input
+                value={search}
+                onChange={(event) => setSearch(event.target.value)}
+                placeholder={t('projects.search.placeholder')}
+                className="h-10 pl-9"
+              />
+            </div>
+
+            <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-4">
+              <ControlField label={t('common.status')}>
+                <Select
+                  className="h-9 text-[13px]"
+                  value={status}
+                  onChange={(event) => setStatus(event.target.value as StatusFilter)}
+                  options={[
+                    { label: t('projects.allStatuses'), value: 'all' },
+                    { label: t('common.available'), value: 'available' },
+                    { label: t('common.missing'), value: 'missing' },
+                  ]}
+                />
+              </ControlField>
+              <ControlField label={t('common.sort')}>
+                <Select
+                  className="h-9 text-[13px]"
+                  value={sort}
+                  onChange={(event) => setSort(event.target.value as SortMode)}
+                  options={[
+                    { label: t('projects.sortCost'), value: 'cost' },
+                    { label: t('projects.sortSessions'), value: 'sessions' },
+                    { label: t('projects.sortName'), value: 'name' },
+                  ]}
+                />
+              </ControlField>
+              <div className="flex items-end">
+                <div className="flex h-9 w-full items-center gap-2 rounded-md border border-border bg-surface px-3 text-xs text-muted-foreground">
+                  <SlidersHorizontal className="h-4 w-4" />
+                  {validating && !isInitialLoading
+                    ? t('common.loading')
+                    : `${projects.length} ${t('projects.shown')}`}
+                </div>
+              </div>
+              <div className="flex items-end">
+                <Button
+                  variant={showHidden ? 'default' : 'outline'}
+                  size="sm"
+                  className="h-9 w-full justify-center"
+                  onClick={() => setShowHidden((current) => !current)}
+                >
+                  {showHidden ? t('projects.showVisible') : t('projects.showHidden')}
+                </Button>
+              </div>
+            </div>
+          </div>
+
+          <div className="grid gap-2 md:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-2">
+            <CompactStat label={t('projects.summary.visible')} value={String(summary.visible)} />
+            <CompactStat
+              label={t('projects.summary.available')}
+              value={String(summary.available)}
+              tone="success"
+            />
+            <CompactStat
+              label={t('projects.summary.missing')}
+              value={String(summary.missing)}
+              tone="warning"
+            />
+            <CompactStat
+              label={t('projects.summary.hidden')}
+              value={String(summary.hidden)}
+              tone="warning"
+            />
+            <CompactStat
+              label={t('projects.summary.spend')}
+              value={formatCurrency(summary.spend)}
+              className="md:col-span-2 xl:col-span-1 2xl:col-span-2"
+            />
+          </div>
         </div>
-      </FilterBar>
+      </DataPanel>
 
       {topProjects.length > 0 && (
         <section className="space-y-3">
@@ -193,7 +216,7 @@ export function ProjectsPage() {
             title={t('projects.top.title')}
             description={t('projects.top.description')}
           />
-          <div className="grid gap-3 lg:grid-cols-3">
+          <div className="grid gap-3 lg:grid-cols-3 2xl:grid-cols-4">
             {topProjects.map((project, index) => (
               <ProjectCard
                 key={project.id}
@@ -201,6 +224,7 @@ export function ProjectsPage() {
                 rank={index + 1}
                 maxCost={summary.maxCost}
                 onHide={hideProject}
+                onRestore={restoreProject}
                 hiding={hidingId === project.id}
                 featured
               />
@@ -214,7 +238,7 @@ export function ProjectsPage() {
           title={t('projects.all.title')}
           description={t('projects.all.description')}
         />
-        <div className="grid grid-cols-1 gap-3 md:grid-cols-2 xl:grid-cols-3">
+        <div className="grid grid-cols-1 gap-3 md:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-4">
           {isInitialLoading
             ? Array.from({ length: 9 }).map((_, index) => <ProjectSkeleton key={index} />)
             : projects.map((project) => (
@@ -223,6 +247,7 @@ export function ProjectsPage() {
                   project={project}
                   maxCost={summary.maxCost}
                   onHide={hideProject}
+                  onRestore={restoreProject}
                   hiding={hidingId === project.id}
                 />
               ))}
@@ -244,6 +269,7 @@ function ProjectCard({
   project,
   maxCost,
   onHide,
+  onRestore,
   hiding,
   featured,
   rank,
@@ -251,6 +277,7 @@ function ProjectCard({
   project: Project;
   maxCost: number;
   onHide: (id: number) => void;
+  onRestore: (id: number) => void;
   hiding: boolean;
   featured?: boolean;
   rank?: number;
@@ -258,21 +285,21 @@ function ProjectCard({
   const { t } = useI18n();
   const percent = Math.min(100, Math.round((Number(project.total_cost || 0) / maxCost) * 100));
   return (
-    <Card interactive className="h-full overflow-hidden">
-      <CardContent className="space-y-5">
+    <Card interactive className={`h-full overflow-hidden ${project.hidden ? 'opacity-80' : ''}`}>
+      <CardContent className="space-y-4">
         <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
           <Link to={`/projects/${project.id}`} className="flex min-w-0 flex-1 items-center gap-3">
             <div
               className={`grid h-11 w-11 shrink-0 place-items-center rounded-md border ${project.exists ? 'border-accent/20 bg-accent-soft text-accent' : 'border-warning/20 bg-warning-soft text-warning'}`}
             >
               {featured && rank ? (
-                <span className="font-mono text-sm font-semibold">#{rank}</span>
+                <span className="text-sm font-semibold">#{rank}</span>
               ) : (
                 <FolderOpen className="h-5 w-5" />
               )}
             </div>
             <div className="min-w-0">
-              <div className="truncate font-mono text-sm font-semibold tracking-[-0.02em] text-foreground">
+              <div className="truncate text-sm font-semibold text-foreground">
                 {basename(project.path)}
               </div>
               <div className="truncate text-xs text-subtle-foreground">
@@ -284,10 +311,10 @@ function ProjectCard({
             <Button
               variant="ghost"
               size="icon-sm"
-              aria-label={t('projects.hide')}
-              title={t('projects.hide.help')}
+              aria-label={project.hidden ? t('projects.restore') : t('projects.hide')}
+              title={project.hidden ? t('projects.restore.help') : t('projects.hide.help')}
               disabled={hiding}
-              onClick={() => onHide(project.id)}
+              onClick={() => (project.hidden ? onRestore(project.id) : onHide(project.id))}
             >
               <Trash2 className="h-4 w-4" />
             </Button>
@@ -301,6 +328,7 @@ function ProjectCard({
         </div>
 
         <div className="flex flex-wrap items-center gap-2">
+          {project.hidden ? <Badge variant="warning">{t('projects.hidden')}</Badge> : null}
           <Badge variant={project.exists ? 'success' : 'warning'}>
             {project.exists ? t('common.available') : t('common.missing')}
           </Badge>
@@ -344,12 +372,8 @@ function ProjectCard({
 function Metric({ label, value }: { label: string; value: string }) {
   return (
     <div className="rounded-md border border-border bg-surface-muted p-3">
-      <div className="font-mono text-[10px] uppercase tracking-[0.12em] text-subtle-foreground">
-        {label}
-      </div>
-      <div className="mt-1 truncate font-mono text-lg font-semibold tracking-[-0.04em] text-foreground">
-        {value}
-      </div>
+      <div className="text-[10px] uppercase text-subtle-foreground">{label}</div>
+      <div className="mt-1 truncate font-mono text-lg font-semibold text-foreground">{value}</div>
     </div>
   );
 }

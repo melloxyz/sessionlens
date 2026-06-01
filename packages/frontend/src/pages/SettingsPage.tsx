@@ -19,8 +19,10 @@ import { useI18n } from '../components/i18n/LanguageProvider.js';
 import { useTheme } from '../components/theme/ThemeProvider.js';
 import { Badge } from '../components/ui/Badge.js';
 import { Button } from '../components/ui/Button.js';
+import { CompactStat } from '../components/ui/CompactStat.js';
 import { DataPanel } from '../components/ui/DataPanel.js';
 import { ErrorState } from '../components/ui/ErrorState.js';
+import { SectionHeader } from '../components/ui/SectionHeader.js';
 import { Skeleton } from '../components/ui/Skeleton.js';
 import type { IntegrationStatusItem } from '../components/layout/IntegrationStatus.js';
 import { useApi } from '../hooks/useApi.js';
@@ -178,10 +180,15 @@ export function SettingsPage() {
 
   return (
     <div
-      className="grid gap-4 p-4 lg:p-6 xl:grid-cols-[minmax(0,1fr)_380px]"
+      className="mx-auto grid w-full max-w-[1800px] gap-6 p-4 lg:p-6 xl:grid-cols-[minmax(0,1.05fr)_400px]"
       aria-busy={isValidating}
     >
       <section className="space-y-5">
+        <SectionHeader
+          title={t('settings.userOptions.title')}
+          description={t('settings.userOptions.description')}
+        />
+
         <DataPanel
           title={t('settings.appearance')}
           description={t('settings.appearance.description')}
@@ -315,6 +322,11 @@ export function SettingsPage() {
           </DataPanel>
         )}
 
+        <SectionHeader
+          title={t('settings.workspaceControls.title')}
+          description={t('settings.workspaceControls.description')}
+        />
+
         <DataPanel
           title={t('settings.ingestion')}
           description={t('settings.ingestion.description')}
@@ -361,7 +373,7 @@ export function SettingsPage() {
                     </div>
                     <div>
                       <div className="flex flex-wrap items-center gap-2">
-                        <div className="font-mono text-sm font-semibold text-foreground">
+                        <div className="text-sm font-semibold text-foreground">
                           {t('settings.autoIngestion')}
                         </div>
                         <Badge variant={autoIngestion?.enabled ? 'success' : 'neutral'}>
@@ -479,7 +491,12 @@ export function SettingsPage() {
         </DataPanel>
       </section>
 
-      <aside className="space-y-5">
+      <aside className="space-y-5 xl:pt-1">
+        <SectionHeader
+          title={t('settings.generalStatus.title')}
+          description={t('settings.generalStatus.description')}
+        />
+
         <DataPanel title={t('settings.workspaceSummary')} contentClassName="space-y-4">
           {overviewError && (
             <ErrorState
@@ -490,21 +507,23 @@ export function SettingsPage() {
               onRetry={refetchOverview}
             />
           )}
-          <SummaryRow
-            label={t('common.sessions')}
-            value={String(overview?.sessionCount ?? 0)}
-            loading={overviewLoading && !overview}
-          />
-          <SummaryRow
-            label={t('settings.totalSpend')}
-            value={formatCurrency(overview?.totalSpend)}
-            loading={overviewLoading && !overview}
-          />
-          <SummaryRow
-            label={t('settings.topCli')}
-            value={overview?.mostUsedCli ? getBrandMeta(overview.mostUsedCli).label : '—'}
-            loading={overviewLoading && !overview}
-          />
+          <div className="grid gap-2">
+            <CompactStat
+              label={t('common.sessions')}
+              value={overviewLoading && !overview ? '—' : String(overview?.sessionCount ?? 0)}
+              meta={t('common.sessions').toLowerCase()}
+            />
+            <CompactStat
+              label={t('settings.totalSpend')}
+              value={overviewLoading && !overview ? '—' : formatCurrency(overview?.totalSpend)}
+              meta={t('common.cost')}
+            />
+            <CompactStat
+              label={t('settings.topCli')}
+              value={overview?.mostUsedCli ? getBrandMeta(overview.mostUsedCli).label : '—'}
+              meta={t('common.cli')}
+            />
+          </div>
         </DataPanel>
 
         <DataPanel
@@ -565,7 +584,7 @@ export function SettingsPage() {
         </DataPanel>
 
         <DataPanel
-          title="Budget Alerts"
+          title={t('budget.alerts.title')}
           action={
             unacknowledgedAlerts.length > 0 ? (
               <Badge variant="danger">{unacknowledgedAlerts.length}</Badge>
@@ -576,11 +595,13 @@ export function SettingsPage() {
           contentClassName="p-3 space-y-2"
         >
           {alertsLoading && !alertsData ? (
-            <div className="py-2 text-center text-sm text-muted-foreground">Loading</div>
+            <div className="py-2 text-center text-sm text-muted-foreground">
+              {t('common.loading')}
+            </div>
           ) : alertsData && alertsData.alerts.length === 0 ? (
             <div className="py-2 text-center text-sm text-muted-foreground">
               <CheckCircle2 className="mx-auto mb-1.5 h-4 w-4 text-subtle-foreground" />
-              No budget alerts
+              {t('budget.alerts.empty.title')}
             </div>
           ) : (
             <div className="max-h-[300px] space-y-2 overflow-y-auto">
@@ -655,7 +676,7 @@ function PreferenceButton({
     >
       <div>
         <Icon className={`mb-4 h-5 w-5 ${tone === 'warning' ? 'text-warning' : 'text-accent'}`} />
-        <div className="font-mono text-sm font-medium text-foreground">{title}</div>
+        <div className="text-sm font-medium text-foreground">{title}</div>
         <div className="mt-1 text-sm leading-6 text-muted-foreground">{description}</div>
       </div>
       {active && <CheckCircle2 className="h-5 w-5 text-accent" />}
@@ -683,7 +704,7 @@ function LanguageButton({
     >
       <div>
         <Languages className="mb-4 h-5 w-5 text-accent" />
-        <div className="font-mono text-sm font-medium text-foreground">{label}</div>
+        <div className="text-sm font-medium text-foreground">{label}</div>
         <div className="mt-1 text-sm leading-6 text-muted-foreground">{description}</div>
       </div>
       {active && <CheckCircle2 className="h-5 w-5 text-accent" />}
@@ -703,7 +724,7 @@ function PrivacyItem({
   return (
     <div className="rounded-lg border border-border bg-surface-muted p-4">
       <Icon className="mb-4 h-5 w-5 text-accent" />
-      <div className="font-mono text-sm font-medium text-foreground">{title}</div>
+      <div className="text-sm font-medium text-foreground">{title}</div>
       <div className="mt-1 text-sm leading-6 text-muted-foreground">{description}</div>
     </div>
   );
@@ -720,15 +741,11 @@ function StatusTile({
 }) {
   return (
     <div className="rounded-lg border border-border bg-surface-muted p-3">
-      <div className="font-mono text-[9px] uppercase tracking-[0.14em] text-subtle-foreground">
-        {label}
-      </div>
+      <div className="text-[9px] uppercase text-subtle-foreground">{label}</div>
       {loading ? (
         <Skeleton className="mt-2 h-7 w-20" />
       ) : (
-        <div className="mt-1 font-mono text-[1.55rem] font-semibold tracking-[-0.05em] text-foreground">
-          {value}
-        </div>
+        <div className="mt-1 font-mono text-[1.55rem] font-semibold text-foreground">{value}</div>
       )}
     </div>
   );
@@ -781,7 +798,7 @@ function ToggleRow({
           </div>
         )}
         <div>
-          <div className="font-mono text-sm font-semibold text-foreground">{title}</div>
+          <div className="text-sm font-semibold text-foreground">{title}</div>
           <div className="mt-1 text-sm leading-6 text-muted-foreground">{description}</div>
         </div>
       </div>

@@ -41,7 +41,7 @@ export function DataTableHeaderCell({
   return (
     <th
       className={cn(
-        'px-4 py-3 text-left font-mono text-[10px] font-medium uppercase tracking-[0.12em] text-subtle-foreground',
+        'px-4 py-3 text-left text-xs font-medium uppercase text-subtle-foreground',
         className,
       )}
       {...props}

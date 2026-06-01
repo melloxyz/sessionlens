@@ -1,10 +1,22 @@
-import { CheckCircle2, CircleDot, GitBranch, Sparkles, type LucideIcon } from 'lucide-react';
+import {
+  CheckCircle2,
+  CircleDot,
+  GitBranch,
+  Monitor,
+  RadioTower,
+  ShieldCheck,
+  Sparkles,
+  type LucideIcon,
+} from 'lucide-react';
 import { type ReactNode } from 'react';
 import { Badge } from '../components/ui/Badge.js';
 import { DataPanel } from '../components/ui/DataPanel.js';
+import { SectionHeader } from '../components/ui/SectionHeader.js';
 import { useI18n } from '../components/i18n/LanguageProvider.js';
+import { useTheme } from '../components/theme/ThemeProvider.js';
 
 const releaseTimeline = [
+  { key: 'changelog.released.12', tags: ['changelog.ui', 'changelog.analytics'] },
   { key: 'changelog.released.11', tags: ['changelog.core', 'changelog.localFirst'] },
   { key: 'changelog.released.10', tags: ['changelog.ui', 'changelog.i18n'] },
   { key: 'changelog.released.0', tags: ['changelog.core', 'changelog.localFirst'] },
@@ -19,7 +31,7 @@ const releaseTimeline = [
   { key: 'changelog.released.9', tags: ['changelog.core', 'changelog.localFirst'] },
 ];
 
-const inProgressCount = 6;
+const inProgressCount = 2;
 const plannedCount = 3;
 
 const contributors = [
@@ -30,25 +42,108 @@ const contributors = [
   },
 ];
 
+const statusCards: {
+  icon: LucideIcon;
+  labelKey: string;
+  valueKey: string;
+}[] = [
+  {
+    icon: Monitor,
+    labelKey: 'changelog.status.focus',
+    valueKey: 'changelog.status.focusValue',
+  },
+  {
+    icon: ShieldCheck,
+    labelKey: 'changelog.status.localFirst',
+    valueKey: 'changelog.status.localFirstValue',
+  },
+  {
+    icon: RadioTower,
+    labelKey: 'changelog.status.pricing',
+    valueKey: 'changelog.status.pricingValue',
+  },
+];
+
 export function ChangelogPage() {
   const { t } = useI18n();
+  const { theme } = useTheme();
 
   return (
-    <div className="flex min-h-full flex-col gap-3 overflow-auto p-4 lg:p-6 xl:h-full xl:min-h-0 xl:overflow-hidden">
-      <DataPanel contentClassName="p-3 lg:p-4">
-        <div className="flex min-w-0 flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
-          <div className="flex min-w-0 flex-wrap items-center gap-2">
-            <Badge variant="default" className="gap-1.5">
-              <Sparkles className="h-3 w-3" /> Sessionlens
-            </Badge>
-            <span className="font-mono text-sm font-semibold tracking-[-0.03em] text-foreground">
-              Changelog
-            </span>
-            <Badge variant="neutral">{t('changelog.version')}</Badge>
-            <Badge variant="success">{t('changelog.current')}</Badge>
+    <div className="mx-auto flex min-h-full w-full max-w-[1780px] flex-col gap-4 overflow-y-auto p-4 lg:p-6">
+      <DataPanel contentClassName="grid gap-4 p-4 2xl:grid-cols-[minmax(0,1.45fr)_420px]">
+        <div className="space-y-5">
+          <div className="flex flex-wrap items-center justify-between gap-3 rounded-md border border-border bg-surface-muted px-4 py-3">
+            <div className="flex min-w-0 items-center gap-3">
+              <img
+                src={
+                  theme === 'dark' ? '/sessionlens-white-logo.png' : '/sessionlens-black-logo.png'
+                }
+                alt="Sessionlens"
+                className="h-12 w-12 shrink-0 rounded-md"
+              />
+              <div className="min-w-0">
+                <div className="text-[10px] font-semibold uppercase text-subtle-foreground">
+                  Sessionlens
+                </div>
+                <div className="truncate text-base font-semibold text-foreground">Sessionlens</div>
+                <div className="truncate text-xs text-muted-foreground">
+                  Local AI CLI observability
+                </div>
+              </div>
+            </div>
+
+            <div className="flex flex-wrap items-center gap-2">
+              <Badge variant="success">{t('changelog.current')}</Badge>
+              <Badge variant="neutral">{t('changelog.version')}</Badge>
+            </div>
           </div>
 
-          <div className="flex flex-wrap gap-2 lg:justify-end">
+          <div className="grid gap-3 xl:grid-cols-[minmax(0,1.05fr)_minmax(320px,0.95fr)]">
+            <div className="rounded-md border border-border bg-surface px-5 py-5">
+              <div className="mb-3 flex flex-wrap items-center gap-2">
+                <Badge variant="default" className="gap-1.5">
+                  <Sparkles className="h-3 w-3" /> Sessionlens
+                </Badge>
+                <Badge variant="neutral">{t('changelog.version')}</Badge>
+              </div>
+              <h1 className="max-w-4xl text-2xl font-semibold tracking-tight text-foreground 2xl:text-[2rem]">
+                {t('changelog.hero.title')}
+              </h1>
+              <p className="mt-3 max-w-3xl text-sm leading-6 text-muted-foreground">
+                {t('changelog.hero.description')}
+              </p>
+            </div>
+
+            <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-2">
+              {[1, 2, 3].map((item) => (
+                <ReleaseHighlight
+                  key={item}
+                  text={t(`changelog.latest.${item}.text`)}
+                  className={item === 3 ? 'sm:col-span-2' : undefined}
+                />
+              ))}
+            </div>
+          </div>
+        </div>
+
+        <div className="grid gap-4">
+          <div className="rounded-md border border-border bg-surface-muted p-3">
+            <div className="mb-3 text-[11px] font-semibold uppercase text-subtle-foreground">
+              {t('changelog.status.title')}
+            </div>
+            <div className="space-y-2.5">
+              {statusCards.map((card) => (
+                <HeroStatusRow
+                  key={card.labelKey}
+                  icon={card.icon}
+                  label={t(card.labelKey)}
+                  value={t(card.valueKey)}
+                />
+              ))}
+            </div>
+          </div>
+
+          <div className="grid gap-2 sm:grid-cols-3 2xl:grid-cols-1">
             <ActionLink href="https://github.com/melloxyz/sessionlens" icon={GitBranch}>
               {t('changelog.status.repository')}
             </ActionLink>
@@ -62,22 +157,18 @@ export function ChangelogPage() {
         </div>
       </DataPanel>
 
-      <div className="grid min-h-0 flex-1 gap-4 xl:grid-cols-[minmax(0,1fr)_320px]">
-        <section className="flex min-h-0 min-w-0 flex-col gap-3 overflow-x-hidden">
+      <div className="grid min-h-0 gap-4 xl:grid-cols-[minmax(0,1fr)_360px]">
+        <section className="flex min-h-0 min-w-0 flex-col gap-4 overflow-x-hidden">
           <div className="flex items-end justify-between gap-2 px-1">
-            <div>
-              <h3 className="font-mono text-[10px] uppercase tracking-[0.22em] text-muted-foreground">
-                Timeline
-              </h3>
-              <p className="mt-1 max-w-2xl text-[11px] leading-5 text-subtle-foreground">
-                {t('changelog.timeline.description')}
-              </p>
-            </div>
+            <SectionHeader
+              title={t('changelog.timeline.title')}
+              description={t('changelog.timeline.description')}
+            />
           </div>
 
           <DataPanel
-            className="min-h-0 flex-1"
-            contentClassName="h-full overflow-y-auto overflow-x-hidden p-2 lg:p-3"
+            className="min-h-0"
+            contentClassName="max-h-[720px] overflow-y-auto overflow-x-hidden p-2 lg:p-3"
           >
             <div className="space-y-2">
               {releaseTimeline.map((entry) => (
@@ -87,51 +178,74 @@ export function ChangelogPage() {
           </DataPanel>
         </section>
 
-        <aside className="flex min-h-0 min-w-0 flex-col gap-4 overflow-x-hidden">
-          <section className="shrink-0 space-y-3">
-            <div className="px-1">
-              <h3 className="font-mono text-[10px] uppercase tracking-[0.22em] text-muted-foreground">
-                {t('changelog.contributors.title')}
-              </h3>
-              <p className="mt-1 text-[11px] leading-5 text-subtle-foreground">
-                {t('changelog.contributors.description')}
-              </p>
-            </div>
-            <div className="space-y-3">
-              {contributors.map((c) => (
-                <a
-                  key={c.github}
-                  href={`https://github.com/${c.github}`}
-                  target="_blank"
-                  rel="noreferrer"
-                  className="group block"
-                >
-                  <DataPanel contentClassName="flex items-center gap-3 p-3 transition-colors group-hover:bg-surface-hover">
-                    <img
-                      src={`https://avatars.githubusercontent.com/${c.github}`}
-                      alt={c.name}
-                      className="h-10 w-10 shrink-0 rounded-full border border-border"
-                      loading="lazy"
-                    />
-                    <div className="min-w-0">
-                      <div className="font-mono text-sm font-semibold text-foreground transition-colors group-hover:text-accent">
-                        {c.name}
-                      </div>
-                      <div className="mt-0.5 text-xs text-muted-foreground">{t(c.roleKey)}</div>
-                      <div className="mt-1 truncate font-mono text-[10px] text-subtle-foreground">
-                        github.com/{c.github}
-                      </div>
+        <aside className="flex min-h-0 min-w-0 flex-col gap-4 overflow-x-hidden xl:pt-11">
+          <DataPanel
+            title={t('changelog.contributors.title')}
+            description={t('changelog.contributors.description')}
+            contentClassName="space-y-3 p-3"
+          >
+            {contributors.map((c) => (
+              <a
+                key={c.github}
+                href={`https://github.com/${c.github}`}
+                target="_blank"
+                rel="noreferrer"
+                className="group block"
+              >
+                <div className="flex items-center gap-3 rounded-md border border-border bg-surface-muted p-3 transition-colors group-hover:bg-surface-hover">
+                  <img
+                    src={`https://avatars.githubusercontent.com/${c.github}`}
+                    alt={c.name}
+                    className="h-10 w-10 shrink-0 rounded-full border border-border"
+                    loading="lazy"
+                  />
+                  <div className="min-w-0">
+                    <div className="text-sm font-semibold text-foreground transition-colors group-hover:text-accent">
+                      {c.name}
                     </div>
-                  </DataPanel>
-                </a>
-              ))}
-            </div>
-          </section>
+                    <div className="mt-0.5 text-xs text-muted-foreground">{t(c.roleKey)}</div>
+                    <div className="mt-1 truncate font-mono text-[10px] text-subtle-foreground">
+                      github.com/{c.github}
+                    </div>
+                  </div>
+                </div>
+              </a>
+            ))}
+          </DataPanel>
 
-          <div className="flex min-h-0 flex-1 flex-col">
-            <CombinedStatusSection inProgressCount={inProgressCount} plannedCount={plannedCount} />
-          </div>
+          <CombinedStatusSection inProgressCount={inProgressCount} plannedCount={plannedCount} />
         </aside>
+      </div>
+    </div>
+  );
+}
+
+function ReleaseHighlight({ text, className }: { text: string; className?: string }) {
+  return (
+    <div className={`rounded-md border border-border bg-surface-muted p-4 ${className ?? ''}`}>
+      <div className="flex items-start gap-3">
+        <span className="mt-1 h-2 w-2 shrink-0 rounded-full bg-accent" />
+        <p className="text-sm leading-6 text-muted-foreground">{text}</p>
+      </div>
+    </div>
+  );
+}
+
+function HeroStatusRow({
+  icon: Icon,
+  label,
+  value,
+}: {
+  icon: LucideIcon;
+  label: string;
+  value: string;
+}) {
+  return (
+    <div className="flex items-start gap-3 rounded-md border border-border bg-surface px-3 py-2.5">
+      <Icon className="mt-0.5 h-3.5 w-3.5 shrink-0 text-subtle-foreground" />
+      <div className="min-w-0">
+        <div className="text-[10px] font-semibold uppercase text-subtle-foreground">{label}</div>
+        <div className="mt-1 text-sm font-medium leading-6 text-foreground">{value}</div>
       </div>
     </div>
   );
@@ -148,12 +262,12 @@ function CombinedStatusSection({
 
   return (
     <DataPanel
-      className="flex h-full flex-col overflow-hidden"
+      className="flex min-h-0 flex-1 flex-col overflow-hidden"
       contentClassName="flex min-h-0 flex-1 flex-col p-0"
     >
       <div className="flex shrink-0 items-center gap-2 border-b border-border px-3 py-2">
         <CircleDot className="h-3.5 w-3.5 shrink-0 text-amber-400" />
-        <span className="font-mono text-[10px] font-semibold uppercase tracking-[0.15em] text-foreground">
+        <span className="text-[10px] font-semibold uppercase text-foreground">
           {t('changelog.inProgress')} & {t('changelog.planned')}
         </span>
       </div>
@@ -161,15 +275,15 @@ function CombinedStatusSection({
       <div className="min-h-0 flex-1 overflow-y-auto">
         <div className="border-t border-border">
           <div className="px-3 pt-2 pb-0.5">
-            <span className="font-mono text-[10px] font-semibold uppercase tracking-[0.12em] text-amber-300/80">
+            <span className="text-[10px] font-semibold uppercase text-amber-300/80">
               {t('changelog.inProgress')}
             </span>
           </div>
           <ul className="divide-y divide-border">
             {Array.from({ length: inProgressCount }, (_, i) => i + 1).map((n) => (
-              <li key={`ip-${n}`} className="flex items-start gap-2 px-3 py-1.5">
+              <li key={`ip-${n}`} className="flex items-start gap-2 px-3 py-2">
                 <span className="mt-1.5 h-1 w-1 shrink-0 rounded-full bg-amber-400" />
-                <span className="text-[12px] leading-[1.35] text-muted-foreground">
+                <span className="text-[12px] leading-[1.45] text-muted-foreground">
                   {t(`changelog.inProgress.${n}`)}
                 </span>
               </li>
@@ -177,15 +291,15 @@ function CombinedStatusSection({
           </ul>
 
           <div className="border-t border-border px-3 pt-2 pb-0.5">
-            <span className="font-mono text-[10px] font-semibold uppercase tracking-[0.12em] text-subtle-foreground">
+            <span className="text-[10px] font-semibold uppercase text-subtle-foreground">
               {t('changelog.planned')}
             </span>
           </div>
           <ul>
             {Array.from({ length: plannedCount }, (_, i) => i + 1).map((n) => (
-              <li key={`pl-${n}`} className="flex items-start gap-2 px-3 py-1.5">
+              <li key={`pl-${n}`} className="flex items-start gap-2 px-3 py-2">
                 <span className="mt-1.5 h-1 w-1 shrink-0 rounded-full bg-subtle-foreground" />
-                <span className="text-[12px] leading-[1.35] text-muted-foreground">
+                <span className="text-[12px] leading-[1.45] text-muted-foreground">
                   {t(`changelog.planned.${n}`)}
                 </span>
               </li>
@@ -211,7 +325,7 @@ function ActionLink({
       href={href}
       target="_blank"
       rel="noreferrer"
-      className="inline-flex max-w-full items-center gap-2 rounded-md border border-border bg-surface-elevated px-3 py-2 font-mono text-[11px] font-medium text-accent transition-colors hover:border-border-strong hover:text-accent-hover focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/25"
+      className="inline-flex max-w-full items-center justify-center gap-2 rounded-md border border-border bg-surface px-3 py-3 text-center text-[11px] font-semibold text-foreground transition-colors hover:border-border-strong hover:bg-surface-hover hover:text-accent focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/25"
     >
       <Icon className="h-4 w-4 shrink-0" />
       <span className="truncate">{children}</span>
@@ -242,7 +356,7 @@ function TimelineItem({ entryKey, tags }: { entryKey: string; tags: string[] }) 
         </div>
       </div>
 
-      <h4 className="font-mono text-[13px] font-semibold tracking-[-0.02em] text-foreground">
+      <h4 className="font-mono text-[13px] font-semibold text-foreground">
         {t(`${entryKey}.title`)}
       </h4>
 

@@ -15,6 +15,7 @@ const PAGE_KEYS: Record<
   '/projects': { title: 'topbar.projects.title', subtitle: 'topbar.projects.subtitle' },
   '/analytics': { title: 'topbar.analytics.title', subtitle: 'topbar.analytics.subtitle' },
   '/models': { title: 'topbar.models.title', subtitle: 'topbar.models.subtitle' },
+  '/budgets': { title: 'topbar.budgets.title', subtitle: 'topbar.budgets.subtitle' },
   '/settings': { title: 'topbar.settings.title', subtitle: 'topbar.settings.subtitle' },
   '/changelog': { title: 'topbar.changelog.title', subtitle: 'topbar.changelog.subtitle' },
 };
@@ -30,6 +31,11 @@ function getPageKeys(pathname: string) {
       title: 'topbar.projects.title' as const,
       subtitle: 'topbar.projects.subtitle' as const,
     };
+  if (pathname.startsWith('/analytics/insights/'))
+    return {
+      title: 'topbar.analytics.title' as const,
+      subtitle: 'topbar.analytics.subtitle' as const,
+    };
   return PAGE_KEYS[pathname] ?? PAGE_KEYS['/'];
 }
 
@@ -40,9 +46,9 @@ export function DashboardLayout() {
   const showDateRange = pathname === '/' || pathname === '/sessions' || pathname === '/analytics';
 
   return (
-    <div className="flex h-[100dvh] overflow-hidden bg-background text-foreground">
+    <div className="flex h-[100dvh] overflow-hidden bg-canvas text-foreground">
       <Sidebar />
-      <main className="flex min-w-0 flex-1 flex-col overflow-hidden">
+      <main className="flex min-w-0 flex-1 flex-col overflow-hidden bg-background">
         <Topbar
           title={t(page.title)}
           subtitle={t(page.subtitle)}

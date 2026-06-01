@@ -1,23 +1,23 @@
 export const CHART_COLORS = [
-  '#0a84ff',
-  '#64d2ff',
-  '#30d158',
-  '#ff9f0a',
-  '#ff453a',
-  '#9a9898',
-  '#2dd4bf',
+  '#4f7cff',
+  '#10b981',
+  '#f59e0b',
+  '#ef4444',
+  '#8b5cf6',
+  '#14b8a6',
+  '#f97316',
 ];
 
 export const CLI_COLORS: Record<string, string> = {
-  codex: '#0a84ff',
-  opencode: '#5a5858',
-  claude: '#ff9f0a',
-  gemini: '#64d2ff',
-  kimi: '#2dd4bf',
-  aider: '#30d158',
-  qwen: '#3b82f6',
-  antigravity: '#ffb340',
-  commandcode: '#000000',
+  codex: '#10a37f',
+  opencode: '#7c6f64',
+  claude: '#9a5a00',
+  gemini: '#235f9f',
+  kimi: '#178f8f',
+  aider: '#087443',
+  qwen: '#5b54b6',
+  antigravity: '#b26b00',
+  commandcode: '#4f7cff',
 };
 
 export function chartColor(index: number) {

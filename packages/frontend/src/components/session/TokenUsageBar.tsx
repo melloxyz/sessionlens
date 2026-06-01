@@ -23,7 +23,7 @@ export function TokenUsageBar({
 
   return (
     <div className="space-y-4">
-      <div className="flex h-3 overflow-hidden rounded-full bg-surface-muted ring-1 ring-border">
+      <div className="flex h-2.5 overflow-hidden rounded-full bg-surface-muted ring-1 ring-border">
         {rows.map((row) => (
           <div
             key={row.label}
@@ -39,7 +39,7 @@ export function TokenUsageBar({
               <span className={`h-2.5 w-2.5 rounded-full ${row.color}`} />
               {row.label}
             </div>
-            <div className="font-medium text-foreground">
+            <div className="text-sm font-medium text-foreground">
               {formatTokens(row.value)}{' '}
               <span className="text-xs text-subtle-foreground">
                 ({((row.value / total) * 100).toFixed(1)}%)

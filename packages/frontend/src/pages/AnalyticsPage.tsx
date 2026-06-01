@@ -1,5 +1,5 @@
-import { useMemo, useState, type ReactNode } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import { useMemo, useState } from 'react';
+import { Link } from 'react-router-dom';
 import {
   AlertTriangle,
   ChevronRight,
@@ -24,13 +24,15 @@ import {
   ResponsiveContainer,
 } from 'recharts';
 import { useApi } from '../hooks/useApi.js';
-import { compactPath, formatCurrency, formatTokens } from '../lib/format.js';
+import { compactPath, formatCurrency, formatDateTime, formatTokens } from '../lib/format.js';
 import { chartColor } from '../lib/chart-colors.js';
 import { useDateRange } from '../components/filters/DateRangeProvider.js';
-import { BrandBadge } from '../components/brand/BrandMark.js';
+import { BrandBadge, getBrandMeta } from '../components/brand/BrandMark.js';
 import { Badge } from '../components/ui/Badge.js';
 import { Button } from '../components/ui/Button.js';
 import { Card, CardContent, CardHeader, CardTitle } from '../components/ui/Card.js';
+import { CompactStat } from '../components/ui/CompactStat.js';
+import { ControlField } from '../components/ui/ControlField.js';
 import { DataPanel } from '../components/ui/DataPanel.js';
 import { EmptyState } from '../components/ui/EmptyState.js';
 import { ErrorState } from '../components/ui/ErrorState.js';
@@ -153,7 +155,6 @@ export function AnalyticsPage() {
         break;
     }
   };
-  const queryPrefix = queryString ? `?${queryString}` : '';
   const filterParams = new URLSearchParams(queryString);
   if (cliFilter) filterParams.set('cli', cliFilter);
   if (providerFilter) filterParams.set('provider', providerFilter);
@@ -166,11 +167,12 @@ export function AnalyticsPage() {
   const filterOptionsParams = new URLSearchParams(queryString);
   if (cliFilter) filterOptionsParams.set('cli', cliFilter);
   if (providerFilter) filterOptionsParams.set('provider', providerFilter);
+  if (modelFilter) filterOptionsParams.set('model', modelFilter);
+  if (projectFilter) filterOptionsParams.set('project', projectFilter);
   const filterOptionsQuery = filterOptionsParams.toString();
-  const buildFilterOptionsQuery = () => (filterOptionsQuery ? `?${filterOptionsQuery}` : '');
 
   const { data: options } = useApi<FilterOptionsResponse>(
-    `/api/analytics/filter-options${buildFilterOptionsQuery()}`,
+    `/api/analytics/filter-options${filterOptionsQuery ? `?${filterOptionsQuery}` : ''}`,
     { initialData: { clis: [], providers: [], models: [], projects: [] } },
   );
   const {
@@ -232,9 +234,39 @@ export function AnalyticsPage() {
   const anomalies = report?.anomalies ?? [];
   const productivity = report?.productivity;
   const modelUsage = report?.modelUsageBreakdown ?? [];
+  const activeFilters = [
+    cliFilter
+      ? {
+          key: 'cli',
+          label: `${t('common.cli')}: ${getBrandLabel(cliFilter)}`,
+          clear: () => setCliFilter(''),
+        }
+      : null,
+    providerFilter
+      ? {
+          key: 'provider',
+          label: `${t('common.provider')}: ${providerFilter}`,
+          clear: () => setProviderFilter(''),
+        }
+      : null,
+    modelFilter
+      ? {
+          key: 'model',
+          label: `${t('common.model')}: ${modelFilter}`,
+          clear: () => setModelFilter(''),
+        }
+      : null,
+    projectFilter
+      ? {
+          key: 'project',
+          label: `${t('common.project')}: ${compactPath(projectFilter)}`,
+          clear: () => setProjectFilter(''),
+        }
+      : null,
+  ].filter(Boolean) as { key: string; label: string; clear: () => void }[];
 
   return (
-    <div className="space-y-5 p-4 lg:p-6" aria-busy={isValidating}>
+    <div className="mx-auto w-full max-w-[1800px] space-y-5 p-4 lg:p-6" aria-busy={isValidating}>
       {(reportError || spendError || tokenError || breakdownError) && (
         <ErrorState
           title={t('analytics.failed')}
@@ -257,106 +289,157 @@ export function AnalyticsPage() {
       )}
 
       <DataPanel contentClassName="space-y-4 p-4">
-        <div className="flex flex-wrap items-start justify-between gap-3">
-          <div>
-            <div className="font-mono text-sm font-semibold text-foreground">
-              {t('analytics.filters')}
+        <div className="grid gap-4 2xl:grid-cols-[minmax(0,1.25fr)_minmax(360px,0.75fr)]">
+          <div className="space-y-3">
+            <div className="flex flex-wrap items-start justify-between gap-3">
+              <div>
+                <div className="text-sm font-semibold text-foreground">
+                  {t('analytics.filters')}
+                </div>
+                <p className="mt-1 text-xs text-subtle-foreground">
+                  {t('analytics.summaryDescription')}
+                </p>
+              </div>
+              {(cliFilter || providerFilter || modelFilter || projectFilter) && (
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => {
+                    setCliFilter('');
+                    setProviderFilter('');
+                    setModelFilter('');
+                    setProjectFilter('');
+                  }}
+                >
+                  {t('analytics.clearFilters')}
+                </Button>
+              )}
             </div>
-            <p className="mt-1 text-xs text-subtle-foreground">
-              {t('analytics.summaryDescription')}
-            </p>
+
+            <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-6">
+              <ControlField label={t('analytics.groupBy')}>
+                <Select
+                  className="h-9 text-[13px]"
+                  options={[
+                    { label: t('analytics.byModel'), value: 'model' },
+                    { label: t('analytics.byProvider'), value: 'provider' },
+                    { label: t('analytics.byCli'), value: 'cli' },
+                    { label: t('analytics.byProject'), value: 'project' },
+                  ]}
+                  value={dimension}
+                  onChange={(e) => setDimension(e.target.value)}
+                />
+              </ControlField>
+              <ControlField label={t('analytics.metric')}>
+                <Select
+                  className="h-9 text-[13px]"
+                  options={[
+                    { label: t('common.cost'), value: 'cost' },
+                    { label: t('common.sessions'), value: 'sessions' },
+                    { label: t('common.tokens'), value: 'tokens' },
+                  ]}
+                  value={metric}
+                  onChange={(e) => setMetric(e.target.value)}
+                />
+              </ControlField>
+              <ControlField label={t('common.cli')}>
+                <Select
+                  className="h-9 text-[13px]"
+                  value={cliFilter}
+                  onChange={(e) => setCliFilter(e.target.value)}
+                  options={[
+                    { label: t('analytics.allClis'), value: '' },
+                    ...(options?.clis ?? []).map((item) => ({
+                      label: `${item.label} (${item.count})`,
+                      value: item.value,
+                    })),
+                  ]}
+                />
+              </ControlField>
+              <ControlField label={t('common.provider')}>
+                <Select
+                  className="h-9 text-[13px]"
+                  value={providerFilter}
+                  onChange={(e) => setProviderFilter(e.target.value)}
+                  options={[
+                    { label: t('analytics.allProviders'), value: '' },
+                    ...(options?.providers ?? []).map((item) => ({
+                      label: `${item.label} (${item.count})`,
+                      value: item.value,
+                    })),
+                  ]}
+                />
+              </ControlField>
+              <ControlField label={t('common.model')}>
+                <Select
+                  className="h-9 text-[13px]"
+                  value={modelFilter}
+                  onChange={(e) => setModelFilter(e.target.value)}
+                  options={[
+                    { label: t('analytics.allModels'), value: '' },
+                    ...(options?.models ?? []).map((item) => ({
+                      label: `${item.label} (${item.count})`,
+                      value: item.value,
+                    })),
+                  ]}
+                />
+              </ControlField>
+              <ControlField label={t('common.project')}>
+                <Select
+                  className="h-9 text-[13px]"
+                  value={projectFilter}
+                  onChange={(e) => setProjectFilter(e.target.value)}
+                  options={[
+                    { label: t('analytics.allProjects'), value: '' },
+                    ...(options?.projects ?? []).map((item) => ({
+                      label: `${compactPath(item.label)} (${item.count})`,
+                      value: item.value,
+                    })),
+                  ]}
+                />
+              </ControlField>
+            </div>
+
+            {activeFilters.length > 0 && (
+              <div className="flex flex-wrap gap-2">
+                {activeFilters.map((filter) => (
+                  <button
+                    key={filter.key}
+                    type="button"
+                    onClick={filter.clear}
+                    className="inline-flex items-center gap-2 rounded-full border border-border bg-surface px-3 py-1.5 text-xs text-muted-foreground transition-colors hover:border-border-strong hover:text-foreground"
+                  >
+                    <span>{filter.label}</span>
+                    <span className="text-subtle-foreground">×</span>
+                  </button>
+                ))}
+              </div>
+            )}
           </div>
-          {(cliFilter || providerFilter || modelFilter || projectFilter) && (
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => {
-                setCliFilter('');
-                setProviderFilter('');
-                setModelFilter('');
-                setProjectFilter('');
-              }}
-            >
-              {t('analytics.clearFilters')}
-            </Button>
-          )}
-        </div>
-        <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-6">
-          <FilterField label={t('analytics.groupBy')}>
-            <Select
-              options={[
-                { label: t('analytics.byModel'), value: 'model' },
-                { label: t('analytics.byProvider'), value: 'provider' },
-                { label: t('analytics.byCli'), value: 'cli' },
-                { label: t('analytics.byProject'), value: 'project' },
-              ]}
-              value={dimension}
-              onChange={(e) => setDimension(e.target.value)}
+
+          <div className="grid gap-2 md:grid-cols-2">
+            <CompactStat
+              label={t('common.cost')}
+              value={formatCurrency(report?.summary.totalSpend)}
+              meta={t('common.total')}
             />
-          </FilterField>
-          <FilterField label={t('analytics.metric')}>
-            <Select
-              options={[
-                { label: t('common.cost'), value: 'cost' },
-                { label: t('common.sessions'), value: 'sessions' },
-                { label: t('common.tokens'), value: 'tokens' },
-              ]}
-              value={metric}
-              onChange={(e) => setMetric(e.target.value)}
+            <CompactStat
+              label={t('analytics.insights')}
+              value={String(insights.length)}
+              meta={dimensionLabel}
             />
-          </FilterField>
-          <FilterField label={t('common.cli')}>
-            <Select
-              value={cliFilter}
-              onChange={(e) => setCliFilter(e.target.value)}
-              options={[
-                { label: t('analytics.allClis'), value: '' },
-                ...(options?.clis ?? []).map((item) => ({
-                  label: `${item.label} (${item.count})`,
-                  value: item.value,
-                })),
-              ]}
+            <CompactStat
+              label={t('analytics.anomalies')}
+              value={String(anomalies.length)}
+              meta={metricLabel}
+              tone={anomalies.length > 0 ? 'warning' : 'default'}
             />
-          </FilterField>
-          <FilterField label={t('common.provider')}>
-            <Select
-              value={providerFilter}
-              onChange={(e) => setProviderFilter(e.target.value)}
-              options={[
-                { label: t('analytics.allProviders'), value: '' },
-                ...(options?.providers ?? []).map((item) => ({
-                  label: `${item.label} (${item.count})`,
-                  value: item.value,
-                })),
-              ]}
+            <CompactStat
+              label={t('analytics.live')}
+              value={report?.generatedAt ? formatDateTime(report.generatedAt) : '—'}
+              meta={t('analytics.summaryTitle')}
             />
-          </FilterField>
-          <FilterField label={t('common.model')}>
-            <Select
-              value={modelFilter}
-              onChange={(e) => setModelFilter(e.target.value)}
-              options={[
-                { label: t('analytics.allModels'), value: '' },
-                ...(options?.models ?? []).map((item) => ({
-                  label: `${item.label} (${item.count})`,
-                  value: item.value,
-                })),
-              ]}
-            />
-          </FilterField>
-          <FilterField label={t('common.project')}>
-            <Select
-              value={projectFilter}
-              onChange={(e) => setProjectFilter(e.target.value)}
-              options={[
-                { label: t('analytics.allProjects'), value: '' },
-                ...(options?.projects ?? []).map((item) => ({
-                  label: `${compactPath(item.label)} (${item.count})`,
-                  value: item.value,
-                })),
-              ]}
-            />
-          </FilterField>
+          </div>
         </div>
       </DataPanel>
 
@@ -364,7 +447,7 @@ export function AnalyticsPage() {
         title={t('analytics.summaryTitle')}
         description={t('analytics.summaryDescription')}
       />
-      <div className="grid grid-cols-1 gap-3 md:grid-cols-2 xl:grid-cols-4">
+      <div className="grid grid-cols-1 gap-3 md:grid-cols-2 xl:grid-cols-4 2xl:grid-cols-8">
         <SummaryCard
           icon={TrendingUp}
           label={t('analytics.sevenDaySpend')}
@@ -446,7 +529,7 @@ export function AnalyticsPage() {
         title={`${t('analytics.insightsTitle')} & ${t('analytics.anomaliesTitle')}`}
         description={t('analytics.insightsDescription')}
       />
-      <div className="grid grid-cols-1 gap-4 xl:grid-cols-[1.2fr_0.8fr]">
+      <div className="grid grid-cols-1 gap-4 xl:grid-cols-[1.15fr_0.85fr] 2xl:grid-cols-[1.25fr_0.75fr]">
         <Card>
           <CardHeader>
             <div>
@@ -463,20 +546,13 @@ export function AnalyticsPage() {
                   : t('common.loading')}
             </Badge>
           </CardHeader>
-          <CardContent className="space-y-3">
+          <CardContent className="grid gap-3 2xl:grid-cols-2">
             {insights.length > 0 ? (
               insights.map((insight) => {
                 const localized = localizeInsight(insight, locale);
                 return (
-                  <Link
-                    key={insight.id}
-                    to={`/analytics/insights/${insight.id}`}
-                    className="block"
-                  >
-                    <InsightRow
-                      item={localized}
-                      label={t('analytics.insight')}
-                    />
+                  <Link key={insight.id} to={`/analytics/insights/${insight.id}`} className="block">
+                    <InsightRow item={localized} label={t('analytics.insight')} />
                   </Link>
                 );
               })
@@ -500,20 +576,13 @@ export function AnalyticsPage() {
             </div>
             <Badge variant="neutral">{t('analytics.baseline')}</Badge>
           </CardHeader>
-          <CardContent className="space-y-3">
+          <CardContent className="grid gap-3">
             {anomalies.length > 0 ? (
               anomalies.map((anomaly) => {
                 const localized = localizeAnomaly(anomaly, locale);
                 return (
-                  <Link
-                    key={anomaly.id}
-                    to={`/analytics/insights/${anomaly.id}`}
-                    className="block"
-                  >
-                    <AnomalyRow
-                      item={localized}
-                      label={t('analytics.anomaly')}
-                    />
+                  <Link key={anomaly.id} to={`/analytics/insights/${anomaly.id}`} className="block">
+                    <AnomalyRow item={localized} label={t('analytics.anomaly')} />
                   </Link>
                 );
               })
@@ -532,7 +601,7 @@ export function AnalyticsPage() {
         title={t('analytics.trendsTitle')}
         description={t('analytics.trendsDescription')}
       />
-      <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
+      <div className="grid grid-cols-1 gap-4 2xl:grid-cols-[minmax(0,1.2fr)_minmax(420px,0.8fr)]">
         <Card>
           <CardHeader>
             <div className="flex items-start justify-between gap-3">
@@ -550,9 +619,7 @@ export function AnalyticsPage() {
               </div>
               <Select
                 value={spendGranularity}
-                onChange={(e) =>
-                  setSpendGranularity(e.target.value as 'day' | 'week' | 'month')
-                }
+                onChange={(e) => setSpendGranularity(e.target.value as 'day' | 'week' | 'month')}
                 options={[
                   { label: t('analytics.granularityDay'), value: 'day' },
                   { label: t('analytics.granularityWeek'), value: 'week' },
@@ -565,7 +632,7 @@ export function AnalyticsPage() {
             {spendLoading && !spendData && !report ? (
               <ChartSkeleton className="h-[260px]" />
             ) : (
-              <ResponsiveContainer width="100%" height={260}>
+              <ResponsiveContainer width="100%" height={300}>
                 <AreaChart data={spendData?.points ?? report?.trend ?? []}>
                   <defs>
                     <linearGradient id="spendGradient" x1="0" y1="0" x2="0" y2="1">
@@ -617,7 +684,7 @@ export function AnalyticsPage() {
             {tokenLoading && !tokenData ? (
               <ChartSkeleton className="h-[260px]" />
             ) : (
-              <ResponsiveContainer width="100%" height={260}>
+              <ResponsiveContainer width="100%" height={300}>
                 <AreaChart data={tokenData?.points ?? []}>
                   <CartesianGrid stroke="var(--border)" vertical={false} />
                   <XAxis
@@ -660,7 +727,7 @@ export function AnalyticsPage() {
         title={t('analytics.explorerTitle')}
         description={t('analytics.explorerDescription')}
       />
-      <div className="grid grid-cols-1 gap-4 lg:grid-cols-[0.9fr_1.1fr]">
+      <div className="grid grid-cols-1 gap-4 2xl:grid-cols-[0.88fr_1.12fr]">
         <Card>
           <CardHeader>
             <div>
@@ -670,7 +737,7 @@ export function AnalyticsPage() {
               </p>
             </div>
           </CardHeader>
-          <CardContent className="flex flex-col gap-6 lg:flex-row lg:items-center">
+          <CardContent className="flex flex-col gap-6 lg:flex-row lg:items-center 2xl:gap-8">
             {breakdownLoading && !breakdownData ? (
               <DonutSkeleton className="w-full lg:flex-1" />
             ) : (
@@ -703,7 +770,7 @@ export function AnalyticsPage() {
                     </PieChart>
                   </ResponsiveContainer>
                 </div>
-                <div className="space-y-2 text-xs lg:min-w-[220px]">
+                <div className="grid gap-2 text-xs sm:grid-cols-2 lg:min-w-[220px] lg:grid-cols-1">
                   {breakdown.map((d, i) => (
                     <div
                       key={d.label}
@@ -741,7 +808,7 @@ export function AnalyticsPage() {
             {breakdownLoading && !breakdownData ? (
               <ChartSkeleton className="h-[260px]" />
             ) : (
-              <ResponsiveContainer width="100%" height={260}>
+              <ResponsiveContainer width="100%" height={300}>
                 <BarChart data={breakdown.slice(0, 8)} layout="vertical" margin={{ left: 72 }}>
                   <CartesianGrid stroke="var(--border)" vertical={false} />
                   <XAxis
@@ -780,7 +847,7 @@ export function AnalyticsPage() {
         title={t('analytics.productivityTitle')}
         description={t('analytics.productivityDescription')}
       />
-      <div className="grid grid-cols-1 gap-4 xl:grid-cols-[1.1fr_0.9fr]">
+      <div className="grid grid-cols-1 gap-4 xl:grid-cols-[0.95fr_1.05fr]">
         <Card>
           <CardHeader>
             <div>
@@ -823,7 +890,7 @@ export function AnalyticsPage() {
               </p>
             </div>
           </CardHeader>
-          <CardContent className="space-y-3">
+          <CardContent className="grid gap-3 2xl:grid-cols-2">
             {(productivity?.topToolCallSessions ?? []).length > 0 ? (
               productivity!.topToolCallSessions.map((session) => (
                 <Link
@@ -833,7 +900,7 @@ export function AnalyticsPage() {
                 >
                   <div className="flex items-start justify-between gap-3">
                     <div className="min-w-0">
-                      <div className="font-mono text-sm font-medium text-foreground">
+                      <div className="text-sm font-medium text-foreground">
                         {session.sessionId.slice(0, 12)}
                       </div>
                       <div className="mt-1 flex flex-wrap items-center gap-1.5">
@@ -877,7 +944,7 @@ export function AnalyticsPage() {
         title={t('analytics.modelUsageTitle')}
         description={t('analytics.multiModelDescription')}
       />
-      <div className="grid grid-cols-1 gap-4 xl:grid-cols-[1.1fr_0.9fr]">
+      <div className="grid grid-cols-1 gap-4 xl:grid-cols-[1fr_0.95fr]">
         <Card>
           <CardHeader>
             <div>
@@ -887,16 +954,14 @@ export function AnalyticsPage() {
               </p>
             </div>
           </CardHeader>
-          <CardContent className="space-y-3">
+          <CardContent className="grid gap-3 2xl:grid-cols-2">
             {modelUsage.length > 0 ? (
               modelUsage.slice(0, 8).map((item) => (
                 <div
                   key={`${item.provider}/${item.model}`}
                   className="cursor-pointer rounded-lg border border-border bg-surface-elevated p-4 text-sm transition-colors hover:bg-surface-hover"
                   onClick={() => {
-                    setProviderFilter(
-                      providerFilter === item.provider ? '' : item.provider,
-                    );
+                    setProviderFilter(providerFilter === item.provider ? '' : item.provider);
                     setModelFilter(modelFilter === item.model ? '' : item.model);
                   }}
                   title={t('analytics.clickToFilterByModel')}
@@ -905,9 +970,7 @@ export function AnalyticsPage() {
                     <div className="min-w-0">
                       <div className="flex flex-wrap items-center gap-2">
                         <BrandBadge value={item.provider} kind="provider" />
-                        <span className="font-mono text-sm font-medium text-foreground">
-                          {item.model}
-                        </span>
+                        <span className="text-sm font-medium text-foreground">{item.model}</span>
                       </div>
                       <div className="text-xs text-subtle-foreground">
                         {item.messageCount} {t('common.messages').toLowerCase()} ·{' '}
@@ -970,17 +1033,6 @@ function SectionHeader({ title, description }: { title: string; description: str
   return <SharedSectionHeader title={title} description={description} />;
 }
 
-function FilterField({ label, children }: { label: string; children: ReactNode }) {
-  return (
-    <label className="space-y-1.5">
-      <span className="block text-[11px] font-medium uppercase tracking-[0.14em] text-subtle-foreground">
-        {label}
-      </span>
-      {children}
-    </label>
-  );
-}
-
 function SummaryCard({
   icon: Icon,
   label,
@@ -1029,7 +1081,7 @@ function InsightRow({ item, label }: { item: Insight; label: string }) {
             </Badge>
             <span className="text-xs text-subtle-foreground">{label}</span>
           </div>
-          <div className="font-mono text-sm font-medium text-foreground">{item.title}</div>
+          <div className="text-sm font-medium text-foreground">{item.title}</div>
           <p className="mt-1 text-sm text-subtle-foreground">{item.description}</p>
         </div>
         <div className="flex shrink-0 items-center gap-2 text-xs text-muted-foreground">
@@ -1060,7 +1112,7 @@ function AnomalyRow({ item, label }: { item: Anomaly; label: string }) {
             </Badge>
             <span className="text-xs text-subtle-foreground">{label}</span>
           </div>
-          <div className="font-mono text-sm font-medium text-foreground">{item.title}</div>
+          <div className="text-sm font-medium text-foreground">{item.title}</div>
           <p className="mt-1 text-sm text-subtle-foreground">{item.description}</p>
         </div>
         <div className="flex shrink-0 items-center gap-2 text-xs text-muted-foreground">
@@ -1088,9 +1140,7 @@ function MetricLine({ label, value, muted }: { label: string; value: string; mut
 function MetricChip({ label, value }: { label: string; value: string }) {
   return (
     <div className="rounded-md border border-border bg-surface p-3">
-      <div className="font-mono text-[10px] uppercase tracking-[0.12em] text-subtle-foreground">
-        {label}
-      </div>
+      <div className="text-[10px] uppercase text-subtle-foreground">{label}</div>
       <div className="mt-1 font-mono font-medium text-foreground">{value}</div>
     </div>
   );
@@ -1192,4 +1242,8 @@ function localizeAnomaly(item: Anomaly, locale: string): Anomaly {
       description: 'Nas sessões analisadas, os cache misses continuam elevados.',
     };
   return item;
+}
+
+function getBrandLabel(value: string): string {
+  return getBrandMeta(value, 'cli').label;
 }

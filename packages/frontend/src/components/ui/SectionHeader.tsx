@@ -25,15 +25,11 @@ export function SectionHeader({
     >
       <div className="min-w-0">
         {eyebrow && (
-          <div className="mb-2 font-mono text-[10px] font-medium uppercase tracking-[0.16em] text-subtle-foreground">
-            {eyebrow}
-          </div>
+          <div className="mb-2 text-xs font-medium uppercase text-subtle-foreground">{eyebrow}</div>
         )}
-        <h2 className="truncate font-mono text-sm font-semibold tracking-[-0.01em] text-foreground">
-          {title}
-        </h2>
+        <h2 className="truncate text-base font-semibold text-foreground">{title}</h2>
         {description && (
-          <p className="mt-1 text-xs leading-5 text-subtle-foreground">{description}</p>
+          <p className="mt-1 max-w-2xl text-sm leading-6 text-muted-foreground">{description}</p>
         )}
       </div>
       {action && <div className="shrink-0 self-start sm:self-auto">{action}</div>}
