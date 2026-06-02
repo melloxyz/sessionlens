@@ -5,7 +5,7 @@ import { BrandBadge, BrandMark } from '../components/brand/BrandMark.js';
 import { Badge } from '../components/ui/Badge.js';
 import { Button } from '../components/ui/Button.js';
 import { ControlField } from '../components/ui/ControlField.js';
-import { DataPanel } from '../components/ui/DataPanel.js';
+import { Card, CardContent } from '../components/ui/Card.js';
 import {
   DataTable,
   DataTableBody,
@@ -17,9 +17,11 @@ import {
 } from '../components/ui/DataTable.js';
 import { EmptyState } from '../components/ui/EmptyState.js';
 import { ErrorState } from '../components/ui/ErrorState.js';
-import { FilterBar } from '../components/ui/FilterBar.js';
+import { FigurePanel } from '../components/ui/FigurePanel.js';
 import { Input } from '../components/ui/Input.js';
 import { TableSkeletonRows } from '../components/ui/LoadingState.js';
+import { MetricBlock } from '../components/ui/MetricBlock.js';
+import { QueryBar } from '../components/ui/QueryBar.js';
 import { Select } from '../components/ui/Select.js';
 import { useDateRange } from '../components/filters/DateRangeProvider.js';
 import { useI18n } from '../components/i18n/LanguageProvider.js';
@@ -68,6 +70,26 @@ export function SessionsPage() {
   }>(apiUrl);
   const isInitialLoading = loading && !data;
   const totalPages = Math.max(1, Math.ceil((data?.total ?? 0) / 20));
+  const currentRows = data?.data ?? [];
+  const currentSpend = currentRows.reduce(
+    (sum, session) => sum + Number(session.total_cost_usd ?? 0),
+    0,
+  );
+  const activeChips = [
+    search
+      ? {
+          key: 'search',
+          label: `${t('common.search')}: ${search}`,
+          onClear: () => updateParam('search', ''),
+        }
+      : null,
+    cli
+      ? { key: 'cli', label: `${t('common.cli')}: ${cli}`, onClear: () => updateParam('cli', '') }
+      : null,
+    sortBy !== 'started_at' || sortOrder !== 'desc'
+      ? { key: 'sort', label: `${t('common.sort')}: ${sortBy} ${sortOrder}` }
+      : null,
+  ].filter(Boolean) as { key: string; label: string; onClear?: () => void }[];
 
   function updateParam(key: string, value: string, resetPage = true) {
     const params = new URLSearchParams(searchParams);
@@ -85,7 +107,7 @@ export function SessionsPage() {
   }
 
   return (
-    <div className="space-y-5 p-4 lg:p-6">
+    <div className="flex flex-col gap-5 p-4 lg:p-6">
       {error && (
         <ErrorState
           title={t('sessions.failed')}
@@ -96,31 +118,42 @@ export function SessionsPage() {
         />
       )}
 
-      <FilterBar
-        className="gap-3"
+      <section className="grid gap-3 md:grid-cols-3">
+        <MetricBlock
+          variant="compact"
+          label={t('sessions.ledger')}
+          value={String(data?.total ?? 0)}
+          meta={validating && !isInitialLoading ? t('common.loading') : t('common.sessions')}
+        />
+        <MetricBlock
+          variant="compact"
+          label={t('common.cost')}
+          value={formatCurrency(currentSpend)}
+          tone="info"
+          meta={t('sessions.currentPage')}
+        />
+        <MetricBlock
+          variant="compact"
+          label={t('common.confidence')}
+          value={String(
+            currentRows.filter((session) => session.source_confidence === 'HIGH').length,
+          )}
+          tone="success"
+          meta={t('sessions.highConfidenceRows')}
+        />
+      </section>
+
+      <QueryBar
+        title={t('sessions.explorerTitle')}
+        description={t('sessions.explorerDescription')}
+        chips={activeChips}
         actions={
-          <ControlField label={t('common.cli')} className="min-w-[220px]">
-            <Select
-              className="h-10"
-              value={cli}
-              onChange={(event) => updateParam('cli', event.target.value)}
-              options={[
-                { label: t('sessions.allClis'), value: '' },
-                { label: 'Codex', value: 'codex' },
-                { label: 'OpenCode', value: 'opencode' },
-                { label: 'Claude', value: 'claude' },
-                { label: 'Gemini', value: 'gemini' },
-                { label: 'Kimi', value: 'kimi' },
-                { label: 'Aider', value: 'aider' },
-                { label: 'Qwen', value: 'qwen' },
-                { label: 'Antigravity', value: 'antigravity' },
-                { label: 'CommandCode', value: 'commandcode' },
-              ]}
-            />
-          </ControlField>
+          <Button variant="command" onClick={() => updateParam('search', searchInput)}>
+            {t('common.search')}
+          </Button>
         }
       >
-        <ControlField label={t('common.search')} className="max-w-md flex-1">
+        <ControlField label={t('common.search')} className="md:col-span-2 xl:col-span-3">
           <div className="relative min-w-0 flex-1">
             <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-subtle-foreground" />
             <Input
@@ -132,14 +165,41 @@ export function SessionsPage() {
             />
           </div>
         </ControlField>
-        <Button variant="secondary" onClick={() => updateParam('search', searchInput)}>
-          {t('common.search')}
-        </Button>
-      </FilterBar>
+        <ControlField label={t('common.cli')}>
+          <Select
+            className="h-10"
+            value={cli}
+            onChange={(event) => updateParam('cli', event.target.value)}
+            options={[
+              { label: t('sessions.allClis'), value: '' },
+              { label: 'Codex', value: 'codex' },
+              { label: 'OpenCode', value: 'opencode' },
+              { label: 'Claude', value: 'claude' },
+              { label: 'Gemini', value: 'gemini' },
+              { label: 'Kimi', value: 'kimi' },
+              { label: 'Aider', value: 'aider' },
+              { label: 'Qwen', value: 'qwen' },
+              { label: 'Antigravity', value: 'antigravity' },
+              { label: 'CommandCode', value: 'commandcode' },
+            ]}
+          />
+        </ControlField>
+      </QueryBar>
 
-      <DataPanel contentClassName="p-0" aria-busy={validating}>
-        <DataTableContainer>
-          <DataTable>
+      <FigurePanel
+        figure="LEDGER 02"
+        title={t('topbar.sessions.title')}
+        description={t('topbar.sessions.subtitle')}
+        meta={
+          <Badge variant="neutral">
+            {validating && !isInitialLoading ? t('common.loading') : `${page}/${totalPages}`}
+          </Badge>
+        }
+        contentClassName="p-0"
+        aria-busy={validating}
+      >
+        <DataTableContainer className="hidden md:block">
+          <DataTable density="compact">
             <DataTableHead className="sticky top-0 z-10 bg-surface">
               <DataTableRow className="hover:bg-transparent">
                 <HeaderCell onClick={() => handleSort('started_at')}>
@@ -202,7 +262,8 @@ export function SessionsPage() {
                     <DataTableCell className="text-right font-mono text-xs text-muted-foreground">
                       <div>{formatDuration(session.duration_ms)}</div>
                       <div>
-                        {session.message_count} msgs · {session.tool_call_count} tools
+                        {session.message_count} {t('common.messagesShort')} ·{' '}
+                        {session.tool_call_count} {t('common.tools').toLowerCase()}
                       </div>
                     </DataTableCell>
                     <DataTableCell className="text-right font-mono font-medium tabular-nums text-foreground">
@@ -232,6 +293,69 @@ export function SessionsPage() {
             </DataTableBody>
           </DataTable>
         </DataTableContainer>
+
+        <div className="grid gap-3 p-3 md:hidden">
+          {isInitialLoading
+            ? Array.from({ length: 6 }).map((_, index) => (
+                <Card key={index} variant="flat">
+                  <CardContent className="h-32 animate-pulse" />
+                </Card>
+              ))
+            : currentRows.map((session) => (
+                <Link key={session.id} to={`/sessions/${session.id}`}>
+                  <Card interactive variant="flat">
+                    <CardContent className="flex flex-col gap-3 p-4">
+                      <div className="flex items-start justify-between gap-3">
+                        <div className="flex min-w-0 items-center gap-3">
+                          <BrandMark value={session.cli} size="md" />
+                          <div className="min-w-0">
+                            <div className="truncate text-sm font-semibold text-foreground">
+                              {session.session_id.slice(0, 10)}
+                            </div>
+                            <div className="text-xs text-subtle-foreground">
+                              {formatRelativeTime(session.started_at)}
+                            </div>
+                          </div>
+                        </div>
+                        <Badge
+                          variant={
+                            session.source_confidence === 'HIGH'
+                              ? 'success'
+                              : session.source_confidence === 'MEDIUM'
+                                ? 'default'
+                                : 'warning'
+                          }
+                        >
+                          {t(`common.confidence.${session.source_confidence.toLowerCase()}`)}
+                        </Badge>
+                      </div>
+                      <div className="min-w-0">
+                        <div className="truncate font-mono text-xs text-muted-foreground">
+                          {session.model ?? t('common.unknown')}
+                        </div>
+                        <div className="mt-1 truncate text-xs text-subtle-foreground">
+                          {compactPath(session.project_path)}
+                        </div>
+                      </div>
+                      <div className="grid grid-cols-3 gap-2 text-xs">
+                        <MobileMetric
+                          label={t('common.cost')}
+                          value={formatCurrency(session.total_cost_usd)}
+                        />
+                        <MobileMetric
+                          label={t('common.duration')}
+                          value={formatDuration(session.duration_ms)}
+                        />
+                        <MobileMetric
+                          label={t('common.tools')}
+                          value={String(session.tool_call_count)}
+                        />
+                      </div>
+                    </CardContent>
+                  </Card>
+                </Link>
+              ))}
+        </div>
 
         {!isInitialLoading && !error && (data?.data.length ?? 0) === 0 && (
           <div className="p-5">
@@ -270,7 +394,7 @@ export function SessionsPage() {
             </Button>
           </div>
         </div>
-      </DataPanel>
+      </FigurePanel>
     </div>
   );
 }
@@ -294,5 +418,14 @@ function HeaderCell({
         <ArrowUpDown className="h-3 w-3" />
       </button>
     </DataTableHeaderCell>
+  );
+}
+
+function MobileMetric({ label, value }: { label: string; value: string }) {
+  return (
+    <div className="min-w-0 rounded-md border border-border bg-surface-muted p-2">
+      <div className="text-[10px] uppercase text-subtle-foreground">{label}</div>
+      <div className="mt-1 truncate font-mono text-xs font-semibold text-foreground">{value}</div>
+    </div>
   );
 }

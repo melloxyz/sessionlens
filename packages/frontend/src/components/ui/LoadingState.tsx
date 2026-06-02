@@ -165,6 +165,9 @@ export function CardSkeleton({ className, ...props }: HTMLAttributes<HTMLDivElem
 export function DetailPageSkeleton({ className, ...props }: HTMLAttributes<HTMLDivElement>) {
   return (
     <div className={cn('space-y-5 p-4 lg:p-6', className)} {...props}>
+      <div className="rounded-md border border-border bg-surface-muted px-4 py-3 text-sm text-subtle-foreground">
+        Loading local evidence...
+      </div>
       <Skeleton className="h-5 w-28" />
       <PanelSkeleton className="min-h-[160px]" />
       <MetricGridSkeleton count={4} />

@@ -19,8 +19,9 @@ import { useI18n } from '../components/i18n/LanguageProvider.js';
 import { useTheme } from '../components/theme/ThemeProvider.js';
 import { Badge } from '../components/ui/Badge.js';
 import { Button } from '../components/ui/Button.js';
-import { CompactStat } from '../components/ui/CompactStat.js';
 import { DataPanel } from '../components/ui/DataPanel.js';
+import { FigurePanel } from '../components/ui/FigurePanel.js';
+import { MetricBlock } from '../components/ui/MetricBlock.js';
 import { ErrorState } from '../components/ui/ErrorState.js';
 import { SectionHeader } from '../components/ui/SectionHeader.js';
 import { Skeleton } from '../components/ui/Skeleton.js';
@@ -189,7 +190,8 @@ export function SettingsPage() {
           description={t('settings.userOptions.description')}
         />
 
-        <DataPanel
+        <FigurePanel
+          figure="CONTROL 01"
           title={t('settings.appearance')}
           description={t('settings.appearance.description')}
           contentClassName="grid gap-3 sm:grid-cols-2"
@@ -210,9 +212,10 @@ export function SettingsPage() {
             onClick={() => setTheme('dark')}
             tone="accent"
           />
-        </DataPanel>
+        </FigurePanel>
 
-        <DataPanel
+        <FigurePanel
+          figure="CONTROL 02"
           title={t('settings.language')}
           description={t('settings.language.description')}
           contentClassName="grid gap-3 sm:grid-cols-2"
@@ -229,9 +232,10 @@ export function SettingsPage() {
             description={t('settings.portuguese.description')}
             onClick={() => setLocale('pt-BR')}
           />
-        </DataPanel>
+        </FigurePanel>
 
-        <DataPanel
+        <FigurePanel
+          figure="LOCAL FIRST"
           title={t('settings.privacy')}
           description={t('settings.privacy.description')}
           contentClassName="grid gap-3 md:grid-cols-3"
@@ -251,7 +255,7 @@ export function SettingsPage() {
             title={t('settings.sqlite')}
             description={t('settings.sqlite.description')}
           />
-        </DataPanel>
+        </FigurePanel>
 
         {trayStatus && trayStatus.available && (
           <DataPanel
@@ -327,7 +331,8 @@ export function SettingsPage() {
           description={t('settings.workspaceControls.description')}
         />
 
-        <DataPanel
+        <FigurePanel
+          figure="RUNTIME"
           title={t('settings.ingestion')}
           description={t('settings.ingestion.description')}
           action={
@@ -488,7 +493,7 @@ export function SettingsPage() {
               )}
             </>
           )}
-        </DataPanel>
+        </FigurePanel>
       </section>
 
       <aside className="space-y-5 xl:pt-1">
@@ -497,7 +502,11 @@ export function SettingsPage() {
           description={t('settings.generalStatus.description')}
         />
 
-        <DataPanel title={t('settings.workspaceSummary')} contentClassName="space-y-4">
+        <FigurePanel
+          figure="STATUS"
+          title={t('settings.workspaceSummary')}
+          contentClassName="space-y-4"
+        >
           {overviewError && (
             <ErrorState
               title={t('settings.overviewFailed')}
@@ -508,23 +517,26 @@ export function SettingsPage() {
             />
           )}
           <div className="grid gap-2">
-            <CompactStat
+            <MetricBlock
+              variant="compact"
               label={t('common.sessions')}
               value={overviewLoading && !overview ? '—' : String(overview?.sessionCount ?? 0)}
               meta={t('common.sessions').toLowerCase()}
             />
-            <CompactStat
+            <MetricBlock
+              variant="compact"
               label={t('settings.totalSpend')}
               value={overviewLoading && !overview ? '—' : formatCurrency(overview?.totalSpend)}
               meta={t('common.cost')}
             />
-            <CompactStat
+            <MetricBlock
+              variant="compact"
               label={t('settings.topCli')}
               value={overview?.mostUsedCli ? getBrandMeta(overview.mostUsedCli).label : '—'}
               meta={t('common.cli')}
             />
           </div>
-        </DataPanel>
+        </FigurePanel>
 
         <DataPanel
           title={t('settings.localDatabase')}
@@ -543,7 +555,8 @@ export function SettingsPage() {
           </div>
         </DataPanel>
 
-        <DataPanel
+        <FigurePanel
+          figure="SOURCES"
           title={t('settings.integrations')}
           action={
             <Badge variant="neutral">
@@ -601,16 +614,16 @@ export function SettingsPage() {
                     />
                     <SummaryRow
                       label={t('common.tools')}
-                      value={String(item.dataQualitySummary?.tools ?? 'unknown')}
+                      value={String(item.dataQualitySummary?.tools ?? t('common.unknown'))}
                     />
                     <SummaryRow
                       label={t('common.files')}
-                      value={String(item.dataQualitySummary?.files ?? 'unknown')}
+                      value={String(item.dataQualitySummary?.files ?? t('common.unknown'))}
                     />
                   </div>
                 </div>
               ))}
-        </DataPanel>
+        </FigurePanel>
 
         <DataPanel
           title={t('budget.alerts.title')}

@@ -2,8 +2,6 @@ import { useEffect, useMemo, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import {
   ArrowUpRight,
-  Coins,
-  Database,
   MessageSquare,
   MoreHorizontal,
   ShieldAlert,
@@ -22,11 +20,12 @@ import {
   XAxis,
   YAxis,
 } from 'recharts';
-import { StatCard } from '../components/StatCard.js';
 import { BrandBadge, BrandMark, getBrandMeta } from '../components/brand/BrandMark.js';
+import { AlertStrip } from '../components/ui/AlertStrip.js';
 import { Badge } from '../components/ui/Badge.js';
 import { Button } from '../components/ui/Button.js';
 import { CompactStat } from '../components/ui/CompactStat.js';
+import { DataQualityMatrix, type DataQualityState } from '../components/ui/DataQualityMatrix.js';
 import { DataPanel } from '../components/ui/DataPanel.js';
 import {
   DataTable,
@@ -40,12 +39,14 @@ import {
 import { TokenUsageBar } from '../components/session/TokenUsageBar.js';
 import { EmptyState } from '../components/ui/EmptyState.js';
 import { ErrorState } from '../components/ui/ErrorState.js';
+import { FigurePanel } from '../components/ui/FigurePanel.js';
 import {
   ChartSkeleton,
   DonutSkeleton,
   PanelSkeleton,
   TableSkeletonRows,
 } from '../components/ui/LoadingState.js';
+import { MetricBlock } from '../components/ui/MetricBlock.js';
 import { chartTooltipProps } from '../components/ui/ChartTooltip.js';
 import { useDateRange } from '../components/filters/DateRangeProvider.js';
 import { useI18n } from '../components/i18n/LanguageProvider.js';
@@ -203,6 +204,50 @@ export function DashboardPage() {
   );
   const totalDurationMs = overview?.totalDurationMs ?? 0;
   const totalMessages = overview?.totalMessages ?? 0;
+  const sessionSample = recentSessions?.data ?? [];
+  const actualCostCount = sessionSample.filter(
+    (session) => session.cost_source === 'actual',
+  ).length;
+  const estimatedCostCount = sessionSample.filter(
+    (session) => session.cost_source === 'estimated',
+  ).length;
+  const highConfidenceCount = sessionSample.filter(
+    (session) => session.source_confidence === 'HIGH',
+  ).length;
+  const sessionsWithTools = sessionSample.filter((session) => session.tool_call_count > 0).length;
+  const costQuality: DataQualityState =
+    actualCostCount > 0 ? 'real' : estimatedCostCount > 0 ? 'estimated' : 'unknown';
+  const qualityItems = [
+    {
+      label: t('dashboard.quality.cost'),
+      state: costQuality,
+      detail:
+        actualCostCount > 0
+          ? t('dashboard.quality.actualRows').replace('{{count}}', String(actualCostCount))
+          : estimatedCostCount > 0
+            ? t('dashboard.quality.estimatedRows').replace('{{count}}', String(estimatedCostCount))
+            : t('dashboard.quality.noRecentCost'),
+    },
+    {
+      label: t('dashboard.quality.tokens'),
+      state: totalTokens > 0 ? ('real' as const) : ('unknown' as const),
+      detail: totalTokens > 0 ? formatTokens(totalTokens) : t('dashboard.quality.noTokenEvents'),
+    },
+    {
+      label: t('dashboard.quality.tools'),
+      state: sessionsWithTools > 0 ? ('partial' as const) : ('unknown' as const),
+      detail: t('dashboard.quality.recentSessions')
+        .replace('{{count}}', String(sessionsWithTools))
+        .replace('{{total}}', String(sessionSample.length || 0)),
+    },
+    {
+      label: t('dashboard.quality.confidence'),
+      state: highConfidenceCount > 0 ? ('real' as const) : ('partial' as const),
+      detail: t('dashboard.quality.highConfidence')
+        .replace('{{count}}', String(highConfidenceCount))
+        .replace('{{total}}', String(sessionSample.length || 0)),
+    },
+  ];
 
   const selectedUsage = useMemo(() => {
     const events = selectedSession?.usageEvents ?? [];
@@ -244,7 +289,7 @@ export function DashboardPage() {
 
   return (
     <div
-      className="grid min-h-full grid-cols-1 gap-4 p-4 lg:p-6 xl:grid-cols-[minmax(0,1fr)_380px]"
+      className="grid min-h-full grid-cols-1 gap-4 p-4 lg:p-6 xl:grid-cols-[minmax(0,1fr)_360px]"
       aria-busy={isValidating}
     >
       {anyError && (
@@ -258,100 +303,112 @@ export function DashboardPage() {
           />
         </section>
       )}
-      <div className="min-w-0 space-y-3">
-        <div className="grid grid-cols-1 gap-3 md:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-5">
-          <StatCard
-            label={t('dashboard.totalSpend')}
-            value={formatCurrency(overview?.totalSpend)}
-            icon={WalletCards}
-            loading={overviewLoading}
-            change={`+ ${t('dashboard.live')}`}
-            changeTone="success"
-            sparkline
-            compact
-            iconVariant="neutral"
-            className="w-full"
-          />
-          <StatCard
-            label={t('dashboard.totalTokens')}
-            value={formatTokens(totalTokens)}
-            icon={Database}
-            loading={tokenLoading && !tokenData}
-            change={t('dashboard.allSources')}
-            changeTone="info"
-            sparkline
-            compact
-            iconVariant="neutral"
-            className="w-full"
-          />
-          <StatCard
-            label={t('dashboard.totalSessions')}
-            value={String(overview?.sessionCount ?? 0)}
-            icon={MessageSquare}
-            loading={overviewLoading}
-            change={`${formatTokens(totalMessages)} ${t('common.messages').toLowerCase()}`}
-            changeTone="info"
-            sparkline
-            compact
-            iconVariant="neutral"
-            className="w-full"
-          />
-          <StatCard
-            label={t('dashboard.avgCostSession')}
-            value={formatCurrency(overview?.averageSessionCost)}
-            icon={Coins}
-            loading={overviewLoading}
-            change={overview?.mostUsedCli ?? '—'}
-            changeTone="warning"
-            sparkline
-            compact
-            iconVariant="neutral"
-            className="w-full"
-          />
-          <StatCard
-            label={t('dashboard.totalDuration')}
-            value={formatDuration(totalDurationMs)}
-            icon={Timer}
-            loading={overviewLoading}
-            change={t('dashboard.indexed')}
-            changeTone="success"
-            sparkline
-            compact
-            iconVariant="neutral"
-            className="w-full"
-          />
-        </div>
+      <div className="flex min-w-0 flex-col gap-4">
+        <section className="grid gap-3 2xl:grid-cols-[minmax(0,1.05fr)_minmax(420px,0.95fr)]">
+          <FigurePanel
+            figure="OVERVIEW"
+            title={t('dashboard.commandCenter')}
+            description={t('dashboard.commandCenterDescription')}
+            meta={<Badge variant="neutral">{rangeLabel}</Badge>}
+            contentClassName="space-y-4"
+          >
+            <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
+              <MetricBlock
+                variant="compact"
+                label={t('dashboard.totalSpend')}
+                value={formatCurrency(overview?.totalSpend)}
+                icon={WalletCards}
+                loading={overviewLoading}
+                tone={exceededBudgets.length > 0 ? 'warning' : 'success'}
+              />
+              <MetricBlock
+                variant="compact"
+                label={t('dashboard.totalSessions')}
+                value={String(overview?.sessionCount ?? 0)}
+                loading={overviewLoading}
+              />
+              <MetricBlock
+                variant="compact"
+                label={t('dashboard.totalTokens')}
+                value={formatTokens(totalTokens)}
+                loading={tokenLoading && !tokenData}
+                meta={t('dashboard.allSources')}
+                tone="info"
+              />
+              <MetricBlock
+                variant="compact"
+                label={t('dashboard.avgCostSession')}
+                value={formatCurrency(overview?.averageSessionCost)}
+                loading={overviewLoading}
+                meta={overview?.mostUsedCli ?? t('common.unknown')}
+              />
+            </div>
+          </FigurePanel>
+          <FigurePanel
+            figure="PULSE"
+            title={t('dashboard.graphQuality')}
+            description={t('dashboard.graphQualityDescription')}
+            meta={
+              <Badge variant={isValidating ? 'warning' : 'success'}>
+                {isValidating ? t('common.loading') : t('dashboard.live')}
+              </Badge>
+            }
+            contentClassName="flex flex-col gap-4"
+          >
+            <DataQualityMatrix items={qualityItems} />
+            <div className="grid gap-3 sm:grid-cols-2">
+              <MetricBlock
+                variant="compact"
+                label={t('dashboard.totalDuration')}
+                value={formatDuration(totalDurationMs)}
+                icon={Timer}
+                loading={overviewLoading}
+                tone="info"
+                meta={t('dashboard.indexed')}
+              />
+              <MetricBlock
+                variant="compact"
+                label={t('common.messages')}
+                value={formatTokens(totalMessages)}
+                icon={MessageSquare}
+                loading={overviewLoading}
+                tone="success"
+                meta={t('dashboard.allSources')}
+              />
+            </div>
+          </FigurePanel>
+        </section>
 
         {exceededBudgets.length > 0 && (
           <div className="grid gap-2">
             {exceededBudgets.slice(0, 3).map((b) => (
-              <Link
+              <AlertStrip
                 key={`${b.id}-${b.scope_type}-${b.scope_value}`}
-                to="/budgets"
-                className="flex items-center gap-3 rounded-lg border border-danger/25 bg-danger/5 px-4 py-3 transition-colors hover:border-danger/40"
-              >
-                <ShieldAlert className="h-5 w-5 shrink-0 text-danger" />
-                <div className="min-w-0 flex-1">
-                  <span className="text-sm font-semibold text-danger">
-                    {b.status === 'exceeded'
-                      ? t('budget.status.exceeded')
-                      : t('budget.status.approaching')}
-                  </span>
-                  <span className="ml-2 text-sm text-muted-foreground">
+                tone={b.status === 'exceeded' ? 'danger' : 'warning'}
+                icon={ShieldAlert}
+                title={
+                  b.status === 'exceeded'
+                    ? t('budget.status.exceeded')
+                    : t('budget.status.approaching')
+                }
+                description={
+                  <>
                     {b.scope_value ?? t('budget.scope.global')} ({t(`budget.period.${b.period}`)}):{' '}
                     <span className="font-mono font-medium text-foreground">
                       ${b.current_spend.toFixed(2)}
                     </span>{' '}
                     / <span className="font-mono text-foreground">${b.limit_usd.toFixed(2)}</span>
-                  </span>
-                </div>
-                <Badge
-                  variant={b.status === 'exceeded' ? 'danger' : 'warning'}
-                  className="shrink-0"
-                >
-                  {b.percentage.toFixed(0)}%
-                </Badge>
-              </Link>
+                  </>
+                }
+                badge={`${b.percentage.toFixed(0)}%`}
+                action={
+                  <Link to="/budgets">
+                    <Button variant="outline" size="sm">
+                      {t('nav.budgets')}
+                    </Button>
+                  </Link>
+                }
+              />
             ))}
             {exceededBudgets.length > 3 && (
               <Link to="/budgets" className="text-center text-xs text-accent hover:underline">
@@ -361,13 +418,14 @@ export function DashboardPage() {
           </div>
         )}
 
-        <section className="space-y-3">
-          <div className="grid grid-cols-1 items-stretch gap-3 lg:grid-cols-2 2xl:grid-cols-[1.35fr_1fr_1fr]">
-            <DataPanel
-              className="lg:col-span-2 2xl:col-span-1"
+        <section className="flex flex-col gap-3">
+          <div className="grid grid-cols-1 items-stretch gap-3 xl:grid-cols-2 2xl:grid-cols-4">
+            <FigurePanel
+              figure="FIG. 01"
+              className="xl:col-span-2"
               title={t('project.spendOverTime')}
               description={t('dashboard.spendTrendDescription')}
-              action={<Badge variant="neutral">{rangeLabel}</Badge>}
+              meta={<Badge variant="neutral">{rangeLabel}</Badge>}
               contentClassName="pt-4"
             >
               {spendLoading && !spendData ? (
@@ -409,9 +467,61 @@ export function DashboardPage() {
                   </AreaChart>
                 </ResponsiveContainer>
               )}
-            </DataPanel>
+            </FigurePanel>
+
+            <FigurePanel
+              figure="FIG. 02"
+              className="xl:col-span-2"
+              title={t('dashboard.tokenFlow')}
+              description={t('dashboard.tokenFlowDescription')}
+              meta={<Badge variant="neutral">{formatTokens(totalTokens)}</Badge>}
+              contentClassName="pt-4"
+            >
+              {tokenLoading && !tokenData ? (
+                <ChartSkeleton />
+              ) : (
+                <ResponsiveContainer width="100%" height={280}>
+                  <AreaChart data={tokenPoints}>
+                    <CartesianGrid stroke="var(--border)" vertical={false} />
+                    <XAxis
+                      dataKey="date"
+                      tick={{ fontSize: 11, fill: 'var(--subtle-foreground)' }}
+                      tickLine={false}
+                      axisLine={false}
+                    />
+                    <YAxis
+                      tick={{ fontSize: 11, fill: 'var(--subtle-foreground)' }}
+                      tickLine={false}
+                      axisLine={false}
+                      tickFormatter={(value: number) => formatTokens(value)}
+                    />
+                    <Tooltip
+                      {...chartTooltipProps}
+                      formatter={(value: number, name: string) => [formatTokens(value), name]}
+                    />
+                    <Area
+                      type="monotone"
+                      dataKey="inputTokens"
+                      name={t('common.input')}
+                      stroke="var(--info)"
+                      fill="var(--info-soft)"
+                      strokeWidth={2}
+                    />
+                    <Area
+                      type="monotone"
+                      dataKey="outputTokens"
+                      name={t('common.output')}
+                      stroke="var(--success)"
+                      fill="var(--success-soft)"
+                      strokeWidth={2}
+                    />
+                  </AreaChart>
+                </ResponsiveContainer>
+              )}
+            </FigurePanel>
 
             <DonutCard
+              figure="FIG. 03"
               title={t('dashboard.spendByCli')}
               data={cliData}
               center={formatCurrency(overview?.totalSpend)}
@@ -422,6 +532,7 @@ export function DashboardPage() {
               colorFor={(label, index) => CLI_COLORS[label] ?? chartColor(index)}
             />
             <DonutCard
+              figure="FIG. 04"
               title={t('dashboard.spendByModel')}
               data={modelData}
               center={`${modelData.length}`}
@@ -433,7 +544,8 @@ export function DashboardPage() {
             />
           </div>
 
-          <DataPanel
+          <FigurePanel
+            figure="LEDGER 01"
             className="overflow-hidden"
             title={t('dashboard.recentSessions')}
             description={t('dashboard.recentSessionsDescription')}
@@ -448,7 +560,7 @@ export function DashboardPage() {
             contentClassName="p-0"
           >
             <DataTableContainer className="max-h-[560px] overflow-auto">
-              <DataTable>
+              <DataTable density="compact">
                 <DataTableHead className="sticky top-0 z-10 bg-surface">
                   <DataTableRow className="hover:bg-transparent">
                     <DataTableHeaderCell>{t('common.session')}</DataTableHeaderCell>
@@ -456,7 +568,7 @@ export function DashboardPage() {
                     <DataTableHeaderCell>{t('common.model')}</DataTableHeaderCell>
                     <DataTableHeaderCell>{t('common.project')}</DataTableHeaderCell>
                     <DataTableHeaderCell className="text-right">
-                      {t('common.duration')}
+                      {t('common.activity')}
                     </DataTableHeaderCell>
                     <DataTableHeaderCell className="text-right">
                       {t('common.cost')}
@@ -509,14 +621,18 @@ export function DashboardPage() {
                           {compactPath(session.project_path)}
                         </DataTableCell>
                         <DataTableCell className="text-right font-mono tabular-nums text-muted-foreground">
-                          {formatDuration(session.duration_ms)}
+                          <div>{formatDuration(session.duration_ms)}</div>
+                          <div className="text-[10px] uppercase text-subtle-foreground">
+                            {session.message_count} {t('common.messagesShort')} /{' '}
+                            {session.tool_call_count} {t('common.tools').toLowerCase()}
+                          </div>
                         </DataTableCell>
                         <DataTableCell className="text-right font-mono tabular-nums font-medium text-foreground">
                           <div>{formatCurrency(session.total_cost_usd)}</div>
                           {session.cost_source === 'estimated' && (
-                            <div className="mt-1 text-[10px] uppercase text-warning">
+                            <Badge variant="estimated" className="mt-1">
                               {t('common.estimated')}
-                            </div>
+                            </Badge>
                           )}
                         </DataTableCell>
                         <DataTableCell className="text-right text-muted-foreground">
@@ -531,15 +647,21 @@ export function DashboardPage() {
                 </DataTableBody>
               </DataTable>
             </DataTableContainer>
-          </DataPanel>
+          </FigurePanel>
         </section>
       </div>
 
-      <aside className="space-y-4">
+      <aside className="space-y-4 xl:sticky xl:top-24 xl:self-start">
         {selectedSessionLoading && !selectedSession ? (
           <PanelSkeleton className="h-full min-h-[520px]" />
         ) : (
-          <DataPanel className="h-full" contentClassName="space-y-4">
+          <DataPanel
+            variant="outlined"
+            className="h-full"
+            title={t('dashboard.sessionInspector')}
+            description={t('dashboard.sessionInspectorDescription')}
+            contentClassName="space-y-4"
+          >
             <div className="flex items-start gap-3">
               <BrandMark value={selectedSession?.cli} size="lg" />
               <div className="min-w-0 flex-1">
@@ -580,11 +702,11 @@ export function DashboardPage() {
               />
             ) : (
               <>
-                <div className="grid gap-2 md:grid-cols-2">
+                <div className="grid gap-2 md:grid-cols-2 xl:grid-cols-1 2xl:grid-cols-2">
                   <CompactStat
                     label={t('common.cost')}
                     value={formatCurrency(selectedSession?.total_cost_usd)}
-                    meta={t('common.total')}
+                    meta={selectedSession?.cost_source ?? t('common.unknown')}
                   />
                   <CompactStat
                     label={t('common.tokens')}
@@ -605,7 +727,7 @@ export function DashboardPage() {
                     label={t('common.duration')}
                     value={formatDuration(selectedSession?.duration_ms)}
                     meta={t('common.activity')}
-                    className="md:col-span-2"
+                    className="md:col-span-2 xl:col-span-1 2xl:col-span-2"
                   />
                 </div>
 
@@ -667,6 +789,7 @@ export function DashboardPage() {
 }
 
 function DonutCard({
+  figure,
   title,
   data,
   center,
@@ -676,6 +799,7 @@ function DonutCard({
   loading,
   colorFor,
 }: {
+  figure: string;
   title: string;
   data: { label: string; value: number; percentage: number }[];
   center: string;
@@ -688,7 +812,8 @@ function DonutCard({
   const { t } = useI18n();
 
   return (
-    <DataPanel
+    <FigurePanel
+      figure={figure}
       className="h-full min-h-[348px]"
       title={title}
       description={t('dashboard.topContributors')}
@@ -761,7 +886,7 @@ function DonutCard({
           </div>
         </>
       )}
-    </DataPanel>
+    </FigurePanel>
   );
 }
 

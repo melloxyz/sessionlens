@@ -9,6 +9,7 @@ interface DataPanelProps extends HTMLAttributes<HTMLDivElement> {
   eyebrow?: string;
   action?: ReactNode;
   contentClassName?: string;
+  variant?: 'default' | 'flat' | 'outlined' | 'figure' | 'inset' | 'elevated';
 }
 
 export function DataPanel({
@@ -17,6 +18,7 @@ export function DataPanel({
   eyebrow,
   action,
   contentClassName,
+  variant,
   className,
   children,
   ...props
@@ -24,7 +26,7 @@ export function DataPanel({
   const hasHeader = title || description || eyebrow || action;
 
   return (
-    <Card className={className} {...props}>
+    <Card variant={variant} className={className} {...props}>
       {hasHeader && (
         <CardHeader>
           <SectionHeader

@@ -33,10 +33,10 @@ import { Button } from '../components/ui/Button.js';
 import { Card, CardContent, CardHeader, CardTitle } from '../components/ui/Card.js';
 import { CompactStat } from '../components/ui/CompactStat.js';
 import { ControlField } from '../components/ui/ControlField.js';
-import { DataPanel } from '../components/ui/DataPanel.js';
 import { EmptyState } from '../components/ui/EmptyState.js';
 import { ErrorState } from '../components/ui/ErrorState.js';
-import { MetricTile } from '../components/ui/MetricTile.js';
+import { FigurePanel } from '../components/ui/FigurePanel.js';
+import { MetricBlock } from '../components/ui/MetricBlock.js';
 import { ChartSkeleton, DonutSkeleton } from '../components/ui/LoadingState.js';
 import { chartTooltipProps } from '../components/ui/ChartTooltip.js';
 import { SectionHeader as SharedSectionHeader } from '../components/ui/SectionHeader.js';
@@ -61,6 +61,19 @@ interface Anomaly {
   description: string;
   value: string;
   sessionId?: string;
+}
+
+interface InsightPreviewState {
+  insightPreview: {
+    id: string;
+    kind: string;
+    type: 'insight' | 'anomaly';
+    severity: 'high' | 'medium' | 'low';
+    title: string;
+    description: string;
+    value: string;
+    sessionId?: string;
+  };
 }
 
 interface AnalyticsReport {
@@ -289,8 +302,42 @@ export function AnalyticsPage() {
         />
       )}
 
-      <DataPanel contentClassName="space-y-4 p-4">
-        <div className="grid gap-4 2xl:grid-cols-[minmax(0,1.25fr)_minmax(360px,0.75fr)]">
+      <FigurePanel
+        figure="WORKBENCH"
+        title={t('analytics.workbenchTitle')}
+        description={t('analytics.summaryDescription')}
+        meta={
+          <Badge variant={isValidating ? 'warning' : 'success'}>
+            {isValidating ? t('common.loading') : t('analytics.live')}
+          </Badge>
+        }
+        contentClassName="space-y-4 p-4"
+      >
+        <div className="grid gap-5 2xl:grid-cols-[minmax(0,0.8fr)_minmax(0,1.2fr)]">
+          <div className="grid gap-2 md:grid-cols-2">
+            <CompactStat
+              label={t('common.cost')}
+              value={formatCurrency(report?.summary.totalSpend)}
+              meta={t('common.total')}
+            />
+            <CompactStat
+              label={t('analytics.insights')}
+              value={String(insights.length)}
+              meta={dimensionLabel}
+            />
+            <CompactStat
+              label={t('analytics.anomalies')}
+              value={String(anomalies.length)}
+              meta={metricLabel}
+              tone={anomalies.length > 0 ? 'warning' : 'default'}
+            />
+            <CompactStat
+              label={t('analytics.live')}
+              value={report?.generatedAt ? formatDateTime(report.generatedAt) : '—'}
+              meta={t('analytics.summaryTitle')}
+            />
+          </div>
+
           <div className="space-y-3">
             <div className="flex flex-wrap items-start justify-between gap-3">
               <div>
@@ -298,7 +345,7 @@ export function AnalyticsPage() {
                   {t('analytics.filters')}
                 </div>
                 <p className="mt-1 text-xs text-subtle-foreground">
-                  {t('analytics.summaryDescription')}
+                  {t('analytics.explorerDescription')}
                 </p>
               </div>
               {(cliFilter || providerFilter || modelFilter || projectFilter) && (
@@ -317,7 +364,7 @@ export function AnalyticsPage() {
               )}
             </div>
 
-            <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-6">
+            <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-3">
               <ControlField label={t('analytics.groupBy')}>
                 <Select
                   className="h-9 text-[13px]"
@@ -417,38 +464,14 @@ export function AnalyticsPage() {
               </div>
             )}
           </div>
-
-          <div className="grid gap-2 md:grid-cols-2">
-            <CompactStat
-              label={t('common.cost')}
-              value={formatCurrency(report?.summary.totalSpend)}
-              meta={t('common.total')}
-            />
-            <CompactStat
-              label={t('analytics.insights')}
-              value={String(insights.length)}
-              meta={dimensionLabel}
-            />
-            <CompactStat
-              label={t('analytics.anomalies')}
-              value={String(anomalies.length)}
-              meta={metricLabel}
-              tone={anomalies.length > 0 ? 'warning' : 'default'}
-            />
-            <CompactStat
-              label={t('analytics.live')}
-              value={report?.generatedAt ? formatDateTime(report.generatedAt) : '—'}
-              meta={t('analytics.summaryTitle')}
-            />
-          </div>
         </div>
-      </DataPanel>
+      </FigurePanel>
 
       <SectionHeader
         title={t('analytics.summaryTitle')}
         description={t('analytics.summaryDescription')}
       />
-      <div className="grid grid-cols-1 gap-3 md:grid-cols-2 xl:grid-cols-4 2xl:grid-cols-8">
+      <div className="grid grid-cols-1 gap-3 md:grid-cols-2 xl:grid-cols-4">
         <SummaryCard
           icon={TrendingUp}
           label={t('analytics.sevenDaySpend')}
@@ -552,7 +575,25 @@ export function AnalyticsPage() {
               insights.map((insight) => {
                 const localized = localizeInsight(insight, locale);
                 return (
-                  <Link key={insight.id} to={`/analytics/insights/${insight.id}`} className="block">
+                  <Link
+                    key={insight.id}
+                    to={`/analytics/insights/${insight.id}`}
+                    state={
+                      {
+                        insightPreview: {
+                          id: insight.id,
+                          kind: insight.kind,
+                          type: 'insight',
+                          severity: insight.severity,
+                          title: insight.title,
+                          description: insight.description,
+                          value: insight.value,
+                          sessionId: insight.sessionId,
+                        },
+                      } satisfies InsightPreviewState
+                    }
+                    className="block"
+                  >
                     <InsightRow item={localized} label={t('analytics.insight')} />
                   </Link>
                 );
@@ -582,7 +623,25 @@ export function AnalyticsPage() {
               anomalies.map((anomaly) => {
                 const localized = localizeAnomaly(anomaly, locale);
                 return (
-                  <Link key={anomaly.id} to={`/analytics/insights/${anomaly.id}`} className="block">
+                  <Link
+                    key={anomaly.id}
+                    to={`/analytics/insights/${anomaly.id}`}
+                    state={
+                      {
+                        insightPreview: {
+                          id: anomaly.id,
+                          kind: anomaly.kind,
+                          type: 'anomaly',
+                          severity: anomaly.severity,
+                          title: anomaly.title,
+                          description: anomaly.description,
+                          value: anomaly.value,
+                          sessionId: anomaly.sessionId,
+                        },
+                      } satisfies InsightPreviewState
+                    }
+                    className="block"
+                  >
                     <AnomalyRow item={localized} label={t('analytics.anomaly')} />
                   </Link>
                 );
@@ -909,7 +968,7 @@ export function AnalyticsPage() {
                         <BrandBadge value={session.provider} kind="provider" />
                       </div>
                       <div className="mt-2 text-xs text-subtle-foreground">
-                        {session.model ?? 'unknown'}
+                        {session.model ?? t('common.unknown')}
                       </div>
                     </div>
                     <Badge variant="neutral">
@@ -1050,15 +1109,14 @@ function SummaryCard({
   loading?: boolean;
 }) {
   return (
-    <MetricTile
+    <MetricBlock
+      variant="compact"
       icon={Icon}
       label={label}
       value={value}
       meta={sub}
       tone={tone}
       loading={loading}
-      compact
-      iconVariant="neutral"
     />
   );
 }

@@ -8,16 +8,37 @@ const PAGE_KEYS: Record<
   {
     title: Parameters<ReturnType<typeof useI18n>['t']>[0];
     subtitle: Parameters<ReturnType<typeof useI18n>['t']>[0];
+    section: string;
   }
 > = {
-  '/': { title: 'topbar.dashboard.title', subtitle: 'topbar.dashboard.subtitle' },
-  '/sessions': { title: 'topbar.sessions.title', subtitle: 'topbar.sessions.subtitle' },
-  '/projects': { title: 'topbar.projects.title', subtitle: 'topbar.projects.subtitle' },
-  '/analytics': { title: 'topbar.analytics.title', subtitle: 'topbar.analytics.subtitle' },
-  '/models': { title: 'topbar.models.title', subtitle: 'topbar.models.subtitle' },
-  '/budgets': { title: 'topbar.budgets.title', subtitle: 'topbar.budgets.subtitle' },
-  '/settings': { title: 'topbar.settings.title', subtitle: 'topbar.settings.subtitle' },
-  '/changelog': { title: 'topbar.changelog.title', subtitle: 'topbar.changelog.subtitle' },
+  '/': { title: 'topbar.dashboard.title', subtitle: 'topbar.dashboard.subtitle', section: '01' },
+  '/sessions': {
+    title: 'topbar.sessions.title',
+    subtitle: 'topbar.sessions.subtitle',
+    section: '02',
+  },
+  '/projects': {
+    title: 'topbar.projects.title',
+    subtitle: 'topbar.projects.subtitle',
+    section: '03',
+  },
+  '/analytics': {
+    title: 'topbar.analytics.title',
+    subtitle: 'topbar.analytics.subtitle',
+    section: '04',
+  },
+  '/models': { title: 'topbar.models.title', subtitle: 'topbar.models.subtitle', section: '05' },
+  '/budgets': { title: 'topbar.budgets.title', subtitle: 'topbar.budgets.subtitle', section: '06' },
+  '/settings': {
+    title: 'topbar.settings.title',
+    subtitle: 'topbar.settings.subtitle',
+    section: '07',
+  },
+  '/changelog': {
+    title: 'topbar.changelog.title',
+    subtitle: 'topbar.changelog.subtitle',
+    section: '08',
+  },
 };
 
 function getPageKeys(pathname: string) {
@@ -25,16 +46,19 @@ function getPageKeys(pathname: string) {
     return {
       title: 'topbar.sessions.title' as const,
       subtitle: 'topbar.sessions.subtitle' as const,
+      section: '02',
     };
   if (pathname.startsWith('/projects/'))
     return {
       title: 'topbar.projects.title' as const,
       subtitle: 'topbar.projects.subtitle' as const,
+      section: '03',
     };
   if (pathname.startsWith('/analytics/insights/'))
     return {
       title: 'topbar.analytics.title' as const,
       subtitle: 'topbar.analytics.subtitle' as const,
+      section: '04',
     };
   return PAGE_KEYS[pathname] ?? PAGE_KEYS['/'];
 }
@@ -50,6 +74,7 @@ export function DashboardLayout() {
       <Sidebar />
       <main className="flex min-w-0 flex-1 flex-col overflow-hidden bg-background">
         <Topbar
+          section={page.section}
           title={t(page.title)}
           subtitle={t(page.subtitle)}
           showDateRange={showDateRange}

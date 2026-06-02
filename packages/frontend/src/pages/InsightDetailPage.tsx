@@ -1,4 +1,4 @@
-import { Link, useParams } from 'react-router-dom';
+import { Link, useLocation, useParams } from 'react-router-dom';
 import {
   ArrowLeft,
   ArrowUpRight,
@@ -26,7 +26,8 @@ import { Badge } from '../components/ui/Badge.js';
 import { Button } from '../components/ui/Button.js';
 import { Card, CardContent, CardHeader, CardTitle } from '../components/ui/Card.js';
 import { ErrorState } from '../components/ui/ErrorState.js';
-import { MetricTile } from '../components/ui/MetricTile.js';
+import { FigurePanel } from '../components/ui/FigurePanel.js';
+import { MetricBlock } from '../components/ui/MetricBlock.js';
 import { SectionHeader } from '../components/ui/SectionHeader.js';
 import { Skeleton } from '../components/ui/Skeleton.js';
 import { chartTooltipProps } from '../components/ui/ChartTooltip.js';
@@ -82,15 +83,34 @@ interface InsightDetailData {
 
 export function InsightDetailPage() {
   const { id } = useParams<{ id: string }>();
+  const location = useLocation();
   const { t } = useI18n();
   const { queryString } = useDateRange();
+  const previewState = location.state as {
+    insightPreview?: Pick<
+      InsightDetailData,
+      'id' | 'kind' | 'type' | 'severity' | 'title' | 'description' | 'value' | 'sessionId'
+    >;
+  } | null;
+  const previewDetail =
+    previewState?.insightPreview && previewState.insightPreview.id === id
+      ? {
+          ...previewState.insightPreview,
+          context: {},
+          recommendations: [],
+        }
+      : undefined;
 
   const queryPrefix = queryString ? `?${queryString}` : '';
   const {
     data: detail,
     loading,
+    validating,
     error,
-  } = useApi<InsightDetailData>(`/api/analytics/insights/${id}${queryPrefix}`);
+  } = useApi<InsightDetailData>(`/api/analytics/insights/${id}${queryPrefix}`, {
+    initialData: previewDetail,
+    immediate: Boolean(id),
+  });
 
   const recs = detail?.recommendations ?? [];
   const localizedRecs = detail ? localizeRecommendations(detail.kind, recs, t) : recs;
@@ -99,12 +119,11 @@ export function InsightDetailPage() {
     detail?.type === 'anomaly' ? t('analytics.anomaly') : t('analytics.insight');
 
   const backLink = queryString ? `/analytics${queryPrefix}` : '/analytics';
-  const projectLink =
-    detail?.context.projectId != null
+  const projectLink = detail?.context.projectPath
+    ? `/projects/${encodeURIComponent(detail.context.projectPath)}`
+    : detail?.context.projectId != null
       ? `/projects/${detail.context.projectId}`
-      : detail?.context.projectPath
-        ? `/projects/${encodeURIComponent(detail.context.projectPath)}`
-        : null;
+      : null;
 
   return (
     <div className="space-y-5 p-4 lg:p-6">
@@ -132,6 +151,12 @@ export function InsightDetailPage() {
         </Link>
       )}
 
+      {validating && detail && (
+        <div className="rounded-md border border-border bg-surface-muted px-4 py-3 text-sm text-subtle-foreground">
+          Loading the latest local evidence...
+        </div>
+      )}
+
       {loading && !detail && (
         <div className="space-y-5">
           <Skeleton className="h-48 w-full" />
@@ -146,9 +171,12 @@ export function InsightDetailPage() {
 
       {detail && (
         <>
-          <Card>
-            <CardHeader>
-              <div className="mb-3 flex items-center gap-2">
+          <FigurePanel
+            figure={detail.type === 'anomaly' ? 'FINDING' : 'INSIGHT'}
+            title={detail.title}
+            description={detail.description}
+            meta={
+              <>
                 <Badge
                   variant={
                     detail.severity === 'high'
@@ -160,13 +188,28 @@ export function InsightDetailPage() {
                 >
                   {detail.kind}
                 </Badge>
-                <span className="text-xs text-subtle-foreground">{insightTypeLabel}</span>
-              </div>
-              <CardTitle>{detail.title}</CardTitle>
-              <p className="mt-2 text-sm text-subtle-foreground">{detail.description}</p>
-              <div className="mt-4 text-xl font-semibold text-foreground">{detail.value}</div>
-            </CardHeader>
-          </Card>
+                <Badge variant="neutral">{insightTypeLabel}</Badge>
+              </>
+            }
+            contentClassName="grid gap-3 md:grid-cols-[minmax(0,1fr)_260px]"
+          >
+            <div className="rounded-md border border-border bg-surface-muted p-4 text-sm leading-6 text-muted-foreground">
+              {detail.description}
+            </div>
+            <MetricBlock
+              variant="compact"
+              label={insightTypeLabel}
+              value={detail.value}
+              tone={
+                detail.severity === 'high'
+                  ? 'danger'
+                  : detail.severity === 'medium'
+                    ? 'warning'
+                    : 'info'
+              }
+              meta={detail.kind}
+            />
+          </FigurePanel>
 
           <SectionHeader
             title={t('insightDetail.context')}
@@ -175,48 +218,47 @@ export function InsightDetailPage() {
 
           <div className="grid grid-cols-1 gap-4">
             {detail.context.trend && detail.context.trend.length > 0 && (
-              <Card>
-                <CardHeader>
-                  <CardTitle>{t('insightDetail.trend')}</CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <ResponsiveContainer width="100%" height={220}>
-                    <AreaChart data={detail.context.trend}>
-                      <defs>
-                        <linearGradient id="contextGrad" x1="0" y1="0" x2="0" y2="1">
-                          <stop offset="5%" stopColor="var(--accent)" stopOpacity={0.35} />
-                          <stop offset="95%" stopColor="var(--accent)" stopOpacity={0.02} />
-                        </linearGradient>
-                      </defs>
-                      <CartesianGrid stroke="var(--border)" vertical={false} />
-                      <XAxis
-                        dataKey="date"
-                        tick={{ fontSize: 11, fill: 'var(--subtle-foreground)' }}
-                        tickLine={false}
-                        axisLine={false}
-                      />
-                      <YAxis
-                        tick={{ fontSize: 11, fill: 'var(--subtle-foreground)' }}
-                        tickLine={false}
-                        axisLine={false}
-                        tickFormatter={(v: number) => `$${v.toFixed(0)}`}
-                      />
-                      <Tooltip
-                        {...chartTooltipProps}
-                        formatter={(value: number) => [formatCurrency(value), t('common.cost')]}
-                      />
-                      <Area
-                        type="monotone"
-                        dataKey="spend"
-                        stroke="var(--accent)"
-                        fill="url(#contextGrad)"
-                        strokeWidth={2}
-                        dot={{ r: 2, fill: 'var(--accent)' }}
-                      />
-                    </AreaChart>
-                  </ResponsiveContainer>
-                </CardContent>
-              </Card>
+              <FigurePanel
+                figure="EVIDENCE 01"
+                title={t('insightDetail.trend')}
+                description={t('insightDetail.trendDescription')}
+              >
+                <ResponsiveContainer width="100%" height={220}>
+                  <AreaChart data={detail.context.trend}>
+                    <defs>
+                      <linearGradient id="contextGrad" x1="0" y1="0" x2="0" y2="1">
+                        <stop offset="5%" stopColor="var(--accent)" stopOpacity={0.35} />
+                        <stop offset="95%" stopColor="var(--accent)" stopOpacity={0.02} />
+                      </linearGradient>
+                    </defs>
+                    <CartesianGrid stroke="var(--border)" vertical={false} />
+                    <XAxis
+                      dataKey="date"
+                      tick={{ fontSize: 11, fill: 'var(--subtle-foreground)' }}
+                      tickLine={false}
+                      axisLine={false}
+                    />
+                    <YAxis
+                      tick={{ fontSize: 11, fill: 'var(--subtle-foreground)' }}
+                      tickLine={false}
+                      axisLine={false}
+                      tickFormatter={(v: number) => `$${v.toFixed(0)}`}
+                    />
+                    <Tooltip
+                      {...chartTooltipProps}
+                      formatter={(value: number) => [formatCurrency(value), t('common.cost')]}
+                    />
+                    <Area
+                      type="monotone"
+                      dataKey="spend"
+                      stroke="var(--accent)"
+                      fill="url(#contextGrad)"
+                      strokeWidth={2}
+                      dot={{ r: 2, fill: 'var(--accent)' }}
+                    />
+                  </AreaChart>
+                </ResponsiveContainer>
+              </FigurePanel>
             )}
 
             {((detail.kind === 'growth' && detail.context.trend) ||
@@ -846,14 +888,6 @@ function SummaryCard({
   tone?: 'success' | 'warning' | 'danger' | 'info';
 }) {
   return (
-    <MetricTile
-      icon={Icon}
-      label={label}
-      value={value}
-      meta={sub}
-      tone={tone}
-      compact
-      iconVariant="neutral"
-    />
+    <MetricBlock variant="compact" icon={Icon} label={label} value={value} meta={sub} tone={tone} />
   );
 }

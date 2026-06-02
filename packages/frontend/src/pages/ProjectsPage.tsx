@@ -11,10 +11,10 @@ import {
 import { Badge } from '../components/ui/Badge.js';
 import { Button } from '../components/ui/Button.js';
 import { Card, CardContent } from '../components/ui/Card.js';
-import { CompactStat } from '../components/ui/CompactStat.js';
 import { ControlField } from '../components/ui/ControlField.js';
-import { DataPanel } from '../components/ui/DataPanel.js';
+import { FigurePanel } from '../components/ui/FigurePanel.js';
 import { Input } from '../components/ui/Input.js';
+import { MetricBlock } from '../components/ui/MetricBlock.js';
 import { Select } from '../components/ui/Select.js';
 import { SectionHeader } from '../components/ui/SectionHeader.js';
 import { ErrorState } from '../components/ui/ErrorState.js';
@@ -121,13 +121,19 @@ export function ProjectsPage() {
 
   return (
     <div className="mx-auto w-full max-w-[1800px] space-y-5 p-4 lg:p-6">
-      <DataPanel
+      <FigurePanel
+        figure="PORTFOLIO"
         title={t('projects.all.title')}
         description={t('projects.all.description')}
         contentClassName="space-y-4 p-4"
       >
-        <div className="grid gap-4 2xl:grid-cols-[minmax(0,1.2fr)_minmax(420px,0.8fr)]">
-          <div className="space-y-3">
+        <div className="grid gap-5 2xl:grid-cols-[minmax(0,1.1fr)_minmax(340px,0.9fr)]">
+          <div className="space-y-4">
+            <div>
+              <div className="text-sm font-semibold text-foreground">{t('projects.all.title')}</div>
+              <p className="mt-1 text-xs text-subtle-foreground">{t('projects.all.description')}</p>
+            </div>
+
             <div className="relative w-full min-w-0">
               <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-subtle-foreground" />
               <Input
@@ -184,31 +190,39 @@ export function ProjectsPage() {
             </div>
           </div>
 
-          <div className="grid gap-2 md:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-2">
-            <CompactStat label={t('projects.summary.visible')} value={String(summary.visible)} />
-            <CompactStat
+          <div className="grid content-start gap-2 sm:grid-cols-2">
+            <MetricBlock
+              variant="compact"
+              label={t('projects.summary.visible')}
+              value={String(summary.visible)}
+            />
+            <MetricBlock
+              variant="compact"
               label={t('projects.summary.available')}
               value={String(summary.available)}
               tone="success"
             />
-            <CompactStat
+            <MetricBlock
+              variant="compact"
               label={t('projects.summary.missing')}
               value={String(summary.missing)}
               tone="warning"
             />
-            <CompactStat
+            <MetricBlock
+              variant="compact"
               label={t('projects.summary.hidden')}
               value={String(summary.hidden)}
               tone="warning"
             />
-            <CompactStat
+            <MetricBlock
+              variant="compact"
               label={t('projects.summary.spend')}
               value={formatCurrency(summary.spend)}
-              className="md:col-span-2 xl:col-span-1 2xl:col-span-2"
+              className="sm:col-span-2"
             />
           </div>
         </div>
-      </DataPanel>
+      </FigurePanel>
 
       {topProjects.length > 0 && (
         <section className="space-y-3">
@@ -284,11 +298,16 @@ function ProjectCard({
 }) {
   const { t } = useI18n();
   const percent = Math.min(100, Math.round((Number(project.total_cost || 0) / maxCost) * 100));
+  const detailPath = `/projects/${encodeURIComponent(project.path)}`;
   return (
-    <Card interactive className={`h-full overflow-hidden ${project.hidden ? 'opacity-80' : ''}`}>
-      <CardContent className="space-y-4">
+    <Card
+      interactive
+      variant={featured ? 'outlined' : 'flat'}
+      className={`h-full overflow-hidden ${project.hidden ? 'opacity-80' : ''}`}
+    >
+      <CardContent className="flex h-full flex-col gap-4">
         <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
-          <Link to={`/projects/${project.id}`} className="flex min-w-0 flex-1 items-center gap-3">
+          <Link to={detailPath} className="flex min-w-0 flex-1 items-center gap-3">
             <div
               className={`grid h-11 w-11 shrink-0 place-items-center rounded-md border ${project.exists ? 'border-accent/20 bg-accent-soft text-accent' : 'border-warning/20 bg-warning-soft text-warning'}`}
             >
@@ -319,7 +338,7 @@ function ProjectCard({
               <Trash2 className="h-4 w-4" />
             </Button>
             <Link
-              to={`/projects/${project.id}`}
+              to={detailPath}
               className="rounded-md border border-transparent p-2 text-subtle-foreground transition-colors hover:border-border hover:bg-surface-hover hover:text-foreground"
             >
               <ArrowUpRight className="h-4 w-4" />
@@ -344,7 +363,7 @@ function ProjectCard({
           <Metric label={t('common.cost')} value={formatCurrency(project.total_cost)} />
         </div>
 
-        <div className="space-y-2">
+        <div className="mt-auto space-y-2">
           <div className="flex justify-between text-[11px] text-subtle-foreground">
             <span>{t('common.cost')}</span>
             <span>{percent}%</span>

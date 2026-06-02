@@ -5,7 +5,6 @@ import { Badge } from '../components/ui/Badge.js';
 import { Button } from '../components/ui/Button.js';
 import { Card, CardContent } from '../components/ui/Card.js';
 import { ControlField } from '../components/ui/ControlField.js';
-import { DataPanel } from '../components/ui/DataPanel.js';
 import {
   DataTable,
   DataTableBody,
@@ -17,9 +16,11 @@ import {
 } from '../components/ui/DataTable.js';
 import { EmptyState } from '../components/ui/EmptyState.js';
 import { ErrorState } from '../components/ui/ErrorState.js';
-import { FilterBar } from '../components/ui/FilterBar.js';
+import { FigurePanel } from '../components/ui/FigurePanel.js';
 import { Input } from '../components/ui/Input.js';
 import { TableSkeletonRows } from '../components/ui/LoadingState.js';
+import { MetricBlock } from '../components/ui/MetricBlock.js';
+import { QueryBar } from '../components/ui/QueryBar.js';
 import { Select } from '../components/ui/Select.js';
 import { SectionHeader } from '../components/ui/SectionHeader.js';
 import { useI18n } from '../components/i18n/LanguageProvider.js';
@@ -67,6 +68,12 @@ export function ModelsPage() {
   const models = data?.data ?? [];
   const isInitialLoading = loading && !data;
   const usedModels = useMemo(() => models.filter((model) => model.is_used).slice(0, 8), [models]);
+  const providerCount = new Set(models.map((model) => model.provider)).size;
+  const activeChips = [
+    search.trim() ? { key: 'search', label: `${t('common.search')}: ${search.trim()}` } : null,
+    provider ? { key: 'provider', label: `${t('common.provider')}: ${provider}` } : null,
+    usedOnly ? { key: 'used', label: t('models.usedOnly') } : null,
+  ].filter(Boolean) as { key: string; label: string }[];
 
   async function syncOpenRouter() {
     setSyncing(true);
@@ -93,9 +100,34 @@ export function ModelsPage() {
   }
 
   return (
-    <div className="space-y-5 p-4 lg:p-6">
-      <FilterBar
-        className="gap-3"
+    <div className="flex flex-col gap-5 p-4 lg:p-6">
+      <section className="grid gap-3 md:grid-cols-3">
+        <MetricBlock
+          variant="compact"
+          label={t('models.usedTitle')}
+          value={String(usedModels.length)}
+          meta={t('models.used')}
+        />
+        <MetricBlock
+          variant="compact"
+          label={t('common.provider')}
+          value={String(providerCount)}
+          tone="info"
+          meta={t('models.catalogTitle')}
+        />
+        <MetricBlock
+          variant="compact"
+          label={t('models.catalogTitle')}
+          value={String(models.length)}
+          tone="success"
+          meta={validating ? t('common.loading') : t('analytics.live')}
+        />
+      </section>
+
+      <QueryBar
+        title="Model catalog header"
+        description={t('models.catalogDescription')}
+        chips={activeChips}
         actions={
           <>
             <Button
@@ -146,7 +178,7 @@ export function ModelsPage() {
             ]}
           />
         </ControlField>
-      </FilterBar>
+      </QueryBar>
 
       {usedModels.length > 0 && (
         <section className="space-y-3">
@@ -171,7 +203,8 @@ export function ModelsPage() {
         </section>
       )}
 
-      <DataPanel
+      <FigurePanel
+        figure="PRICING 01"
         title={t('models.catalogTitle')}
         description={t('models.catalogDescription')}
         action={<Badge variant="neutral">{validating ? t('common.loading') : models.length}</Badge>}
@@ -259,7 +292,7 @@ export function ModelsPage() {
             />
           </div>
         )}
-      </DataPanel>
+      </FigurePanel>
     </div>
   );
 }

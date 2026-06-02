@@ -3,13 +3,25 @@ import { cn } from '../../lib/utils.js';
 
 interface CardProps extends HTMLAttributes<HTMLDivElement> {
   interactive?: boolean;
+  variant?: 'default' | 'flat' | 'outlined' | 'figure' | 'inset' | 'elevated';
 }
 
-export function Card({ className, interactive, ...props }: CardProps) {
+const cardVariants: Record<NonNullable<CardProps['variant']>, string> = {
+  default: 'border-border bg-panel text-panel-foreground shadow-[var(--shadow-card)]',
+  flat: 'border-border bg-surface text-foreground shadow-none',
+  outlined: 'border-border-strong bg-transparent text-foreground shadow-none',
+  figure: 'border-border bg-panel text-panel-foreground shadow-none',
+  inset: 'border-border bg-surface-muted text-foreground shadow-none',
+  elevated:
+    'border-border-strong bg-surface-elevated text-foreground shadow-[var(--shadow-floating)]',
+};
+
+export function Card({ className, interactive, variant = 'default', ...props }: CardProps) {
   return (
     <div
       className={cn(
-        'rounded-md border border-border bg-panel text-panel-foreground shadow-[var(--shadow-card)]',
+        'rounded-md border',
+        cardVariants[variant],
         interactive &&
           'transition-colors duration-200 hover:border-border-strong hover:bg-surface-hover focus-within:border-border-strong focus-within:bg-surface-hover',
         className,
@@ -21,7 +33,7 @@ export function Card({ className, interactive, ...props }: CardProps) {
 
 export function CardHeader({ className, ...props }: HTMLAttributes<HTMLDivElement>) {
   return (
-    <div className={cn('flex items-center justify-between gap-4 p-5 pb-0', className)} {...props} />
+    <div className={cn('flex items-start justify-between gap-4 p-5 pb-0', className)} {...props} />
   );
 }
 

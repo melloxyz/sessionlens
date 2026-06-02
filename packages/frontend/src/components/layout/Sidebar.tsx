@@ -33,13 +33,14 @@ const NAV_ITEMS: {
     | 'nav.analytics'
     | 'nav.budgets';
   icon: LucideIcon;
+  code: string;
 }[] = [
-  { to: '/', labelKey: 'nav.dashboard', icon: LayoutDashboard },
-  { to: '/sessions', labelKey: 'nav.sessions', icon: MessageSquare },
-  { to: '/projects', labelKey: 'nav.projects', icon: FolderOpen },
-  { to: '/models', labelKey: 'nav.models', icon: PackageOpen },
-  { to: '/analytics', labelKey: 'nav.analytics', icon: BarChart3 },
-  { to: '/budgets', labelKey: 'nav.budgets', icon: WalletCards },
+  { to: '/', labelKey: 'nav.dashboard', icon: LayoutDashboard, code: '01' },
+  { to: '/sessions', labelKey: 'nav.sessions', icon: MessageSquare, code: '02' },
+  { to: '/projects', labelKey: 'nav.projects', icon: FolderOpen, code: '03' },
+  { to: '/analytics', labelKey: 'nav.analytics', icon: BarChart3, code: '04' },
+  { to: '/models', labelKey: 'nav.models', icon: PackageOpen, code: '05' },
+  { to: '/budgets', labelKey: 'nav.budgets', icon: WalletCards, code: '06' },
 ];
 
 export function Sidebar() {
@@ -54,20 +55,25 @@ export function Sidebar() {
     .map((item) => ({ ...item, label: getBrandMeta(item.cli, 'cli').label }));
 
   return (
-    <aside className="hidden h-full w-[260px] shrink-0 flex-col border-r border-border bg-canvas lg:flex">
-      <div className="flex h-18 items-center gap-3 border-b border-border px-4">
+    <aside className="hidden h-full w-[276px] shrink-0 flex-col border-r border-border bg-canvas lg:flex">
+      <div className="flex h-22 items-center gap-3 border-b border-border px-4">
         <img
           src={theme === 'dark' ? '/sessionlens-white-logo.png' : '/sessionlens-black-logo.png'}
           alt="Sessionlens"
-          className="h-11 w-11 rounded-md"
+          className="h-11 w-11 rounded-md border border-border bg-surface"
         />
         <div className="min-w-0">
           <div className="text-lg font-semibold text-foreground">Sessionlens</div>
-          <div className="text-xs text-muted-foreground">Local AI CLI observability</div>
+          <div className="font-mono text-[11px] uppercase text-muted-foreground">
+            {t('sidebar.controlPlane')}
+          </div>
         </div>
       </div>
 
-      <nav className="space-y-1 px-3 py-5">
+      <nav className="flex flex-col gap-1 px-3 py-5">
+        <div className="px-2 pb-2 text-[11px] font-semibold uppercase text-subtle-foreground">
+          {t('sidebar.stack')}
+        </div>
         {NAV_ITEMS.map((item) => (
           <NavLink
             key={item.to}
@@ -75,9 +81,9 @@ export function Sidebar() {
             end={item.to === '/'}
             className={({ isActive }) =>
               cn(
-                'group relative flex h-9 items-center gap-3 rounded-md border px-3 text-sm transition-colors duration-150 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus/25',
+                'group relative flex min-h-10 items-center gap-3 rounded-md border px-3 text-sm transition-colors duration-150 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus/25',
                 isActive
-                  ? 'border-border bg-surface text-foreground shadow-[var(--shadow-card)]'
+                  ? 'border-border-strong bg-surface text-foreground shadow-[var(--shadow-card)]'
                   : 'border-transparent text-muted-foreground hover:border-border hover:bg-surface hover:text-foreground',
               )
             }
@@ -90,6 +96,7 @@ export function Sidebar() {
                     isActive && 'bg-accent',
                   )}
                 />
+                <span className="font-mono text-[11px] text-subtle-foreground">{item.code}</span>
                 <item.icon
                   className={cn('h-4 w-4 shrink-0 transition-colors', isActive && 'text-accent')}
                 />
@@ -102,11 +109,12 @@ export function Sidebar() {
         ))}
       </nav>
 
-      <div className="mt-3 px-4">
-        <div className="mb-3 text-xs font-semibold uppercase text-subtle-foreground">
-          Integrations
+      <div className="mt-2 px-4">
+        <div className="mb-3 flex items-center justify-between gap-3 text-xs font-semibold uppercase text-subtle-foreground">
+          <span>{t('sidebar.sources')}</span>
+          <span className="font-mono">{integrations.length}</span>
         </div>
-        <div className="space-y-1">
+        <div className="flex flex-col gap-1">
           {integrations.map((item) => (
             <Tooltip
               key={item.label}
@@ -115,15 +123,19 @@ export function Sidebar() {
             >
               <button
                 type="button"
-                className="flex h-9 w-full items-center justify-between rounded-md border border-transparent px-2 text-left text-xs text-muted-foreground transition-colors hover:border-border hover:bg-surface hover:text-foreground"
+                className="flex min-h-10 w-full items-center justify-between rounded-md border border-border bg-surface-muted px-2 text-left text-xs text-muted-foreground transition-colors hover:border-border-strong hover:bg-surface hover:text-foreground"
                 onClick={async () => {
                   await fetch(`/api/integrations/${item.cli}/open`, { method: 'POST' });
                 }}
-                title={item.path ?? item.label}
               >
                 <div className="flex items-center gap-2.5">
                   <BrandMark value={item.cli} size="sm" />
-                  <span>{item.label}</span>
+                  <div className="min-w-0">
+                    <div className="truncate text-foreground">{item.label}</div>
+                    <div className="font-mono text-[10px] text-subtle-foreground">
+                      {item.completenessScore ?? 0}% {t('sidebar.coverage')}
+                    </div>
+                  </div>
                 </div>
                 <CircleDot
                   className={cn(
@@ -151,7 +163,7 @@ export function Sidebar() {
           <NavLink
             to="/settings"
             className="grid h-8 place-items-center rounded-full border border-transparent text-muted-foreground transition-colors hover:border-border hover:bg-surface-hover hover:text-foreground"
-            aria-label="Settings"
+            aria-label={t('nav.settings')}
           >
             <Settings className="h-4 w-4" />
           </NavLink>
@@ -159,14 +171,14 @@ export function Sidebar() {
             type="button"
             onClick={toggleTheme}
             className="grid h-8 place-items-center rounded-full border border-transparent text-muted-foreground transition-colors hover:border-border hover:bg-surface-hover hover:text-foreground"
-            aria-label={theme === 'dark' ? 'Light mode' : 'Dark mode'}
+            aria-label={theme === 'dark' ? t('sidebar.lightMode') : t('sidebar.darkMode')}
           >
             {theme === 'dark' ? <Sun className="h-4 w-4" /> : <Moon className="h-4 w-4" />}
           </button>
           <NavLink
             to="/changelog"
             className="grid h-8 place-items-center rounded-full border border-transparent text-muted-foreground transition-colors hover:border-border hover:bg-surface-hover hover:text-foreground"
-            aria-label="Changelog"
+            aria-label={t('topbar.changelog.title')}
           >
             <History className="h-4 w-4" />
           </NavLink>

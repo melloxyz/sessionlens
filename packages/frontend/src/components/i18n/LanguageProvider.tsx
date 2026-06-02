@@ -80,6 +80,7 @@ const dictionaries = {
     'common.cli': 'CLI',
     'common.status': 'Status',
     'common.sort': 'Sort',
+    'common.messagesShort': 'msgs',
     'common.confidence.high': 'High',
     'common.confidence.medium': 'Medium',
     'common.confidence.low': 'Low',
@@ -87,6 +88,12 @@ const dictionaries = {
     'sessions.empty.title': 'No sessions found',
     'sessions.empty.description': 'Try changing the search term, CLI filter, or ingestion status.',
     'sessions.allClis': 'All CLIs',
+    'sessions.ledger': 'Session ledger',
+    'sessions.currentPage': 'current page',
+    'sessions.highConfidenceRows': 'high confidence rows',
+    'sessions.explorerTitle': 'Session explorer',
+    'sessions.explorerDescription':
+      'Search local session evidence without changing the underlying adapter contract.',
     'projects.failed': 'Projects failed to load',
     'projects.search.placeholder': 'Search projects by name or path',
     'projects.allStatuses': 'All statuses',
@@ -148,6 +155,12 @@ const dictionaries = {
     'sidebar.localFirst': 'Local first',
     'sidebar.localFirst.description':
       'Costs, sessions, prompts, and settings stay on this machine.',
+    'sidebar.sources': 'Sources',
+    'sidebar.lightMode': 'Switch to light mode',
+    'sidebar.darkMode': 'Switch to dark mode',
+    'sidebar.controlPlane': 'Local control plane',
+    'sidebar.stack': 'Local stack',
+    'sidebar.coverage': 'coverage',
     'session.costEstimated': 'Cost (estimated)',
     'session.conversation': 'Conversation',
     'session.normalizedMessages': 'normalized messages from this local session',
@@ -189,6 +202,26 @@ const dictionaries = {
     'dashboard.spendTrendDescription': 'Daily cost across all indexed AI coding CLIs.',
     'dashboard.recentSessionsDescription':
       'Latest indexed conversations across your local adapters.',
+    'dashboard.commandCenter': 'Overview command center',
+    'dashboard.commandCenterDescription':
+      'Core spend, session and token signals for the selected window.',
+    'dashboard.graphQuality': 'Local graph quality',
+    'dashboard.graphQualityDescription':
+      'Recent indexed evidence by cost, tokens, tools and confidence.',
+    'dashboard.sessionInspector': 'Session inspector',
+    'dashboard.sessionInspectorDescription': 'Selected recent session with evidence and economics.',
+    'dashboard.tokenFlow': 'Token flow',
+    'dashboard.tokenFlowDescription': 'Input and output volume over the selected period.',
+    'dashboard.quality.cost': 'Cost',
+    'dashboard.quality.tokens': 'Tokens',
+    'dashboard.quality.tools': 'Tools',
+    'dashboard.quality.confidence': 'Confidence',
+    'dashboard.quality.actualRows': '{{count}} actual rows',
+    'dashboard.quality.estimatedRows': '{{count}} estimated rows',
+    'dashboard.quality.noRecentCost': 'No recent cost evidence',
+    'dashboard.quality.noTokenEvents': 'No token events',
+    'dashboard.quality.recentSessions': '{{count}}/{{total}} recent sessions',
+    'dashboard.quality.highConfidence': '{{count}}/{{total}} high confidence',
     'dashboard.noSpend.title': 'No spend data yet',
     'dashboard.noSpend.description':
       'Cost distribution will appear after sessions with spend are indexed.',
@@ -259,6 +292,7 @@ const dictionaries = {
     'analytics.summaryTitle': 'Executive summary',
     'analytics.summaryDescription':
       'A quick read of spend, activity and model usage for the selected filters.',
+    'analytics.workbenchTitle': 'Analytics workbench',
     'analytics.trendsTitle': 'Trends',
     'analytics.trendsDescription': 'How spend and token volume moved over time.',
     'analytics.explorerTitle': 'Breakdown explorer',
@@ -426,7 +460,7 @@ const dictionaries = {
     'changelog.status.releases': 'Releases',
     'changelog.status.issues': 'Issues',
     'changelog.github.title': 'Repository',
-    'changelog.version': 'v0.9.0',
+    'changelog.version': 'v0.9.1',
     'changelog.current': 'Current',
     'changelog.latest': 'Latest',
     'changelog.released': 'Released',
@@ -446,11 +480,11 @@ const dictionaries = {
     'changelog.i18n': 'i18n',
     'changelog.localFirst': 'Local-first',
     'changelog.latest.1.text':
-      'Analytics filters are now contextual across CLI, provider, model and project selectors',
+      'Dashboard, projects and analytics now use tighter top sections with clearer hierarchy and more stable panel alignment',
     'changelog.latest.2.text':
-      'Dedicated insight pages now link correctly to projects and sessions with localized recommendations',
+      'Project detail moved folder access into the header and budget control now sits above git history for faster scanning',
     'changelog.latest.3.text':
-      'Projects, budgets and sidebar integrations gained restore flows, real folder links and stronger theme contrast',
+      'Changelog, budgets, sidebar copy and remaining UI labels were rebuilt and translated for a cleaner local-first experience',
     'changelog.inProgress.1':
       'Broader adapter validation and data-quality QA across supported CLIs',
     'changelog.inProgress.2':
@@ -461,6 +495,14 @@ const dictionaries = {
     'changelog.contributors.title': 'Contributors',
     'changelog.contributors.description': 'People who helped build Sessionlens',
     'changelog.contributors.mello.role': 'Creator & Lead Developer',
+    'changelog.released.13.version': 'v0.9.1',
+    'changelog.released.13.title': 'Interface refinement and changelog rebuild',
+    'changelog.released.13.1':
+      'Dashboard command center, graph quality and session inspector were rebalanced for faster reading on desktop',
+    'changelog.released.13.2':
+      'Projects, analytics and budgets gained cleaner headers, denser filters and improved panel alignment without touching business logic',
+    'changelog.released.13.3':
+      'Changelog was rebuilt with a more professional release log layout and the remaining high-visibility UI copy was translated',
     'changelog.released.12.version': 'v0.9.0',
     'changelog.released.12.title': 'Desktop-first redesign and workflow polish',
     'changelog.released.12.1':
@@ -781,6 +823,7 @@ const dictionaries = {
     'common.cli': 'CLI',
     'common.status': 'Status',
     'common.sort': 'Ordenação',
+    'common.messagesShort': 'msgs',
     'common.duration': 'Duração',
     'common.model': 'Modelo',
     'common.project': 'Projeto',
@@ -809,6 +852,12 @@ const dictionaries = {
     'sessions.empty.title': 'Nenhuma sessão encontrada',
     'sessions.empty.description': 'Tente alterar a busca, o filtro de CLI ou o status de ingestão.',
     'sessions.allClis': 'Todas as CLIs',
+    'sessions.ledger': 'Razão de sessões',
+    'sessions.currentPage': 'página atual',
+    'sessions.highConfidenceRows': 'linhas de alta confiança',
+    'sessions.explorerTitle': 'Explorador de sessões',
+    'sessions.explorerDescription':
+      'Busque evidências locais de sessão sem alterar o contrato dos adapters.',
     'projects.failed': 'Falha ao carregar projetos',
     'projects.search.placeholder': 'Buscar projetos por nome ou caminho',
     'projects.allStatuses': 'Todos os status',
@@ -869,6 +918,12 @@ const dictionaries = {
     'sidebar.localFirst': 'Local-first',
     'sidebar.localFirst.description':
       'Custos, sessões, prompts e configurações ficam somente nesta máquina.',
+    'sidebar.sources': 'Fontes',
+    'sidebar.lightMode': 'Alternar para modo claro',
+    'sidebar.darkMode': 'Alternar para modo escuro',
+    'sidebar.controlPlane': 'Plano de controle local',
+    'sidebar.stack': 'Stack local',
+    'sidebar.coverage': 'cobertura',
     'session.costEstimated': 'Custo (estimado)',
     'session.conversation': 'Conversa',
     'session.normalizedMessages': 'mensagens normalizadas desta sessão local',
@@ -910,6 +965,27 @@ const dictionaries = {
     'dashboard.spendTrendDescription': 'Custo diário em todas as AI coding CLIs indexadas.',
     'dashboard.recentSessionsDescription':
       'Conversas indexadas mais recentes dos seus adapters locais.',
+    'dashboard.commandCenter': 'Central de visão geral',
+    'dashboard.commandCenterDescription':
+      'Sinais principais de gasto, sessões e tokens para a janela selecionada.',
+    'dashboard.graphQuality': 'Qualidade do grafo local',
+    'dashboard.graphQualityDescription':
+      'Evidência indexada recente por custo, tokens, ferramentas e confiança.',
+    'dashboard.sessionInspector': 'Inspetor de sessão',
+    'dashboard.sessionInspectorDescription':
+      'Sessão recente selecionada com evidências e economia.',
+    'dashboard.tokenFlow': 'Fluxo de tokens',
+    'dashboard.tokenFlowDescription': 'Volume de entrada e saída no período selecionado.',
+    'dashboard.quality.cost': 'Custo',
+    'dashboard.quality.tokens': 'Tokens',
+    'dashboard.quality.tools': 'Ferramentas',
+    'dashboard.quality.confidence': 'Confiança',
+    'dashboard.quality.actualRows': '{{count}} linhas reais',
+    'dashboard.quality.estimatedRows': '{{count}} linhas estimadas',
+    'dashboard.quality.noRecentCost': 'Sem evidência recente de custo',
+    'dashboard.quality.noTokenEvents': 'Sem eventos de token',
+    'dashboard.quality.recentSessions': '{{count}}/{{total}} sessões recentes',
+    'dashboard.quality.highConfidence': '{{count}}/{{total}} alta confiança',
     'dashboard.noSpend.title': 'Sem dados de gasto ainda',
     'dashboard.noSpend.description':
       'A distribuição de custos aparece após indexar sessões com gasto.',
@@ -980,6 +1056,7 @@ const dictionaries = {
     'analytics.summaryTitle': 'Resumo executivo',
     'analytics.summaryDescription':
       'Uma leitura rápida de gasto, atividade e modelos para os filtros selecionados.',
+    'analytics.workbenchTitle': 'Bancada de analytics',
     'analytics.trendsTitle': 'Tendências',
     'analytics.trendsDescription': 'Como gasto e volume de tokens mudaram ao longo do tempo.',
     'analytics.explorerTitle': 'Explorador de breakdown',
@@ -1149,7 +1226,7 @@ const dictionaries = {
     'changelog.status.releases': 'Releases',
     'changelog.status.issues': 'Issues',
     'changelog.github.title': 'Repositório',
-    'changelog.version': 'v0.9.0',
+    'changelog.version': 'v0.9.1',
     'changelog.current': 'Atual',
     'changelog.latest': 'Mais recente',
     'changelog.released': 'Entregue',
@@ -1171,11 +1248,11 @@ const dictionaries = {
     'changelog.i18n': 'i18n',
     'changelog.localFirst': 'Local-first',
     'changelog.latest.1.text':
-      'Os filtros de Analytics agora são contextuais entre CLI, provider, modelo e projeto',
+      'Dashboard, projetos e analytics agora têm topos mais compactos, hierarquia mais clara e alinhamento mais estável entre painéis',
     'changelog.latest.2.text':
-      'As páginas dedicadas de insight agora abrem projetos e sessões corretos com recomendações localizadas',
+      'O detalhe do projeto moveu a abertura de pasta para o header e colocou o orçamento acima da timeline git para leitura mais rápida',
     'changelog.latest.3.text':
-      'Projects, Budgets e integrações da sidebar ganharam restauração, links reais de pasta e contraste melhor entre temas',
+      'Changelog, budgets, textos da sidebar e rótulos restantes da UI foram reconstruídos e traduzidos para uma experiência local-first mais limpa',
     'changelog.inProgress.1':
       'Validação mais ampla de adapters e QA de qualidade de dados entre CLIs suportadas',
     'changelog.inProgress.2':
@@ -1186,6 +1263,14 @@ const dictionaries = {
     'changelog.contributors.title': 'Contribuidores',
     'changelog.contributors.description': 'Pessoas que ajudaram a construir o Sessionlens',
     'changelog.contributors.mello.role': 'Criador & Desenvolvedor Principal',
+    'changelog.released.13.version': 'v0.9.1',
+    'changelog.released.13.title': 'Refino da interface e rebuild do changelog',
+    'changelog.released.13.1':
+      'Central do dashboard, qualidade do grafo e inspetor de sessão foram reequilibrados para leitura mais rápida no desktop',
+    'changelog.released.13.2':
+      'Projetos, analytics e budgets ganharam headers mais limpos, filtros mais densos e melhor alinhamento sem tocar na lógica de negócio',
+    'changelog.released.13.3':
+      'O changelog foi recriado com um layout de release log mais profissional e o restante do texto visível da UI foi traduzido',
     'changelog.released.12.version': 'v0.9.0',
     'changelog.released.12.title': 'Redesign desktop-first e polish dos fluxos',
     'changelog.released.12.1':

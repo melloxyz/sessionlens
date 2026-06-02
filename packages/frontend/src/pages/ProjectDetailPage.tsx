@@ -32,7 +32,7 @@ import { chartColor } from '../lib/chart-colors.js';
 import { Badge } from '../components/ui/Badge.js';
 import { Button } from '../components/ui/Button.js';
 import { CompactStat } from '../components/ui/CompactStat.js';
-import { DataPanel } from '../components/ui/DataPanel.js';
+import { FigurePanel } from '../components/ui/FigurePanel.js';
 import {
   DataTable,
   DataTableBody,
@@ -45,6 +45,7 @@ import {
 import { EmptyState } from '../components/ui/EmptyState.js';
 import { ErrorState } from '../components/ui/ErrorState.js';
 import { DetailPageSkeleton } from '../components/ui/LoadingState.js';
+import { MetricBlock } from '../components/ui/MetricBlock.js';
 import { chartTooltipProps } from '../components/ui/ChartTooltip.js';
 import { useI18n } from '../components/i18n/LanguageProvider.js';
 
@@ -63,9 +64,10 @@ interface ProjectDetailResponse {
 export function ProjectDetailPage() {
   const { t } = useI18n();
   const { id } = useParams<{ id: string }>();
+  const projectApiId = id ? encodeURIComponent(id) : '';
   const [openingProject, setOpeningProject] = useState(false);
   const { data, loading, validating, error, refetch } = useApi<ProjectDetailResponse>(
-    `/api/projects/${id}`,
+    `/api/projects/${projectApiId}`,
   );
 
   const derived = useMemo(() => {
@@ -106,11 +108,11 @@ export function ProjectDetailPage() {
   const sessions = data.sessions;
   const spendData = data.spendOverTime.map((d) => ({ ...d, spend: Number(d.spend) || 0 }));
   const modelData = data.modelBreakdown.map((d) => ({
-    name: String(d.model || 'unknown'),
+    name: String(d.model || t('common.unknown')),
     value: Number(d.cost) || 0,
   }));
   const providerData = data.providerBreakdown.map((d) => ({
-    name: String(d.provider || 'unknown'),
+    name: String(d.provider || t('common.unknown')),
     value: Number(d.cost) || 0,
   }));
 
@@ -118,7 +120,7 @@ export function ProjectDetailPage() {
     if (!id || !p.exists || openingProject) return;
     setOpeningProject(true);
     try {
-      await fetch(`/api/projects/${id}/open`, { method: 'POST' });
+      await fetch(`/api/projects/${projectApiId}/open`, { method: 'POST' });
     } finally {
       setOpeningProject(false);
     }
@@ -133,7 +135,32 @@ export function ProjectDetailPage() {
         <ArrowLeft className="h-4 w-4" /> {t('project.back')}
       </Link>
 
-      <DataPanel className="overflow-hidden" contentClassName="p-4 lg:p-5">
+      <FigurePanel
+        figure="PROJECT LAB"
+        title={basename(String(p.path))}
+        description={compactPath(String(p.path))}
+        meta={
+          <Badge variant={p.exists ? 'success' : 'warning'}>
+            {p.exists ? t('common.available') : t('common.missing')}
+          </Badge>
+        }
+        action={
+          <Button
+            variant="outline"
+            onClick={openProjectFolder}
+            disabled={!p.exists || openingProject}
+            className="shrink-0"
+          >
+            <FolderOpen className="h-4 w-4" />
+            {openingProject
+              ? t('project.opening')
+              : p.exists
+                ? t('project.openFolder')
+                : t('project.folderMissing')}
+          </Button>
+        }
+        contentClassName="p-4 lg:p-5"
+      >
         <div className="grid gap-4 xl:grid-cols-[minmax(0,1.15fr)_minmax(360px,0.85fr)] xl:items-start">
           <div className="min-w-0 space-y-4">
             <div className="flex items-center gap-3">
@@ -141,12 +168,7 @@ export function ProjectDetailPage() {
                 <FolderOpen className="h-4.5 w-4.5" />
               </div>
               <div className="min-w-0">
-                <h1 className="truncate text-xl font-semibold text-foreground lg:text-2xl">
-                  {basename(String(p.path))}
-                </h1>
-                <p className="mt-1 truncate text-xs text-subtle-foreground lg:text-sm">
-                  {compactPath(String(p.path))}
-                </p>
+                <div className="font-mono text-sm text-muted-foreground">{String(p.path)}</div>
               </div>
             </div>
             <div className="mt-3 flex flex-wrap items-center gap-2">
@@ -181,41 +203,34 @@ export function ProjectDetailPage() {
 
           <div className="flex w-full flex-col gap-3">
             <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
-              <CompactStat label={t('common.sessions')} value={String(p.total_sessions)} />
-              <CompactStat
+              <MetricBlock
+                variant="compact"
+                label={t('common.sessions')}
+                value={String(p.total_sessions)}
+              />
+              <MetricBlock
+                variant="compact"
                 label={t('project.totalCost')}
                 value={formatCurrency(p.total_cost as number)}
               />
-              <CompactStat
+              <MetricBlock
+                variant="compact"
                 label={t('project.lastActivity')}
                 value={derived.last?.started_at ? formatDate(String(derived.last.started_at)) : '—'}
               />
-              <CompactStat
+              <MetricBlock
+                variant="compact"
                 label={t('project.topModel')}
                 value={derived.topModel}
                 meta={t('common.model')}
-                valueClassName="truncate text-[13px]"
               />
             </div>
-            <Button
-              variant="outline"
-              onClick={openProjectFolder}
-              disabled={!p.exists || openingProject}
-              className="self-start"
-            >
-              <FolderOpen className="h-4 w-4" />
-              {openingProject
-                ? t('project.opening')
-                : p.exists
-                  ? t('project.openFolder')
-                  : t('project.folderMissing')}
-            </Button>
           </div>
         </div>
-      </DataPanel>
+      </FigurePanel>
 
       <div className="grid grid-cols-1 gap-4 xl:grid-cols-[1.2fr_0.8fr]">
-        <DataPanel title={t('project.spendOverTime')}>
+        <FigurePanel figure="FIG. 01" title={t('project.spendOverTime')}>
           <ResponsiveContainer width="100%" height={280}>
             <AreaChart data={spendData}>
               <defs>
@@ -250,7 +265,7 @@ export function ProjectDetailPage() {
               />
             </AreaChart>
           </ResponsiveContainer>
-        </DataPanel>
+        </FigurePanel>
 
         <DistributionCard
           title={modelData.length ? t('project.modelDistribution') : t('project.distribution')}
@@ -259,7 +274,7 @@ export function ProjectDetailPage() {
       </div>
 
       <div className="grid grid-cols-1 gap-4 xl:grid-cols-[minmax(0,1fr)_420px]">
-        <DataPanel title={t('project.recentSessions')} contentClassName="p-0">
+        <FigurePanel figure="LEDGER 03" title={t('project.recentSessions')} contentClassName="p-0">
           <DataTableContainer>
             <DataTable>
               <DataTableHead className="sticky top-0 z-10 bg-surface">
@@ -284,26 +299,28 @@ export function ProjectDetailPage() {
               </DataTableBody>
             </DataTable>
           </DataTableContainer>
-        </DataPanel>
+        </FigurePanel>
 
-        <DataPanel
-          title={t('project.gitTimeline')}
-          action={data.commits?.branch && <Badge variant="neutral">{data.commits.branch}</Badge>}
-          contentClassName="space-y-3"
-        >
-          {(data.commits?.commits ?? []).slice(0, 10).map((commit) => (
-            <CommitRow key={commit.hash} commit={commit} />
-          ))}
-          {(data.commits?.commits.length ?? 0) === 0 && (
-            <EmptyState
-              title={t('project.noCommits.title')}
-              description={t('project.noCommits.description')}
-              icon={GitCommitHorizontal}
-            />
-          )}
-        </DataPanel>
-
-        <BudgetControl projectPath={String(p.path)} projectCost={Number(p.total_cost) || 0} />
+        <div className="space-y-4">
+          <BudgetControl projectPath={String(p.path)} projectCost={Number(p.total_cost) || 0} />
+          <FigurePanel
+            figure="GIT"
+            title={t('project.gitTimeline')}
+            action={data.commits?.branch && <Badge variant="neutral">{data.commits.branch}</Badge>}
+            contentClassName="space-y-3"
+          >
+            {(data.commits?.commits ?? []).slice(0, 10).map((commit) => (
+              <CommitRow key={commit.hash} commit={commit} />
+            ))}
+            {(data.commits?.commits.length ?? 0) === 0 && (
+              <EmptyState
+                title={t('project.noCommits.title')}
+                description={t('project.noCommits.description')}
+                icon={GitCommitHorizontal}
+              />
+            )}
+          </FigurePanel>
+        </div>
       </div>
     </div>
   );
@@ -317,7 +334,8 @@ function DistributionCard({
   data: { name: string; value: number }[];
 }) {
   return (
-    <DataPanel
+    <FigurePanel
+      figure="FIG. 02"
       title={title}
       contentClassName="grid gap-4 md:grid-cols-[180px_minmax(0,1fr)] xl:grid-cols-1"
     >
@@ -348,7 +366,7 @@ function DistributionCard({
           </div>
         ))}
       </div>
-    </DataPanel>
+    </FigurePanel>
   );
 }
 
@@ -381,7 +399,7 @@ function BudgetControl({ projectPath, projectCost }: { projectPath: string; proj
 
   if (!projectBudget) {
     return (
-      <DataPanel title={t('budget.title')} contentClassName="space-y-3 p-3">
+      <FigurePanel figure="BUDGET" title={t('budget.title')} contentClassName="space-y-3">
         <div className="flex items-center justify-between">
           <span className="text-sm text-muted-foreground">{t('budget.project.empty')}</span>
         </div>
@@ -404,12 +422,12 @@ function BudgetControl({ projectPath, projectCost }: { projectPath: string; proj
           <WalletCards className="h-3.5 w-3.5" />
           {t('budget.project.create')}
         </Button>
-      </DataPanel>
+      </FigurePanel>
     );
   }
 
   return (
-    <DataPanel title={t('budget.title')} contentClassName="space-y-3 p-3">
+    <FigurePanel figure="BUDGET" title={t('budget.title')} contentClassName="space-y-3">
       <div className="flex items-center justify-between">
         <span className="text-sm capitalize text-muted-foreground">
           {t(`budget.period.${projectBudget.period}`)} {t('budget.limit')}
@@ -473,7 +491,7 @@ function BudgetControl({ projectPath, projectCost }: { projectPath: string; proj
           {t('common.remove')}
         </Button>
       </div>
-    </DataPanel>
+    </FigurePanel>
   );
 }
 

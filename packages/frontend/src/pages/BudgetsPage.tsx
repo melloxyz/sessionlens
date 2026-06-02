@@ -11,9 +11,9 @@ import {
 } from 'lucide-react';
 import { getBrandMeta } from '../components/brand/BrandMark.js';
 import { useI18n } from '../components/i18n/LanguageProvider.js';
+import { AlertStrip } from '../components/ui/AlertStrip.js';
 import { Badge } from '../components/ui/Badge.js';
 import { Button } from '../components/ui/Button.js';
-import { CompactStat } from '../components/ui/CompactStat.js';
 import { ControlField } from '../components/ui/ControlField.js';
 import { DataPanel } from '../components/ui/DataPanel.js';
 import {
@@ -27,8 +27,9 @@ import {
 } from '../components/ui/DataTable.js';
 import { EmptyState } from '../components/ui/EmptyState.js';
 import { ErrorState } from '../components/ui/ErrorState.js';
+import { FigurePanel } from '../components/ui/FigurePanel.js';
 import { Input } from '../components/ui/Input.js';
-import { SectionHeader } from '../components/ui/SectionHeader.js';
+import { MetricBlock } from '../components/ui/MetricBlock.js';
 import { Select } from '../components/ui/Select.js';
 import { useApi } from '../hooks/useApi.js';
 import { compactPath, formatCurrency, formatDateTime } from '../lib/format.js';
@@ -222,42 +223,72 @@ export function BudgetsPage() {
 
   return (
     <div className="mx-auto w-full max-w-[1800px] space-y-5 p-4 lg:p-6">
-      <DataPanel contentClassName="grid gap-4 p-4 xl:grid-cols-[minmax(0,1fr)_360px] xl:items-start">
-        <SectionHeader
-          title={t('budget.title')}
-          description={t('budget.description')}
-          action={
-            <Button onClick={() => setShowForm(true)} disabled={showForm}>
-              <Plus className="h-4 w-4" />
-              {t('budget.add')}
-            </Button>
-          }
-        />
+      <FigurePanel
+        figure="BUDGET COMMAND"
+        title={t('budget.title')}
+        description={t('budget.description')}
+        contentClassName="space-y-4 p-4"
+        action={
+          <Button onClick={() => setShowForm(true)} disabled={showForm}>
+            <Plus className="h-4 w-4" />
+            {t('budget.add')}
+          </Button>
+        }
+      >
+        <div className="grid gap-4 2xl:grid-cols-[minmax(0,0.9fr)_minmax(0,1.1fr)] 2xl:items-start">
+          <div className="space-y-3">
+            <div className="text-sm font-semibold text-foreground">{t('budget.title')}</div>
+            <p className="max-w-2xl text-sm leading-6 text-muted-foreground">
+              {t('budget.description')}
+            </p>
+          </div>
 
-        <div className="grid gap-3 sm:grid-cols-2">
-          <CompactStat label={t('budget.summary.active')} value={String(summary.activeBudgets)} />
-          <CompactStat
-            label={t('budget.summary.approaching')}
-            value={String(summary.approaching)}
-            tone="warning"
-          />
-          <CompactStat
-            label={t('budget.summary.alerts')}
-            value={String(unacknowledgedAlerts.length)}
-            tone="warning"
-          />
-          <CompactStat
-            label={t('budget.summary.monitoredSpend')}
-            value={formatCurrency(summary.monitoredSpend)}
-            tone="success"
-          />
+          <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4 2xl:grid-cols-2">
+            <MetricBlock
+              variant="compact"
+              label={t('budget.summary.active')}
+              value={String(summary.activeBudgets)}
+            />
+            <MetricBlock
+              variant="compact"
+              label={t('budget.summary.approaching')}
+              value={String(summary.approaching)}
+              tone="warning"
+            />
+            <MetricBlock
+              variant="compact"
+              label={t('budget.summary.alerts')}
+              value={String(unacknowledgedAlerts.length)}
+              tone="warning"
+            />
+            <MetricBlock
+              variant="compact"
+              label={t('budget.summary.monitoredSpend')}
+              value={formatCurrency(summary.monitoredSpend)}
+              tone="success"
+            />
+          </div>
         </div>
-      </DataPanel>
+      </FigurePanel>
 
-      <div className="grid gap-4 xl:grid-cols-[minmax(0,1fr)_380px]">
+      {summary.exceeded > 0 && (
+        <AlertStrip
+          tone="danger"
+          icon={ShieldAlert}
+          title={t('budget.status.exceeded')}
+          description={`${summary.exceeded} ${t('budget.summary.exceeded').toLowerCase()}`}
+          badge={summary.exceeded}
+        />
+      )}
+
+      <div className="grid gap-4 xl:grid-cols-[minmax(0,1.1fr)_360px]">
         <section className="space-y-5">
           {showForm && (
-            <DataPanel title={t('budget.form.title')} contentClassName="space-y-4 p-4">
+            <FigurePanel
+              figure="BUILDER"
+              title={t('budget.form.title')}
+              contentClassName="space-y-4 p-4"
+            >
               {formError && (
                 <div className="rounded-lg border border-danger/30 bg-danger/5 p-3 text-sm text-danger">
                   {formError}
@@ -338,11 +369,12 @@ export function BudgetsPage() {
                   {t('common.cancel')}
                 </Button>
               </div>
-            </DataPanel>
+            </FigurePanel>
           )}
 
-          <div className="grid gap-4 2xl:grid-cols-2">
-            <DataPanel
+          <div className="grid gap-4 xl:grid-cols-2">
+            <FigurePanel
+              figure="LIMITS"
               title={t('budget.table.title')}
               description={t('budget.table.description')}
               contentClassName="p-0"
@@ -398,9 +430,10 @@ export function BudgetsPage() {
                   </DataTable>
                 </DataTableContainer>
               )}
-            </DataPanel>
+            </FigurePanel>
 
-            <DataPanel
+            <FigurePanel
+              figure="STATUS"
               title={t('budget.status.title')}
               description={t('budget.status.description')}
               contentClassName="p-0"
@@ -471,12 +504,13 @@ export function BudgetsPage() {
                   </DataTable>
                 </DataTableContainer>
               )}
-            </DataPanel>
+            </FigurePanel>
           </div>
         </section>
 
         <aside className="space-y-5 xl:sticky xl:top-6 xl:self-start">
-          <DataPanel
+          <FigurePanel
+            figure="ALERTS"
             title={t('budget.alerts.title')}
             description={t('budget.alerts.description')}
             action={
@@ -545,7 +579,7 @@ export function BudgetsPage() {
                 ))}
               </div>
             )}
-          </DataPanel>
+          </FigurePanel>
 
           <DataPanel
             title={t('budget.summary.title')}

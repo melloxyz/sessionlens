@@ -4,12 +4,14 @@ import { ArrowLeft, Bot, FileCode2, MessageSquare, Terminal, Wrench } from 'luci
 import { BrandBadge, BrandMark } from '../components/brand/BrandMark.js';
 import { Badge } from '../components/ui/Badge.js';
 import { Button } from '../components/ui/Button.js';
-import { CompactStat } from '../components/ui/CompactStat.js';
+import { DataQualityMatrix, type DataQualityState } from '../components/ui/DataQualityMatrix.js';
 import { DataPanel } from '../components/ui/DataPanel.js';
 import { TokenUsageBar } from '../components/session/TokenUsageBar.js';
 import { EmptyState } from '../components/ui/EmptyState.js';
 import { ErrorState } from '../components/ui/ErrorState.js';
+import { FigurePanel } from '../components/ui/FigurePanel.js';
 import { DetailPageSkeleton } from '../components/ui/LoadingState.js';
+import { MetricBlock } from '../components/ui/MetricBlock.js';
 import { useI18n } from '../components/i18n/LanguageProvider.js';
 import { useApi } from '../hooks/useApi.js';
 import {
@@ -158,6 +160,38 @@ export function SessionDetailPage() {
   const modelUsage = session.modelUsage ?? [];
   const tools = session.tools ?? [];
   const files = session.files ?? [];
+  const qualityItems = [
+    {
+      label: t('common.messages'),
+      state: normalizeQuality(session.data_quality?.messages),
+      detail: `${messages.length} ${t('common.messages').toLowerCase()}`,
+    },
+    {
+      label: t('common.tokens'),
+      state: normalizeQuality(session.data_quality?.tokens),
+      detail: formatTokens(totalTokens),
+    },
+    {
+      label: t('common.cost'),
+      state: normalizeQuality(session.data_quality?.cost),
+      detail: session.cost_source,
+    },
+    {
+      label: t('common.tools'),
+      state: normalizeQuality(session.data_quality?.tools),
+      detail: `${tools.length} events / ${session.tool_call_count ?? 0} total`,
+    },
+    {
+      label: t('common.files'),
+      state: normalizeQuality(session.data_quality?.files),
+      detail: `${files.length} ${t('common.files').toLowerCase()}`,
+    },
+    {
+      label: t('common.model'),
+      state: normalizeQuality(session.data_quality?.model),
+      detail: session.model ?? t('common.unknown'),
+    },
+  ];
 
   async function openProject() {
     if (!id || !session?.project_exists) return;
@@ -170,7 +204,7 @@ export function SessionDetailPage() {
   }
 
   return (
-    <div className="space-y-5 p-4 lg:p-6" aria-busy={validating}>
+    <div className="flex flex-col gap-5 p-4 lg:p-6" aria-busy={validating}>
       <div className="flex flex-wrap items-center justify-between gap-3">
         <Link
           to="/sessions"
@@ -191,26 +225,24 @@ export function SessionDetailPage() {
         </Badge>
       </div>
 
-      <DataPanel contentClassName="space-y-4">
-        <div className="flex flex-col gap-4 xl:flex-row xl:items-start xl:justify-between">
-          <div className="flex min-w-0 items-start gap-4">
-            <BrandMark value={session.cli} size="lg" />
-            <div className="min-w-0">
-              <div className="mb-2 flex flex-wrap items-center gap-2">
-                <BrandBadge value={session.cli} />
-                <BrandBadge value={session.provider} kind="provider" />
-                <span className="text-xs text-subtle-foreground">
-                  {formatRelativeTime(session.started_at)}
-                </span>
-              </div>
-              <h1 className="truncate text-xl font-semibold text-foreground lg:text-2xl">
-                {t('common.session')} {session.session_id.slice(0, 12)}
-              </h1>
-              <p className="mt-1 truncate text-sm text-muted-foreground">
-                {compactPath(session.project_path)}
-              </p>
-            </div>
-          </div>
+      <FigurePanel
+        figure="FORENSICS"
+        title={`${t('common.session')} ${session.session_id.slice(0, 12)}`}
+        description={compactPath(session.project_path)}
+        meta={
+          <Badge
+            variant={
+              session.source_confidence === 'HIGH'
+                ? 'success'
+                : session.source_confidence === 'MEDIUM'
+                  ? 'default'
+                  : 'warning'
+            }
+          >
+            {t(`common.confidence.${session.source_confidence.toLowerCase()}`)}
+          </Badge>
+        }
+        action={
           <Button
             variant="outline"
             onClick={openProject}
@@ -222,28 +254,49 @@ export function SessionDetailPage() {
                 ? t('session.openFolder')
                 : t('session.folderMissing')}
           </Button>
+        }
+        contentClassName="flex flex-col gap-4"
+      >
+        <div className="flex flex-col gap-4 xl:flex-row xl:items-start xl:justify-between">
+          <div className="flex min-w-0 items-start gap-4">
+            <BrandMark value={session.cli} size="lg" />
+            <div className="min-w-0">
+              <div className="mb-2 flex flex-wrap items-center gap-2">
+                <BrandBadge value={session.cli} />
+                <BrandBadge value={session.provider} kind="provider" />
+                <span className="text-xs text-subtle-foreground">
+                  {formatRelativeTime(session.started_at)}
+                </span>
+              </div>
+              <div className="font-mono text-sm text-muted-foreground">{session.session_id}</div>
+            </div>
+          </div>
         </div>
 
-        <div className="grid gap-2 md:grid-cols-2 xl:grid-cols-3">
-          <CompactStat
+        <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-3">
+          <MetricBlock
+            variant="compact"
             label={
               session.cost_source === 'estimated' ? t('session.costEstimated') : t('common.cost')
             }
             value={formatCurrency(session.total_cost_usd)}
-            meta={t('common.total')}
+            meta={session.cost_source}
             tone="success"
           />
-          <CompactStat
+          <MetricBlock
+            variant="compact"
             label={t('common.tokens')}
             value={formatTokens(totalTokens)}
             meta={t('dashboard.allSources')}
           />
-          <CompactStat
+          <MetricBlock
+            variant="compact"
             label={t('common.messages')}
             value={String(session.message_count ?? messages.length)}
             meta={t('session.normalizedMessages')}
           />
-          <CompactStat
+          <MetricBlock
+            variant="compact"
             label={t('common.tools')}
             value={String(session.tool_call_count ?? 0)}
             meta={
@@ -253,22 +306,25 @@ export function SessionDetailPage() {
             }
             tone="warning"
           />
-          <CompactStat
+          <MetricBlock
+            variant="compact"
             label={t('common.duration')}
             value={formatDuration(session.duration_ms)}
             meta={t('common.activity')}
           />
-          <CompactStat
+          <MetricBlock
+            variant="compact"
             label={t('common.model')}
             value={session.model ?? t('common.unknown')}
             meta={session.provider}
             tone="warning"
           />
         </div>
-      </DataPanel>
+      </FigurePanel>
 
-      <div className="grid grid-cols-1 gap-6 lg:grid-cols-[minmax(0,1fr)_380px]">
-        <DataPanel
+      <div className="grid grid-cols-1 gap-5 lg:grid-cols-[minmax(0,1fr)_400px]">
+        <FigurePanel
+          figure="TIMELINE 01"
           className="min-w-0"
           title={t('session.conversation')}
           description={`${messages.length} ${t('session.normalizedMessages')}`}
@@ -288,11 +344,24 @@ export function SessionDetailPage() {
               )}
             </div>
           </div>
-        </DataPanel>
+        </FigurePanel>
 
         <aside className="space-y-4 lg:sticky lg:top-24 lg:self-start">
+          <FigurePanel
+            figure="MATRIX"
+            title={t('session.dataQuality')}
+            description="Evidence availability for this local source."
+            contentClassName="pt-4"
+          >
+            <DataQualityMatrix items={qualityItems} />
+          </FigurePanel>
+
           {modelUsage.length > 1 && (
-            <DataPanel title={t('session.modelsUsed')} contentClassName="space-y-3 pt-3">
+            <FigurePanel
+              figure="FIG. 01"
+              title={t('session.modelsUsed')}
+              contentClassName="flex flex-col gap-3 pt-3"
+            >
               {modelUsage.map((item) => (
                 <div
                   key={`${item.provider}/${item.model}`}
@@ -326,10 +395,14 @@ export function SessionDetailPage() {
                   </div>
                 </div>
               ))}
-            </DataPanel>
+            </FigurePanel>
           )}
 
-          <DataPanel title={t('session.tokenUsage')} contentClassName="space-y-5 pt-3">
+          <FigurePanel
+            figure="FIG. 02"
+            title={t('session.tokenUsage')}
+            contentClassName="space-y-5 pt-3"
+          >
             <TokenUsageBar
               input={totalInput}
               output={totalOutput}
@@ -339,9 +412,9 @@ export function SessionDetailPage() {
             {reasoning > 0 && (
               <DetailRow label={t('common.reasoning')} value={formatTokens(reasoning)} />
             )}
-          </DataPanel>
+          </FigurePanel>
 
-          <DataPanel title={t('session.dataQuality')} contentClassName="space-y-3 pt-3 text-sm">
+          <DataPanel title="Evidence trail" contentClassName="space-y-3 pt-3 text-sm">
             <DetailRow
               label={t('session.sourcePath')}
               value={compactPath(session.source_path ?? null) || '—'}
@@ -376,7 +449,8 @@ export function SessionDetailPage() {
             />
           </DataPanel>
 
-          <DataPanel
+          <FigurePanel
+            figure="TOOLS"
             title={t('session.toolsCaptured')}
             description={`${tools.length} ${t('common.tools').toLowerCase()}`}
             contentClassName="space-y-2 pt-3"
@@ -417,9 +491,10 @@ export function SessionDetailPage() {
                 icon={Wrench}
               />
             )}
-          </DataPanel>
+          </FigurePanel>
 
-          <DataPanel
+          <FigurePanel
+            figure="FILES"
             title={t('session.filesTouched')}
             description={`${files.length} ${t('common.files').toLowerCase()}`}
             contentClassName="space-y-2 pt-3"
@@ -458,7 +533,7 @@ export function SessionDetailPage() {
                 icon={FileCode2}
               />
             )}
-          </DataPanel>
+          </FigurePanel>
 
           <DataPanel title={t('session.metadata')} contentClassName="space-y-3 pt-3 text-sm">
             <DetailRow label={t('common.project')} value={basename(session.project_path)} />
@@ -511,6 +586,25 @@ function formatQualityValue(
       return t('common.heuristic');
     default:
       return '—';
+  }
+}
+
+function normalizeQuality(value: string | null | undefined): DataQualityState {
+  switch (value) {
+    case 'real':
+    case 'actual':
+      return 'real';
+    case 'partial':
+    case 'inferred':
+      return 'partial';
+    case 'estimated':
+      return 'estimated';
+    case 'heuristic':
+      return 'heuristic';
+    case 'unavailable':
+      return 'unavailable';
+    default:
+      return 'unknown';
   }
 }
 

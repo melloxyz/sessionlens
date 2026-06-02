@@ -6,12 +6,25 @@ import type {
 } from 'react';
 import { cn } from '../../lib/utils.js';
 
-export function DataTable({ className, ...props }: TableHTMLAttributes<HTMLTableElement>) {
-  return <table className={cn('w-full text-sm', className)} {...props} />;
+interface DataTableProps extends TableHTMLAttributes<HTMLTableElement> {
+  density?: 'default' | 'compact';
+}
+
+export function DataTable({ className, density = 'default', ...props }: DataTableProps) {
+  return (
+    <table
+      className={cn(
+        'w-full border-separate border-spacing-0 text-sm',
+        density === 'compact' && 'text-[13px]',
+        className,
+      )}
+      {...props}
+    />
+  );
 }
 
 export function DataTableContainer({ className, ...props }: HTMLAttributes<HTMLDivElement>) {
-  return <div className={cn('overflow-x-auto', className)} {...props} />;
+  return <div className={cn('overflow-x-auto rounded-md', className)} {...props} />;
 }
 
 export function DataTableHead({ className, ...props }: HTMLAttributes<HTMLTableSectionElement>) {
