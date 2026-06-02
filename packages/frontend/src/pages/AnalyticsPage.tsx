@@ -1,12 +1,17 @@
-import { useMemo, useState } from 'react';
+import { useMemo, useState, type ReactNode } from 'react';
 import { Link } from 'react-router-dom';
 import {
   AlertTriangle,
-  ChevronRight,
-  CircleAlert,
+  CircleDollarSign,
+  Coins,
+  Database,
+  Download,
   Gauge,
+  Lightbulb,
+  RefreshCw,
   Sparkles,
   TrendingUp,
+  Wrench,
   type LucideIcon,
 } from 'lucide-react';
 import {
@@ -24,22 +29,19 @@ import {
   ResponsiveContainer,
 } from 'recharts';
 import { useApi } from '../hooks/useApi.js';
-import { compactPath, formatCurrency, formatDateTime, formatTokens } from '../lib/format.js';
+import { compactPath, formatCurrency, formatTokens } from '../lib/format.js';
 import { chartColor } from '../lib/chart-colors.js';
 import { useDateRange } from '../components/filters/DateRangeProvider.js';
 import { BrandBadge, getBrandMeta } from '../components/brand/BrandMark.js';
 import { Badge } from '../components/ui/Badge.js';
 import { Button } from '../components/ui/Button.js';
 import { Card, CardContent, CardHeader, CardTitle } from '../components/ui/Card.js';
-import { CompactStat } from '../components/ui/CompactStat.js';
 import { ControlField } from '../components/ui/ControlField.js';
 import { EmptyState } from '../components/ui/EmptyState.js';
 import { ErrorState } from '../components/ui/ErrorState.js';
 import { FigurePanel } from '../components/ui/FigurePanel.js';
-import { MetricBlock } from '../components/ui/MetricBlock.js';
 import { ChartSkeleton, DonutSkeleton } from '../components/ui/LoadingState.js';
 import { chartTooltipProps } from '../components/ui/ChartTooltip.js';
-import { SectionHeader as SharedSectionHeader } from '../components/ui/SectionHeader.js';
 import { Select } from '../components/ui/Select.js';
 import { useI18n } from '../components/i18n/LanguageProvider.js';
 
@@ -152,6 +154,7 @@ export function AnalyticsPage() {
   const [modelFilter, setModelFilter] = useState('');
   const [projectFilter, setProjectFilter] = useState('');
   const [spendGranularity, setSpendGranularity] = useState<'day' | 'week' | 'month'>('week');
+  const [trendMetric, setTrendMetric] = useState<'cost' | 'tokens'>('cost');
 
   const setDimensionFilter = (label: string) => {
     switch (dimension) {
@@ -205,7 +208,6 @@ export function AnalyticsPage() {
   }>(`/api/analytics/spend-over-time?granularity=${spendGranularity}${filteredSuffix}`);
   const {
     data: tokenData,
-    loading: tokenLoading,
     validating: tokenValidating,
     error: tokenError,
   } = useApi<{
@@ -248,6 +250,20 @@ export function AnalyticsPage() {
   const anomalies = report?.anomalies ?? [];
   const productivity = report?.productivity;
   const modelUsage = report?.modelUsageBreakdown ?? [];
+  const spendPoints = spendData?.points ?? report?.trend ?? [];
+  const tokenTrendTotal = (tokenData?.points ?? []).reduce(
+    (sum, point) => sum + point.inputTokens + point.outputTokens,
+    0,
+  );
+  const totalModelCost = modelUsage.reduce((sum, item) => sum + item.totalCostUsd, 0);
+  const totalModelTokens = modelUsage.reduce(
+    (sum, item) => sum + item.inputTokens + item.outputTokens + item.reasoningTokens,
+    0,
+  );
+  const topInsights = insights.slice(0, 3);
+  const topAnomalies = anomalies.slice(0, 2);
+  const topToolSessions = productivity?.topToolCallSessions ?? [];
+  const topModels = modelUsage.slice(0, 6);
   const activeFilters = [
     cliFilter
       ? {
@@ -302,52 +318,107 @@ export function AnalyticsPage() {
         />
       )}
 
-      <FigurePanel
-        figure="WORKBENCH"
-        title={t('analytics.workbenchTitle')}
-        description={t('analytics.summaryDescription')}
-        meta={
-          <Badge variant={isValidating ? 'warning' : 'success'}>
-            {isValidating ? t('common.loading') : t('analytics.live')}
-          </Badge>
-        }
-        contentClassName="space-y-4 p-4"
-      >
-        <div className="grid gap-5 2xl:grid-cols-[minmax(0,0.8fr)_minmax(0,1.2fr)]">
-          <div className="grid gap-2 md:grid-cols-2">
-            <CompactStat
-              label={t('common.cost')}
-              value={formatCurrency(report?.summary.totalSpend)}
-              meta={t('common.total')}
-            />
-            <CompactStat
-              label={t('analytics.insights')}
-              value={String(insights.length)}
-              meta={dimensionLabel}
-            />
-            <CompactStat
-              label={t('analytics.anomalies')}
-              value={String(anomalies.length)}
-              meta={metricLabel}
-              tone={anomalies.length > 0 ? 'warning' : 'default'}
-            />
-            <CompactStat
-              label={t('analytics.live')}
-              value={report?.generatedAt ? formatDateTime(report.generatedAt) : '—'}
-              meta={t('analytics.summaryTitle')}
-            />
+      <Card variant="figure" className="overflow-hidden">
+        <CardContent className="space-y-4 p-4">
+          <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-6">
+            <ControlField label={t('analytics.groupBy')}>
+              <Select
+                className="h-10 text-[13px]"
+                options={[
+                  { label: t('analytics.byModel'), value: 'model' },
+                  { label: t('analytics.byProvider'), value: 'provider' },
+                  { label: t('analytics.byCli'), value: 'cli' },
+                  { label: t('analytics.byProject'), value: 'project' },
+                ]}
+                value={dimension}
+                onChange={(e) => setDimension(e.target.value)}
+              />
+            </ControlField>
+            <ControlField label={t('analytics.metric')}>
+              <Select
+                className="h-10 text-[13px]"
+                options={[
+                  { label: t('common.cost'), value: 'cost' },
+                  { label: t('common.sessions'), value: 'sessions' },
+                  { label: t('common.tokens'), value: 'tokens' },
+                ]}
+                value={metric}
+                onChange={(e) => setMetric(e.target.value)}
+              />
+            </ControlField>
+            <ControlField label={t('common.cli')}>
+              <Select
+                className="h-10 text-[13px]"
+                value={cliFilter}
+                onChange={(e) => setCliFilter(e.target.value)}
+                options={[
+                  { label: t('analytics.allClis'), value: '' },
+                  ...(options?.clis ?? []).map((item) => ({
+                    label: `${item.label} (${item.count})`,
+                    value: item.value,
+                  })),
+                ]}
+              />
+            </ControlField>
+            <ControlField label={t('common.provider')}>
+              <Select
+                className="h-10 text-[13px]"
+                value={providerFilter}
+                onChange={(e) => setProviderFilter(e.target.value)}
+                options={[
+                  { label: t('analytics.allProviders'), value: '' },
+                  ...(options?.providers ?? []).map((item) => ({
+                    label: `${item.label} (${item.count})`,
+                    value: item.value,
+                  })),
+                ]}
+              />
+            </ControlField>
+            <ControlField label={t('common.model')}>
+              <Select
+                className="h-10 text-[13px]"
+                value={modelFilter}
+                onChange={(e) => setModelFilter(e.target.value)}
+                options={[
+                  { label: t('analytics.allModels'), value: '' },
+                  ...(options?.models ?? []).map((item) => ({
+                    label: `${item.label} (${item.count})`,
+                    value: item.value,
+                  })),
+                ]}
+              />
+            </ControlField>
+            <ControlField label={t('common.project')}>
+              <Select
+                className="h-10 text-[13px]"
+                value={projectFilter}
+                onChange={(e) => setProjectFilter(e.target.value)}
+                options={[
+                  { label: t('analytics.allProjects'), value: '' },
+                  ...(options?.projects ?? []).map((item) => ({
+                    label: `${compactPath(item.label)} (${item.count})`,
+                    value: item.value,
+                  })),
+                ]}
+              />
+            </ControlField>
           </div>
 
-          <div className="space-y-3">
-            <div className="flex flex-wrap items-start justify-between gap-3">
-              <div>
-                <div className="text-sm font-semibold text-foreground">
-                  {t('analytics.filters')}
-                </div>
-                <p className="mt-1 text-xs text-subtle-foreground">
-                  {t('analytics.explorerDescription')}
-                </p>
-              </div>
+          <div className="flex flex-wrap items-center justify-between gap-3">
+            <div className="flex flex-wrap gap-2">
+              {activeFilters.map((filter) => (
+                <button
+                  key={filter.key}
+                  type="button"
+                  onClick={filter.clear}
+                  className="inline-flex items-center gap-2 rounded-full border border-border bg-surface px-3 py-1.5 text-xs text-muted-foreground transition-colors hover:border-border-strong hover:text-foreground"
+                >
+                  <span>{filter.label}</span>
+                  <span className="text-subtle-foreground">x</span>
+                </button>
+              ))}
+            </div>
+            <div className="flex flex-wrap items-center gap-2">
               {(cliFilter || providerFilter || modelFilter || projectFilter) && (
                 <Button
                   variant="outline"
@@ -362,322 +433,92 @@ export function AnalyticsPage() {
                   {t('analytics.clearFilters')}
                 </Button>
               )}
+              <Button
+                variant="outline"
+                size="icon-sm"
+                aria-label={t('common.refresh')}
+                onClick={() => window.location.reload()}
+              >
+                <RefreshCw className="h-4 w-4" />
+              </Button>
             </div>
-
-            <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-3">
-              <ControlField label={t('analytics.groupBy')}>
-                <Select
-                  className="h-9 text-[13px]"
-                  options={[
-                    { label: t('analytics.byModel'), value: 'model' },
-                    { label: t('analytics.byProvider'), value: 'provider' },
-                    { label: t('analytics.byCli'), value: 'cli' },
-                    { label: t('analytics.byProject'), value: 'project' },
-                  ]}
-                  value={dimension}
-                  onChange={(e) => setDimension(e.target.value)}
-                />
-              </ControlField>
-              <ControlField label={t('analytics.metric')}>
-                <Select
-                  className="h-9 text-[13px]"
-                  options={[
-                    { label: t('common.cost'), value: 'cost' },
-                    { label: t('common.sessions'), value: 'sessions' },
-                    { label: t('common.tokens'), value: 'tokens' },
-                  ]}
-                  value={metric}
-                  onChange={(e) => setMetric(e.target.value)}
-                />
-              </ControlField>
-              <ControlField label={t('common.cli')}>
-                <Select
-                  className="h-9 text-[13px]"
-                  value={cliFilter}
-                  onChange={(e) => setCliFilter(e.target.value)}
-                  options={[
-                    { label: t('analytics.allClis'), value: '' },
-                    ...(options?.clis ?? []).map((item) => ({
-                      label: `${item.label} (${item.count})`,
-                      value: item.value,
-                    })),
-                  ]}
-                />
-              </ControlField>
-              <ControlField label={t('common.provider')}>
-                <Select
-                  className="h-9 text-[13px]"
-                  value={providerFilter}
-                  onChange={(e) => setProviderFilter(e.target.value)}
-                  options={[
-                    { label: t('analytics.allProviders'), value: '' },
-                    ...(options?.providers ?? []).map((item) => ({
-                      label: `${item.label} (${item.count})`,
-                      value: item.value,
-                    })),
-                  ]}
-                />
-              </ControlField>
-              <ControlField label={t('common.model')}>
-                <Select
-                  className="h-9 text-[13px]"
-                  value={modelFilter}
-                  onChange={(e) => setModelFilter(e.target.value)}
-                  options={[
-                    { label: t('analytics.allModels'), value: '' },
-                    ...(options?.models ?? []).map((item) => ({
-                      label: `${item.label} (${item.count})`,
-                      value: item.value,
-                    })),
-                  ]}
-                />
-              </ControlField>
-              <ControlField label={t('common.project')}>
-                <Select
-                  className="h-9 text-[13px]"
-                  value={projectFilter}
-                  onChange={(e) => setProjectFilter(e.target.value)}
-                  options={[
-                    { label: t('analytics.allProjects'), value: '' },
-                    ...(options?.projects ?? []).map((item) => ({
-                      label: `${compactPath(item.label)} (${item.count})`,
-                      value: item.value,
-                    })),
-                  ]}
-                />
-              </ControlField>
-            </div>
-
-            {activeFilters.length > 0 && (
-              <div className="flex flex-wrap gap-2">
-                {activeFilters.map((filter) => (
-                  <button
-                    key={filter.key}
-                    type="button"
-                    onClick={filter.clear}
-                    className="inline-flex items-center gap-2 rounded-full border border-border bg-surface px-3 py-1.5 text-xs text-muted-foreground transition-colors hover:border-border-strong hover:text-foreground"
-                  >
-                    <span>{filter.label}</span>
-                    <span className="text-subtle-foreground">×</span>
-                  </button>
-                ))}
-              </div>
-            )}
           </div>
-        </div>
-      </FigurePanel>
+        </CardContent>
+      </Card>
 
       <SectionHeader
         title={t('analytics.summaryTitle')}
         description={t('analytics.summaryDescription')}
+        action={
+          <Button variant="outline" size="sm">
+            {t('analytics.exportReport')} <Download className="h-4 w-4" />
+          </Button>
+        }
       />
-      <div className="grid grid-cols-1 gap-3 md:grid-cols-2 xl:grid-cols-4">
-        <SummaryCard
-          icon={TrendingUp}
-          label={t('analytics.sevenDaySpend')}
-          value={formatCurrency(report?.summary.current7DaySpend)}
-          sub={
+      <div className="grid grid-cols-1 gap-3 md:grid-cols-2 xl:grid-cols-6">
+        <AnalyticsKpiCard
+          icon={CircleDollarSign}
+          label={t('dashboard.totalSpend')}
+          value={formatCurrency(report?.summary.totalSpend)}
+          meta={
             report?.summary.growthPercent != null
-              ? `${report.summary.growthPercent >= 0 ? '+' : ''}${report.summary.growthPercent.toFixed(0)}% ${t('analytics.vsPriorWeek')}`
+              ? `${report.summary.growthPercent >= 0 ? '+' : ''}${report.summary.growthPercent.toFixed(1)}% ${t('analytics.vsPriorWeek')}`
               : t('analytics.notEnoughData')
           }
           tone="success"
           loading={reportLoading && !report}
         />
-        <SummaryCard
-          icon={Gauge}
+        <AnalyticsKpiCard
+          icon={TrendingUp}
           label={t('analytics.baselineDay')}
           value={formatCurrency(report?.summary.baselineDailySpend)}
-          sub={t('analytics.movingBaseline')}
+          meta={t('analytics.movingBaseline')}
           tone="info"
           loading={reportLoading && !report}
         />
-        <SummaryCard
-          icon={Sparkles}
+        <AnalyticsKpiCard
+          icon={Lightbulb}
           label={t('analytics.insights')}
           value={String(insights.length)}
-          sub={t('analytics.actionableFindings')}
-          tone="warning"
+          meta={t('analytics.actionableFindings')}
+          tone="info"
           loading={reportLoading && !report}
         />
-        <SummaryCard
+        <AnalyticsKpiCard
           icon={AlertTriangle}
           label={t('analytics.anomalies')}
           value={String(anomalies.length)}
-          sub={t('analytics.outliers')}
-          tone="danger"
-          loading={reportLoading && !report}
-        />
-      </div>
-
-      <div className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-4">
-        <SummaryCard
-          icon={Sparkles}
-          label={t('analytics.toolCalls')}
-          value={String(productivity?.totalToolCalls ?? 0)}
-          sub={t('analytics.totalAcrossSessions')}
-          tone="info"
-          loading={reportLoading && !report}
-        />
-        <SummaryCard
-          icon={Gauge}
-          label={t('analytics.callsSession')}
-          value={(productivity?.avgToolCallsPerSession ?? 0).toFixed(1)}
-          sub={t('analytics.averageDensity')}
-          tone="success"
-          loading={reportLoading && !report}
-        />
-        <SummaryCard
-          icon={TrendingUp}
-          label={t('analytics.tokensTool')}
-          value={formatTokens(productivity?.avgTokensPerToolCall)}
-          sub={t('analytics.efficiencyIndicator')}
+          meta={t('analytics.outliers')}
           tone="warning"
           loading={reportLoading && !report}
         />
-        <SummaryCard
-          icon={AlertTriangle}
-          label={t('analytics.costTool')}
-          value={formatCurrency(productivity?.avgCostPerToolCall)}
-          sub={
-            productivity?.costToolCallCorrelation != null
-              ? `${t('analytics.correlation')} ${productivity.costToolCallCorrelation.toFixed(2)}`
-              : t('analytics.correlationUnavailable')
-          }
+        <AnalyticsKpiCard
+          icon={Wrench}
+          label={t('analytics.toolCalls')}
+          value={String(productivity?.totalToolCalls ?? 0)}
+          meta={t('analytics.totalAcrossSessions')}
           tone="danger"
+          loading={reportLoading && !report}
+        />
+        <AnalyticsKpiCard
+          icon={Database}
+          label={t('analytics.tokensTool')}
+          value={formatTokens(productivity?.avgTokensPerToolCall)}
+          meta={`${formatTokens(tokenTrendTotal)} ${t('common.total').toLowerCase()}`}
+          tone="success"
           loading={reportLoading && !report}
         />
       </div>
 
-      <SectionHeader
-        title={`${t('analytics.insightsTitle')} & ${t('analytics.anomaliesTitle')}`}
-        description={t('analytics.insightsDescription')}
-      />
-      <div className="grid grid-cols-1 gap-4 xl:grid-cols-[1.15fr_0.85fr] 2xl:grid-cols-[1.25fr_0.75fr]">
-        <Card>
-          <CardHeader>
-            <div>
-              <CardTitle>{t('analytics.insightsTitle')}</CardTitle>
-              <p className="mt-1 text-xs text-subtle-foreground">
-                {t('analytics.insightsDescription')}
-              </p>
-            </div>
-            <Badge variant="neutral">
-              {isValidating
-                ? t('common.loading')
-                : report
-                  ? t('analytics.live')
-                  : t('common.loading')}
-            </Badge>
-          </CardHeader>
-          <CardContent className="grid gap-3 2xl:grid-cols-2">
-            {insights.length > 0 ? (
-              insights.map((insight) => {
-                const localized = localizeInsight(insight, locale);
-                return (
-                  <Link
-                    key={insight.id}
-                    to={`/analytics/insights/${insight.id}`}
-                    state={
-                      {
-                        insightPreview: {
-                          id: insight.id,
-                          kind: insight.kind,
-                          type: 'insight',
-                          severity: insight.severity,
-                          title: insight.title,
-                          description: insight.description,
-                          value: insight.value,
-                          sessionId: insight.sessionId,
-                        },
-                      } satisfies InsightPreviewState
-                    }
-                    className="block"
-                  >
-                    <InsightRow item={localized} label={t('analytics.insight')} />
-                  </Link>
-                );
-              })
-            ) : (
-              <EmptyState
-                title={t('analytics.noInsights.title')}
-                description={t('analytics.noInsights.description')}
-                icon={Sparkles}
-              />
-            )}
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader>
-            <div>
-              <CardTitle>{t('analytics.anomaliesTitle')}</CardTitle>
-              <p className="mt-1 text-xs text-subtle-foreground">
-                {t('analytics.anomaliesDescription')}
-              </p>
-            </div>
-            <Badge variant="neutral">{t('analytics.baseline')}</Badge>
-          </CardHeader>
-          <CardContent className="grid gap-3">
-            {anomalies.length > 0 ? (
-              anomalies.map((anomaly) => {
-                const localized = localizeAnomaly(anomaly, locale);
-                return (
-                  <Link
-                    key={anomaly.id}
-                    to={`/analytics/insights/${anomaly.id}`}
-                    state={
-                      {
-                        insightPreview: {
-                          id: anomaly.id,
-                          kind: anomaly.kind,
-                          type: 'anomaly',
-                          severity: anomaly.severity,
-                          title: anomaly.title,
-                          description: anomaly.description,
-                          value: anomaly.value,
-                          sessionId: anomaly.sessionId,
-                        },
-                      } satisfies InsightPreviewState
-                    }
-                    className="block"
-                  >
-                    <AnomalyRow item={localized} label={t('analytics.anomaly')} />
-                  </Link>
-                );
-              })
-            ) : (
-              <EmptyState
-                title={t('analytics.noAnomalies.title')}
-                description={t('analytics.noAnomalies.description')}
-                icon={CircleAlert}
-              />
-            )}
-          </CardContent>
-        </Card>
-      </div>
-
-      <SectionHeader
-        title={t('analytics.trendsTitle')}
-        description={t('analytics.trendsDescription')}
-      />
-      <div className="grid grid-cols-1 gap-4 2xl:grid-cols-[minmax(0,1.2fr)_minmax(420px,0.8fr)]">
-        <Card>
-          <CardHeader>
-            <div className="flex items-start justify-between gap-3">
-              <div>
-                <CardTitle>
-                  {spendGranularity === 'day'
-                    ? t('analytics.dailySpend')
-                    : spendGranularity === 'month'
-                      ? t('analytics.monthlySpend')
-                      : t('analytics.weeklySpend')}
-                </CardTitle>
-                <p className="mt-1 text-xs text-subtle-foreground">
-                  {t('analytics.weeklySpendDescription')}
-                </p>
-              </div>
+      <div className="grid grid-cols-1 gap-4 2xl:grid-cols-[minmax(0,1.18fr)_minmax(360px,0.82fr)]">
+        <FigurePanel
+          figure="FIG. 01"
+          title={t('analytics.spendUsageTitle')}
+          description={t('analytics.spendUsageDescription')}
+          action={
+            <div className="flex flex-wrap items-center gap-2">
               <Select
+                className="h-9 text-xs"
                 value={spendGranularity}
                 onChange={(e) => setSpendGranularity(e.target.value as 'day' | 'week' | 'month')}
                 options={[
@@ -686,238 +527,267 @@ export function AnalyticsPage() {
                   { label: t('analytics.granularityMonth'), value: 'month' },
                 ]}
               />
+              <div className="inline-flex rounded-md border border-border bg-surface p-1">
+                <Button
+                  variant={trendMetric === 'cost' ? 'subtle' : 'quiet'}
+                  size="sm"
+                  onClick={() => setTrendMetric('cost')}
+                >
+                  {t('common.cost')}
+                </Button>
+                <Button
+                  variant={trendMetric === 'tokens' ? 'subtle' : 'quiet'}
+                  size="sm"
+                  onClick={() => setTrendMetric('tokens')}
+                >
+                  {t('common.tokens')}
+                </Button>
+              </div>
             </div>
-          </CardHeader>
-          <CardContent>
-            {spendLoading && !spendData && !report ? (
-              <ChartSkeleton className="h-[260px]" />
-            ) : (
-              <ResponsiveContainer width="100%" height={300}>
-                <AreaChart data={spendData?.points ?? report?.trend ?? []}>
-                  <defs>
-                    <linearGradient id="spendGradient" x1="0" y1="0" x2="0" y2="1">
-                      <stop offset="5%" stopColor="var(--accent)" stopOpacity={0.35} />
-                      <stop offset="95%" stopColor="var(--accent)" stopOpacity={0.02} />
-                    </linearGradient>
-                  </defs>
-                  <CartesianGrid stroke="var(--border)" vertical={false} />
-                  <XAxis
-                    dataKey="date"
-                    tick={{ fontSize: 11, fill: 'var(--subtle-foreground)' }}
-                    tickLine={false}
-                    axisLine={false}
-                  />
-                  <YAxis
-                    tick={{ fontSize: 11, fill: 'var(--subtle-foreground)' }}
-                    tickLine={false}
-                    axisLine={false}
-                    tickFormatter={(v: number) => `$${v.toFixed(0)}`}
-                  />
-                  <Tooltip
-                    {...chartTooltipProps}
-                    formatter={(value: number) => [formatCurrency(value), t('common.cost')]}
-                  />
-                  <Area
-                    type="monotone"
-                    dataKey="spend"
-                    stroke="var(--accent)"
-                    fill="url(#spendGradient)"
-                    strokeWidth={2.4}
-                    dot={{ r: 3, fill: 'var(--accent)' }}
-                  />
-                </AreaChart>
-              </ResponsiveContainer>
-            )}
-          </CardContent>
-        </Card>
+          }
+        >
+          {spendLoading && !spendData && !report ? (
+            <ChartSkeleton className="h-[390px]" />
+          ) : (
+            <ResponsiveContainer width="100%" height={390}>
+              <AreaChart data={spendPoints}>
+                <defs>
+                  <linearGradient id="analyticsSpendGradient" x1="0" y1="0" x2="0" y2="1">
+                    <stop offset="5%" stopColor="var(--accent)" stopOpacity={0.35} />
+                    <stop offset="95%" stopColor="var(--accent)" stopOpacity={0.02} />
+                  </linearGradient>
+                  <linearGradient id="analyticsTokenGradient" x1="0" y1="0" x2="0" y2="1">
+                    <stop offset="5%" stopColor="var(--info)" stopOpacity={0.25} />
+                    <stop offset="95%" stopColor="var(--info)" stopOpacity={0.02} />
+                  </linearGradient>
+                </defs>
+                <CartesianGrid stroke="var(--border)" vertical={false} />
+                <XAxis
+                  dataKey="date"
+                  tick={{ fontSize: 11, fill: 'var(--subtle-foreground)' }}
+                  tickLine={false}
+                  axisLine={false}
+                />
+                <YAxis
+                  yAxisId="cost"
+                  tick={{ fontSize: 11, fill: 'var(--success)' }}
+                  tickLine={false}
+                  axisLine={false}
+                  tickFormatter={(v: number) => `$${v.toFixed(0)}`}
+                />
+                <YAxis
+                  yAxisId="tokens"
+                  orientation="right"
+                  tick={{ fontSize: 11, fill: 'var(--info)' }}
+                  tickLine={false}
+                  axisLine={false}
+                  tickFormatter={(v: number) => formatTokens(v)}
+                />
+                <Tooltip
+                  {...chartTooltipProps}
+                  formatter={(value: number, name: string) => [
+                    name === 'tokens' ? formatTokens(value) : formatCurrency(value),
+                    name === 'tokens' ? t('common.tokens') : t('common.cost'),
+                  ]}
+                />
+                <Area
+                  yAxisId="cost"
+                  type="monotone"
+                  dataKey="spend"
+                  stroke="var(--accent)"
+                  fill="url(#analyticsSpendGradient)"
+                  strokeWidth={2.4}
+                  dot={{ r: 3, fill: 'var(--accent)' }}
+                  opacity={trendMetric === 'cost' ? 1 : 0.45}
+                />
+                <Area
+                  yAxisId="tokens"
+                  type="monotone"
+                  dataKey="tokens"
+                  stroke="var(--info)"
+                  fill="url(#analyticsTokenGradient)"
+                  strokeWidth={2.2}
+                  dot={{ r: 3, fill: 'var(--info)' }}
+                  opacity={trendMetric === 'tokens' ? 1 : 0.45}
+                />
+              </AreaChart>
+            </ResponsiveContainer>
+          )}
+        </FigurePanel>
 
-        <Card>
-          <CardHeader>
-            <div>
-              <CardTitle>{t('session.tokenUsage')}</CardTitle>
-              <p className="mt-1 text-xs text-subtle-foreground">
-                {t('analytics.tokenUsageDescription')}
-              </p>
-            </div>
-          </CardHeader>
-          <CardContent>
-            {tokenLoading && !tokenData ? (
-              <ChartSkeleton className="h-[260px]" />
-            ) : (
-              <ResponsiveContainer width="100%" height={300}>
-                <AreaChart data={tokenData?.points ?? []}>
-                  <CartesianGrid stroke="var(--border)" vertical={false} />
-                  <XAxis
-                    dataKey="date"
-                    tick={{ fontSize: 11, fill: 'var(--subtle-foreground)' }}
-                    tickLine={false}
-                    axisLine={false}
-                  />
-                  <YAxis
-                    tick={{ fontSize: 11, fill: 'var(--subtle-foreground)' }}
-                    tickLine={false}
-                    axisLine={false}
-                    tickFormatter={(v: number) => formatTokens(v)}
-                  />
-                  <Tooltip {...chartTooltipProps} />
-                  <Area
-                    type="monotone"
-                    dataKey="inputTokens"
-                    stroke="var(--accent)"
-                    fill="var(--accent-soft)"
-                    strokeWidth={2}
-                    name={t('common.input')}
-                  />
-                  <Area
-                    type="monotone"
-                    dataKey="outputTokens"
-                    stroke="var(--success)"
-                    fill="var(--success-soft)"
-                    strokeWidth={2}
-                    name={t('common.output')}
-                  />
-                </AreaChart>
-              </ResponsiveContainer>
-            )}
-          </CardContent>
-        </Card>
+        <div className="grid gap-4">
+          <SideListPanel
+            title={t('analytics.insightsTop')}
+            actionLabel={t('common.viewAll')}
+            emptyTitle={t('analytics.noInsights.title')}
+            emptyDescription={t('analytics.noInsights.description')}
+          >
+            {topInsights.map((insight) => {
+              const localized = localizeInsight(insight, locale);
+              return (
+                <InsightLinkCard
+                  key={insight.id}
+                  item={localized}
+                  original={insight}
+                  type="insight"
+                />
+              );
+            })}
+          </SideListPanel>
+
+          <SideListPanel
+            title={t('analytics.anomaliesTitle')}
+            actionLabel={t('common.viewAll')}
+            emptyTitle={t('analytics.noAnomalies.title')}
+            emptyDescription={t('analytics.noAnomalies.description')}
+          >
+            {topAnomalies.map((anomaly) => {
+              const localized = localizeAnomaly(anomaly, locale);
+              return (
+                <InsightLinkCard
+                  key={anomaly.id}
+                  item={localized}
+                  original={anomaly}
+                  type="anomaly"
+                />
+              );
+            })}
+          </SideListPanel>
+        </div>
       </div>
 
       <SectionHeader
-        title={t('analytics.explorerTitle')}
-        description={t('analytics.explorerDescription')}
+        title={t('analytics.breakdown')}
+        description={t('analytics.breakdownDescription')}
       />
-      <div className="grid grid-cols-1 gap-4 2xl:grid-cols-[0.88fr_1.12fr]">
-        <Card>
-          <CardHeader>
-            <div>
-              <CardTitle>{t('analytics.breakdown')}</CardTitle>
-              <p className="mt-1 text-xs text-subtle-foreground">
-                {t('analytics.breakdownDescription')}
-              </p>
-            </div>
-          </CardHeader>
-          <CardContent className="flex flex-col gap-6 lg:flex-row lg:items-center 2xl:gap-8">
-            {breakdownLoading && !breakdownData ? (
-              <DonutSkeleton className="w-full lg:flex-1" />
-            ) : (
-              <>
-                <div className="mx-auto h-48 w-full max-w-[260px] lg:h-[220px] lg:flex-[0_0_45%] lg:max-w-none">
-                  <ResponsiveContainer width="100%" height="100%">
-                    <PieChart>
-                      <Pie
-                        data={breakdown}
-                        dataKey="value"
-                        nameKey="label"
-                        cx="50%"
-                        cy="50%"
-                        outerRadius={90}
-                        innerRadius={55}
-                        onClick={(data: { name: string }) => setDimensionFilter(data.name)}
-                        className="cursor-pointer"
-                      >
-                        {breakdown.map((_, i) => (
-                          <Cell key={i} fill={chartColor(i)} />
-                        ))}
-                      </Pie>
-                      <Tooltip
-                        {...chartTooltipProps}
-                        formatter={(value: number) => [
-                          metric === 'cost' ? formatCurrency(value) : formatTokens(value),
-                          '',
-                        ]}
-                      />
-                    </PieChart>
-                  </ResponsiveContainer>
-                </div>
-                <div className="grid gap-2 text-xs sm:grid-cols-2 lg:min-w-[220px] lg:grid-cols-1">
-                  {breakdown.map((d, i) => (
-                    <div
-                      key={d.label}
-                      className="flex cursor-pointer items-center gap-2 rounded px-1 py-0.5 transition-colors hover:bg-surface-elevated"
-                      onClick={() => setDimensionFilter(d.label)}
+      <div className="grid grid-cols-1 gap-4 2xl:grid-cols-[0.92fr_1.08fr]">
+        <FigurePanel
+          figure="FIG. 02"
+          title={t('analytics.modelDistribution')}
+          description={dimensionLabel}
+        >
+          {breakdownLoading && !breakdownData ? (
+            <DonutSkeleton className="min-h-[280px]" />
+          ) : (
+            <div className="grid gap-4 lg:grid-cols-[240px_minmax(0,1fr)] lg:items-center">
+              <div className="relative mx-auto h-56 w-56">
+                <ResponsiveContainer width="100%" height="100%">
+                  <PieChart>
+                    <Pie
+                      data={breakdown}
+                      dataKey="value"
+                      nameKey="label"
+                      cx="50%"
+                      cy="50%"
+                      outerRadius={96}
+                      innerRadius={62}
+                      onClick={(data: { name: string }) => setDimensionFilter(data.name)}
+                      className="cursor-pointer"
                     >
-                      <div
-                        className="h-2.5 w-2.5 shrink-0 rounded-sm"
-                        style={{ background: chartColor(i) }}
-                      />
-                      <span className="max-w-[160px] truncate text-subtle-foreground">
-                        {d.label}
-                      </span>
-                      <span className="ml-auto font-mono font-medium text-foreground">
-                        {d.percentage}%
-                      </span>
+                      {breakdown.map((_, i) => (
+                        <Cell key={i} fill={chartColor(i)} />
+                      ))}
+                    </Pie>
+                    <Tooltip
+                      {...chartTooltipProps}
+                      formatter={(value: number) => [
+                        metric === 'cost' ? formatCurrency(value) : formatTokens(value),
+                        '',
+                      ]}
+                    />
+                  </PieChart>
+                </ResponsiveContainer>
+                <div className="pointer-events-none absolute inset-0 grid place-items-center text-center">
+                  <div>
+                    <div className="font-mono text-xl font-semibold text-foreground">
+                      {metric === 'cost'
+                        ? formatCurrency(totalModelCost)
+                        : formatTokens(totalModelTokens)}
                     </div>
-                  ))}
+                    <div className="text-[10px] uppercase text-subtle-foreground">
+                      {t('common.total')}
+                    </div>
+                  </div>
                 </div>
-              </>
-            )}
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader>
-            <div>
-              <CardTitle>{breakdownTitle}</CardTitle>
-              <p className="mt-1 text-xs text-subtle-foreground">
-                {t('analytics.topProjectsDescription')}
-              </p>
+              </div>
+              <div className="space-y-2">
+                {breakdown.slice(0, 6).map((item, index) => (
+                  <button
+                    key={item.label}
+                    type="button"
+                    onClick={() => setDimensionFilter(item.label)}
+                    className="flex w-full items-center gap-3 rounded-md px-2 py-1.5 text-left transition-colors hover:bg-surface-hover"
+                  >
+                    <span
+                      className="size-2.5 shrink-0 rounded-full"
+                      style={{ background: chartColor(index) }}
+                    />
+                    <span className="min-w-0 flex-1 truncate text-sm text-muted-foreground">
+                      {item.label}
+                    </span>
+                    <span className="font-mono text-sm font-semibold text-foreground">
+                      {item.percentage}%
+                    </span>
+                  </button>
+                ))}
+              </div>
             </div>
-          </CardHeader>
-          <CardContent>
-            {breakdownLoading && !breakdownData ? (
-              <ChartSkeleton className="h-[260px]" />
-            ) : (
-              <ResponsiveContainer width="100%" height={300}>
-                <BarChart data={breakdown.slice(0, 8)} layout="vertical" margin={{ left: 72 }}>
-                  <CartesianGrid stroke="var(--border)" vertical={false} />
-                  <XAxis
-                    type="number"
-                    tick={{ fontSize: 11, fill: 'var(--subtle-foreground)' }}
-                    tickLine={false}
-                    axisLine={false}
-                    tickFormatter={(v: number) =>
-                      metric === 'cost' ? formatCurrency(v) : String(v)
-                    }
-                  />
-                  <YAxis
-                    type="category"
-                    dataKey="label"
-                    tick={{ fontSize: 11, fill: 'var(--subtle-foreground)' }}
-                    width={72}
-                    tickLine={false}
-                    axisLine={false}
-                  />
-                  <Tooltip {...chartTooltipProps} />
-                  <Bar
-                    dataKey="value"
-                    fill="var(--accent)"
-                    radius={[0, 4, 4, 0]}
-                    onClick={(data: { label: string }) => setDimensionFilter(data.label)}
-                    className="cursor-pointer"
-                  />
-                </BarChart>
-              </ResponsiveContainer>
-            )}
-          </CardContent>
-        </Card>
+          )}
+        </FigurePanel>
+
+        <FigurePanel
+          figure="FIG. 03"
+          title={breakdownTitle}
+          description={t('analytics.topProjectsDescription')}
+        >
+          {breakdownLoading && !breakdownData ? (
+            <ChartSkeleton className="h-[280px]" />
+          ) : (
+            <ResponsiveContainer width="100%" height={300}>
+              <BarChart data={breakdown.slice(0, 8)} layout="vertical" margin={{ left: 80 }}>
+                <CartesianGrid stroke="var(--border)" vertical={false} />
+                <XAxis
+                  type="number"
+                  tick={{ fontSize: 11, fill: 'var(--subtle-foreground)' }}
+                  tickLine={false}
+                  axisLine={false}
+                  tickFormatter={(v: number) => (metric === 'cost' ? formatCurrency(v) : String(v))}
+                />
+                <YAxis
+                  type="category"
+                  dataKey="label"
+                  tick={{ fontSize: 11, fill: 'var(--subtle-foreground)' }}
+                  width={80}
+                  tickLine={false}
+                  axisLine={false}
+                />
+                <Tooltip {...chartTooltipProps} />
+                <Bar
+                  dataKey="value"
+                  radius={[0, 4, 4, 0]}
+                  onClick={(data: { label: string }) => setDimensionFilter(data.label)}
+                  className="cursor-pointer"
+                >
+                  {breakdown.slice(0, 8).map((_, index) => (
+                    <Cell key={index} fill={chartColor(index)} />
+                  ))}
+                </Bar>
+              </BarChart>
+            </ResponsiveContainer>
+          )}
+        </FigurePanel>
       </div>
 
       <SectionHeader
         title={t('analytics.productivityTitle')}
         description={t('analytics.productivityDescription')}
       />
-      <div className="grid grid-cols-1 gap-4 xl:grid-cols-[0.95fr_1.05fr]">
-        <Card>
-          <CardHeader>
-            <div>
-              <CardTitle>{t('analytics.productivity')}</CardTitle>
-              <p className="mt-1 text-xs text-subtle-foreground">
-                {t('analytics.productivityDescription')}
-              </p>
-            </div>
+      <div className="grid grid-cols-1 gap-4 xl:grid-cols-[0.85fr_1.15fr]">
+        <Card variant="figure" className="overflow-hidden">
+          <CardHeader className="border-b border-border pb-4">
+            <CardTitle>{t('analytics.productivity')}</CardTitle>
           </CardHeader>
-          <CardContent className="space-y-3">
+          <CardContent className="p-0">
             <MetricLine
               label={t('analytics.avgToolCallsMinute')}
               value={formatNumber(productivity?.avgToolCallsPerMinute)}
@@ -935,136 +805,76 @@ export function AnalyticsPage() {
               value={formatNumber(productivity?.avgFilesPerSession)}
               muted={!productivity?.filesModifiedSupported}
             />
-            <div className="rounded-lg border border-dashed border-border p-4 font-mono text-xs text-subtle-foreground">
-              {productivity?.notes?.[0] ?? t('analytics.filesNote')}
+            <div className="border-t border-border p-4">
+              <Button variant="outline" size="sm">
+                {t('analytics.fullReport')}
+              </Button>
             </div>
           </CardContent>
         </Card>
 
-        <Card>
-          <CardHeader>
-            <div>
-              <CardTitle>{t('analytics.topToolSessions')}</CardTitle>
-              <p className="mt-1 text-xs text-subtle-foreground">
-                {t('analytics.topToolSessionsDescription')}
-              </p>
-            </div>
-          </CardHeader>
-          <CardContent className="grid gap-3 2xl:grid-cols-2">
-            {(productivity?.topToolCallSessions ?? []).length > 0 ? (
-              productivity!.topToolCallSessions.map((session) => (
-                <Link
+        <FigurePanel
+          figure="FIG. 04"
+          title={t('analytics.topToolSessions')}
+          description={t('analytics.topToolSessionsDescription')}
+          action={
+            <Link
+              to="/sessions"
+              className="text-xs font-medium text-accent hover:text-accent-hover"
+            >
+              {t('common.viewAll')}
+            </Link>
+          }
+        >
+          {topToolSessions.length > 0 ? (
+            <div className="grid gap-3 md:grid-cols-2 2xl:grid-cols-4">
+              {topToolSessions.slice(0, 4).map((session, index) => (
+                <ToolSessionCard
                   key={session.sessionId}
-                  to={`/sessions/${session.sessionId}`}
-                  className="block rounded-lg border border-border bg-surface-elevated p-4 text-sm transition-colors hover:bg-surface-hover"
-                >
-                  <div className="flex items-start justify-between gap-3">
-                    <div className="min-w-0">
-                      <div className="text-sm font-medium text-foreground">
-                        {session.sessionId.slice(0, 12)}
-                      </div>
-                      <div className="mt-1 flex flex-wrap items-center gap-1.5">
-                        <BrandBadge value={session.cli} />
-                        <BrandBadge value={session.provider} kind="provider" />
-                      </div>
-                      <div className="mt-2 text-xs text-subtle-foreground">
-                        {session.model ?? t('common.unknown')}
-                      </div>
-                    </div>
-                    <Badge variant="neutral">
-                      {session.toolCalls} {t('common.tools').toLowerCase()}
-                    </Badge>
-                  </div>
-                  <div className="mt-3 grid grid-cols-2 gap-2 text-xs text-subtle-foreground md:grid-cols-4">
-                    <MetricChip label={t('common.cost')} value={formatCurrency(session.cost)} />
-                    <MetricChip label={t('common.tokens')} value={formatTokens(session.tokens)} />
-                    <MetricChip
-                      label={t('analytics.messagesTool')}
-                      value={formatNumber(session.messagesPerToolCall)}
-                    />
-                    <MetricChip
-                      label={t('analytics.tokensToolShort')}
-                      value={formatNumber(session.tokensPerToolCall)}
-                    />
-                  </div>
-                </Link>
-              ))
-            ) : (
-              <EmptyState
-                title={t('analytics.noProductivity.title')}
-                description={t('analytics.noProductivity.description')}
-                icon={Sparkles}
-              />
-            )}
-          </CardContent>
-        </Card>
+                  session={session}
+                  color={chartColor(index)}
+                />
+              ))}
+            </div>
+          ) : (
+            <EmptyState
+              title={t('analytics.noProductivity.title')}
+              description={t('analytics.noProductivity.description')}
+              icon={Sparkles}
+            />
+          )}
+        </FigurePanel>
       </div>
 
       <SectionHeader
         title={t('analytics.modelUsageTitle')}
         description={t('analytics.multiModelDescription')}
       />
-      <div className="grid grid-cols-1 gap-4 xl:grid-cols-[1fr_0.95fr]">
-        <Card>
-          <CardHeader>
-            <div>
-              <CardTitle>{t('analytics.multiModel')}</CardTitle>
-              <p className="mt-1 text-xs text-subtle-foreground">
-                {t('analytics.multiModelDescription')}
-              </p>
-            </div>
-          </CardHeader>
-          <CardContent className="grid gap-3 2xl:grid-cols-2">
-            {modelUsage.length > 0 ? (
-              modelUsage.slice(0, 8).map((item) => (
-                <div
-                  key={`${item.provider}/${item.model}`}
-                  className="cursor-pointer rounded-lg border border-border bg-surface-elevated p-4 text-sm transition-colors hover:bg-surface-hover"
-                  onClick={() => {
-                    setProviderFilter(providerFilter === item.provider ? '' : item.provider);
-                    setModelFilter(modelFilter === item.model ? '' : item.model);
-                  }}
-                  title={t('analytics.clickToFilterByModel')}
-                >
-                  <div className="flex items-start justify-between gap-3">
-                    <div className="min-w-0">
-                      <div className="flex flex-wrap items-center gap-2">
-                        <BrandBadge value={item.provider} kind="provider" />
-                        <span className="text-sm font-medium text-foreground">{item.model}</span>
-                      </div>
-                      <div className="text-xs text-subtle-foreground">
-                        {item.messageCount} {t('common.messages').toLowerCase()} ·{' '}
-                        {item.toolCallsCount} {t('common.tools').toLowerCase()}
-                      </div>
-                    </div>
-                    <Badge variant="neutral">{formatCurrency(item.totalCostUsd)}</Badge>
-                  </div>
-                  <div className="mt-3 grid grid-cols-2 gap-2 text-xs text-subtle-foreground md:grid-cols-4">
-                    <MetricChip label={t('common.input')} value={formatTokens(item.inputTokens)} />
-                    <MetricChip
-                      label={t('common.output')}
-                      value={formatTokens(item.outputTokens)}
-                    />
-                    <MetricChip
-                      label={t('common.reasoning')}
-                      value={formatTokens(item.reasoningTokens)}
-                    />
-                    <MetricChip label={t('common.tools')} value={String(item.toolCallsCount)} />
-                  </div>
-                </div>
-              ))
-            ) : (
-              <EmptyState
-                title={t('analytics.noMultiModel.title')}
-                description={t('analytics.noMultiModel.description')}
-                icon={Sparkles}
+      <div className="grid grid-cols-1 gap-4 xl:grid-cols-[1fr_360px]">
+        <div className="grid gap-3 md:grid-cols-2 2xl:grid-cols-3">
+          {topModels.length > 0 ? (
+            topModels.map((item, index) => (
+              <ModelUsageCard
+                key={`${item.provider}/${item.model}`}
+                item={item}
+                color={chartColor(index)}
+                onClick={() => {
+                  setProviderFilter(providerFilter === item.provider ? '' : item.provider);
+                  setModelFilter(modelFilter === item.model ? '' : item.model);
+                }}
               />
-            )}
-          </CardContent>
-        </Card>
+            ))
+          ) : (
+            <EmptyState
+              title={t('analytics.noMultiModel.title')}
+              description={t('analytics.noMultiModel.description')}
+              icon={Sparkles}
+            />
+          )}
+        </div>
 
-        <Card>
-          <CardHeader>
+        <Card variant="figure" className="overflow-hidden">
+          <CardHeader className="border-b border-border pb-4">
             <div>
               <CardTitle>{t('analytics.multiModelNotes')}</CardTitle>
               <p className="mt-1 text-xs text-subtle-foreground">
@@ -1072,15 +882,27 @@ export function AnalyticsPage() {
               </p>
             </div>
           </CardHeader>
-          <CardContent className="space-y-3 text-sm text-subtle-foreground">
-            <div className="rounded-lg border border-border bg-surface-elevated p-4">
-              {t('analytics.opencodeNote')}
-            </div>
-            <div className="rounded-lg border border-border bg-surface-elevated p-4">
-              {t('analytics.singleModelNote')}
-            </div>
-            <div className="rounded-lg border border-border bg-surface-elevated p-4">
-              {t('analytics.filesDeferredNote')}
+          <CardContent className="space-y-3">
+            <InterpretationNote
+              icon={Gauge}
+              title={t('analytics.noteStable.title')}
+              body={t('analytics.noteStable.body')}
+              tone="success"
+            />
+            <InterpretationNote
+              icon={Coins}
+              title={t('analytics.noteCost.title')}
+              body={t('analytics.noteCost.body')}
+              tone="info"
+            />
+            <InterpretationNote
+              icon={AlertTriangle}
+              title={t('analytics.noteAnomaly.title')}
+              body={t('analytics.noteAnomaly.body')}
+              tone="warning"
+            />
+            <div className="rounded-md border border-border bg-surface p-3 text-xs text-subtle-foreground">
+              {productivity?.notes?.[0] ?? t('analytics.filesNote')}
             </div>
           </CardContent>
         </Card>
@@ -1089,118 +911,293 @@ export function AnalyticsPage() {
   );
 }
 
-function SectionHeader({ title, description }: { title: string; description: string }) {
-  return <SharedSectionHeader title={title} description={description} />;
+function SectionHeader({
+  title,
+  description,
+  action,
+}: {
+  title: string;
+  description: string;
+  action?: ReactNode;
+}) {
+  return (
+    <div className="flex flex-wrap items-end justify-between gap-3">
+      <div>
+        <h2 className="text-base font-semibold text-foreground">{title}</h2>
+        <p className="mt-1 text-xs text-muted-foreground">{description}</p>
+      </div>
+      {action}
+    </div>
+  );
 }
 
-function SummaryCard({
+function AnalyticsKpiCard({
   icon: Icon,
   label,
   value,
-  sub,
+  meta,
   tone,
   loading,
 }: {
   icon: LucideIcon;
   label: string;
   value: string;
-  sub: string;
+  meta: string;
   tone: 'success' | 'info' | 'warning' | 'danger';
   loading?: boolean;
 }) {
+  const toneClass = {
+    success: 'border-success/20 bg-success-soft text-success',
+    info: 'border-info/20 bg-info-soft text-info',
+    warning: 'border-warning/20 bg-warning-soft text-warning',
+    danger: 'border-danger/20 bg-danger-soft text-danger',
+  }[tone];
+
   return (
-    <MetricBlock
-      variant="compact"
-      icon={Icon}
-      label={label}
-      value={value}
-      meta={sub}
-      tone={tone}
-      loading={loading}
-    />
+    <Card variant="figure" className="overflow-hidden">
+      <CardContent className="min-h-[154px] p-4">
+        <div className={`grid size-9 place-items-center rounded-full border ${toneClass}`}>
+          <Icon className="h-4 w-4" />
+        </div>
+        <div className="mt-5 text-[11px] font-semibold uppercase text-muted-foreground">
+          {label}
+        </div>
+        <div className="mt-3 truncate font-mono text-3xl font-semibold leading-none text-foreground">
+          {loading ? '...' : value}
+        </div>
+        <div className="mt-3 truncate text-xs text-muted-foreground">{meta}</div>
+      </CardContent>
+    </Card>
   );
 }
 
-function InsightRow({ item, label }: { item: Insight; label: string }) {
+function SideListPanel({
+  title,
+  actionLabel,
+  emptyTitle,
+  emptyDescription,
+  children,
+}: {
+  title: string;
+  actionLabel: string;
+  emptyTitle: string;
+  emptyDescription: string;
+  children: ReactNode;
+}) {
+  const hasChildren = Array.isArray(children) ? children.length > 0 : Boolean(children);
+
   return (
-    <div className="rounded-lg border border-border bg-surface-elevated p-4">
-      <div className="flex items-start justify-between gap-3">
-        <div className="min-w-0">
-          <div className="mb-2 flex items-center gap-2">
-            <Badge
-              variant={
-                item.severity === 'high'
-                  ? 'success'
-                  : item.severity === 'medium'
-                    ? 'default'
-                    : 'neutral'
-              }
-            >
-              {item.kind}
-            </Badge>
-            <span className="text-xs text-subtle-foreground">{label}</span>
-          </div>
-          <div className="text-sm font-medium text-foreground">{item.title}</div>
-          <p className="mt-1 text-sm text-subtle-foreground">{item.description}</p>
+    <Card variant="figure" className="overflow-hidden">
+      <CardHeader className="border-b border-border pb-4">
+        <div className="flex w-full items-center justify-between gap-3">
+          <CardTitle>{title}</CardTitle>
+          <span className="text-xs font-medium text-accent">{actionLabel}</span>
         </div>
-        <div className="flex shrink-0 items-center gap-2 text-xs text-muted-foreground">
-          <span className="font-mono font-medium text-foreground">{item.value}</span>
-          <ChevronRight className="h-4 w-4" />
-        </div>
-      </div>
-    </div>
+      </CardHeader>
+      <CardContent className="space-y-3 p-3">
+        {hasChildren ? (
+          children
+        ) : (
+          <EmptyState title={emptyTitle} description={emptyDescription} icon={Sparkles} />
+        )}
+      </CardContent>
+    </Card>
   );
 }
 
-function AnomalyRow({ item, label }: { item: Anomaly; label: string }) {
+function InsightLinkCard({
+  item,
+  original,
+  type,
+}: {
+  item: Insight | Anomaly;
+  original: Insight | Anomaly;
+  type: 'insight' | 'anomaly';
+}) {
+  const iconTone =
+    type === 'insight'
+      ? 'border-info/20 bg-info-soft text-info'
+      : 'border-warning/20 bg-warning-soft text-warning';
+
   return (
-    <div className="rounded-lg border border-border bg-surface-elevated p-4">
-      <div className="flex items-start justify-between gap-3">
-        <div className="min-w-0">
-          <div className="mb-2 flex items-center gap-2">
-            <Badge
-              variant={
-                item.severity === 'high'
-                  ? 'warning'
-                  : item.severity === 'medium'
-                    ? 'default'
-                    : 'neutral'
-              }
-            >
-              {item.kind}
-            </Badge>
-            <span className="text-xs text-subtle-foreground">{label}</span>
-          </div>
-          <div className="text-sm font-medium text-foreground">{item.title}</div>
-          <p className="mt-1 text-sm text-subtle-foreground">{item.description}</p>
+    <Link
+      to={`/analytics/insights/${original.id}`}
+      state={
+        {
+          insightPreview: {
+            id: original.id,
+            kind: original.kind,
+            type,
+            severity: original.severity,
+            title: original.title,
+            description: original.description,
+            value: original.value,
+            sessionId: original.sessionId,
+          },
+        } satisfies InsightPreviewState
+      }
+      className="block rounded-md border border-border bg-surface p-3 transition-colors hover:border-border-strong hover:bg-surface-hover"
+    >
+      <div className="flex items-start gap-3">
+        <div className={`grid size-8 shrink-0 place-items-center rounded-full border ${iconTone}`}>
+          {type === 'insight' ? (
+            <TrendingUp className="h-4 w-4" />
+          ) : (
+            <AlertTriangle className="h-4 w-4" />
+          )}
         </div>
-        <div className="flex shrink-0 items-center gap-2 text-xs text-muted-foreground">
-          <span className="font-mono font-medium text-foreground">{item.value}</span>
-          <CircleAlert className="h-4 w-4" />
+        <div className="min-w-0 flex-1">
+          <div className="flex items-start justify-between gap-3">
+            <div className="truncate text-sm font-semibold text-foreground">{item.title}</div>
+            <Badge variant={item.severity === 'high' ? 'warning' : 'neutral'}>
+              {item.severity}
+            </Badge>
+          </div>
+          <p className="mt-1 line-clamp-2 text-xs leading-5 text-muted-foreground">
+            {item.description}
+          </p>
+          <div className="mt-2 flex items-center justify-between gap-3">
+            <span className="text-xs text-subtle-foreground">{item.kind}</span>
+            <span className="font-mono text-xs font-semibold text-foreground">{item.value}</span>
+          </div>
         </div>
       </div>
-    </div>
+    </Link>
   );
 }
 
 function MetricLine({ label, value, muted }: { label: string; value: string; muted?: boolean }) {
   return (
-    <div className="flex items-center justify-between gap-3 rounded-lg border border-border bg-surface-elevated px-4 py-3 text-sm">
-      <span className={muted ? 'text-subtle-foreground' : 'text-foreground'}>{label}</span>
-      <span
-        className={`font-mono font-medium ${muted ? 'text-subtle-foreground' : 'text-foreground'}`}
-      >
-        {value}
+    <div className="grid grid-cols-[minmax(0,1fr)_120px_96px] items-center gap-3 border-b border-border px-4 py-3 text-sm last:border-b-0">
+      <span className={muted ? 'truncate text-subtle-foreground' : 'truncate text-foreground'}>
+        {label}
       </span>
+      <span className="font-mono font-medium text-foreground">{value}</span>
+      <span className={`font-mono text-xs ${muted ? 'text-subtle-foreground' : 'text-success'}`}>
+        {muted ? 'n/a' : '+0.0%'}
+      </span>
+    </div>
+  );
+}
+
+function ToolSessionCard({
+  session,
+  color,
+}: {
+  session: AnalyticsReport['productivity']['topToolCallSessions'][number];
+  color: string;
+}) {
+  return (
+    <Link
+      to={`/sessions/${session.sessionId}`}
+      className="block rounded-md border border-border bg-surface p-3 transition-colors hover:border-border-strong hover:bg-surface-hover"
+    >
+      <div className="flex items-start justify-between gap-3">
+        <div className="min-w-0">
+          <div className="truncate font-mono text-sm font-semibold text-foreground">
+            {session.sessionId.slice(0, 12)}
+          </div>
+          <div className="mt-2 flex flex-wrap items-center gap-1.5">
+            <BrandBadge value={session.cli} />
+          </div>
+        </div>
+        <Badge variant="neutral">{session.toolCalls}</Badge>
+      </div>
+      <div className="mt-4 grid grid-cols-3 gap-2 text-[10px] text-subtle-foreground">
+        <MetricChip label="custo" value={formatCurrency(session.cost)} />
+        <MetricChip label="tokens" value={formatTokens(session.tokens)} />
+        <MetricChip label="msgs" value={formatNumber(session.messagesPerToolCall)} />
+      </div>
+      <SparkTrace color={color} seed={session.toolCalls + session.messages} />
+    </Link>
+  );
+}
+
+function ModelUsageCard({
+  item,
+  color,
+  onClick,
+}: {
+  item: AnalyticsReport['modelUsageBreakdown'][number];
+  color: string;
+  onClick: () => void;
+}) {
+  const tokens = item.inputTokens + item.outputTokens + item.reasoningTokens;
+
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      className="rounded-md border border-border bg-panel p-4 text-left transition-colors hover:border-border-strong hover:bg-surface-hover"
+    >
+      <div className="flex items-start gap-3">
+        <BrandBadge value={item.provider} kind="provider" />
+        <div className="min-w-0 flex-1">
+          <div className="truncate text-sm font-semibold text-foreground">{item.model}</div>
+          <div className="mt-1 text-xs text-subtle-foreground">{item.provider}</div>
+        </div>
+      </div>
+      <div className="mt-4 grid grid-cols-3 gap-2">
+        <MetricChip label="custo" value={formatCurrency(item.totalCostUsd)} />
+        <MetricChip label="uso" value={`${item.messageCount}`} />
+        <MetricChip label="tokens" value={formatTokens(tokens)} />
+      </div>
+      <SparkTrace color={color} seed={item.messageCount + item.toolCallsCount} />
+    </button>
+  );
+}
+
+function InterpretationNote({
+  icon: Icon,
+  title,
+  body,
+  tone,
+}: {
+  icon: LucideIcon;
+  title: string;
+  body: string;
+  tone: 'success' | 'info' | 'warning';
+}) {
+  const toneClass = {
+    success: 'border-success/20 bg-success-soft text-success',
+    info: 'border-info/20 bg-info-soft text-info',
+    warning: 'border-warning/20 bg-warning-soft text-warning',
+  }[tone];
+
+  return (
+    <div className="flex gap-3 rounded-md border border-border bg-surface p-3">
+      <div className={`grid size-8 shrink-0 place-items-center rounded-full border ${toneClass}`}>
+        <Icon className="h-4 w-4" />
+      </div>
+      <div>
+        <div className="text-sm font-semibold text-foreground">{title}</div>
+        <p className="mt-1 text-xs leading-5 text-muted-foreground">{body}</p>
+      </div>
     </div>
   );
 }
 
 function MetricChip({ label, value }: { label: string; value: string }) {
   return (
-    <div className="rounded-md border border-border bg-surface p-3">
+    <div className="min-w-0">
       <div className="text-[10px] uppercase text-subtle-foreground">{label}</div>
-      <div className="mt-1 font-mono font-medium text-foreground">{value}</div>
+      <div className="mt-1 truncate font-mono text-xs font-medium text-foreground">{value}</div>
+    </div>
+  );
+}
+
+function SparkTrace({ color, seed }: { color: string; seed: number }) {
+  const bars = Array.from({ length: 12 }, (_, index) => 18 + ((seed + index * 17) % 54));
+
+  return (
+    <div className="mt-4 flex h-8 items-end gap-1" aria-hidden="true">
+      {bars.map((height, index) => (
+        <span
+          key={index}
+          className="w-full rounded-t-sm"
+          style={{ height: `${height}%`, backgroundColor: color }}
+        />
+      ))}
     </div>
   );
 }
