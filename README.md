@@ -241,8 +241,6 @@ Sessionlens provides a Windows tray icon with:
 | Phase 11  | 📋 Planned | Extensibility (plugin SDK, IDE integration)                                                 |
 | Phase 12  | 📋 Planned | Future / Cloud Optional (opt-in sync, team analytics)                                       |
 
-> Detailed roadmap, including the Phase 11 product opportunities backlog (side-by-side CLI comparison, report export, Git ROI, MCP server, CLI companion, session replay, GitHub Actions, native OS notifications, activity heatmap), lives in `.commandcode/ROADMAP.md`.
-
 ---
 
 ## Documentation Roadmap
