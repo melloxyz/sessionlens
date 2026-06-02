@@ -2,11 +2,13 @@ import { useEffect, useMemo, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import {
   ArrowUpRight,
-  MessageSquare,
+  Bot,
+  CircleDollarSign,
+  Gauge,
   MoreHorizontal,
+  Network,
   ShieldAlert,
-  Timer,
-  WalletCards,
+  type LucideIcon,
 } from 'lucide-react';
 import {
   Area,
@@ -24,9 +26,7 @@ import { BrandBadge, BrandMark, getBrandMeta } from '../components/brand/BrandMa
 import { AlertStrip } from '../components/ui/AlertStrip.js';
 import { Badge } from '../components/ui/Badge.js';
 import { Button } from '../components/ui/Button.js';
-import { CompactStat } from '../components/ui/CompactStat.js';
-import { DataQualityMatrix, type DataQualityState } from '../components/ui/DataQualityMatrix.js';
-import { DataPanel } from '../components/ui/DataPanel.js';
+import { Card, CardContent } from '../components/ui/Card.js';
 import {
   DataTable,
   DataTableBody,
@@ -46,7 +46,6 @@ import {
   PanelSkeleton,
   TableSkeletonRows,
 } from '../components/ui/LoadingState.js';
-import { MetricBlock } from '../components/ui/MetricBlock.js';
 import { chartTooltipProps } from '../components/ui/ChartTooltip.js';
 import { useDateRange } from '../components/filters/DateRangeProvider.js';
 import { useI18n } from '../components/i18n/LanguageProvider.js';
@@ -113,6 +112,8 @@ interface BudgetStatusItem {
   percentage: number;
   status: 'ok' | 'warning' | 'approaching' | 'exceeded';
 }
+
+type QualityTone = 'real' | 'partial' | 'estimated' | 'unknown';
 
 export function DashboardPage() {
   const { t } = useI18n();
@@ -215,12 +216,15 @@ export function DashboardPage() {
     (session) => session.source_confidence === 'HIGH',
   ).length;
   const sessionsWithTools = sessionSample.filter((session) => session.tool_call_count > 0).length;
-  const costQuality: DataQualityState =
+  const sampleSize = Math.max(sessionSample.length, 1);
+  const costQuality: QualityTone =
     actualCostCount > 0 ? 'real' : estimatedCostCount > 0 ? 'estimated' : 'unknown';
-  const qualityItems = [
+  const tokenCoverage = tokenPoints.filter((point) => point.inputTokens + point.outputTokens > 0);
+  const qualitySignals = [
     {
       label: t('dashboard.quality.cost'),
       state: costQuality,
+      score: Math.round(((actualCostCount + estimatedCostCount * 0.65) / sampleSize) * 100),
       detail:
         actualCostCount > 0
           ? t('dashboard.quality.actualRows').replace('{{count}}', String(actualCostCount))
@@ -231,11 +235,16 @@ export function DashboardPage() {
     {
       label: t('dashboard.quality.tokens'),
       state: totalTokens > 0 ? ('real' as const) : ('unknown' as const),
+      score:
+        totalTokens > 0
+          ? Math.round((tokenCoverage.length / Math.max(tokenPoints.length, 1)) * 100)
+          : 0,
       detail: totalTokens > 0 ? formatTokens(totalTokens) : t('dashboard.quality.noTokenEvents'),
     },
     {
       label: t('dashboard.quality.tools'),
       state: sessionsWithTools > 0 ? ('partial' as const) : ('unknown' as const),
+      score: Math.round((sessionsWithTools / sampleSize) * 100),
       detail: t('dashboard.quality.recentSessions')
         .replace('{{count}}', String(sessionsWithTools))
         .replace('{{total}}', String(sessionSample.length || 0)),
@@ -243,6 +252,7 @@ export function DashboardPage() {
     {
       label: t('dashboard.quality.confidence'),
       state: highConfidenceCount > 0 ? ('real' as const) : ('partial' as const),
+      score: Math.round((highConfidenceCount / sampleSize) * 100),
       detail: t('dashboard.quality.highConfidence')
         .replace('{{count}}', String(highConfidenceCount))
         .replace('{{total}}', String(sessionSample.length || 0)),
@@ -289,7 +299,7 @@ export function DashboardPage() {
 
   return (
     <div
-      className="grid min-h-full grid-cols-1 gap-4 p-4 lg:p-6 xl:grid-cols-[minmax(0,1fr)_360px]"
+      className="grid min-h-full grid-cols-1 gap-4 p-4 lg:p-6 xl:grid-cols-[minmax(0,1fr)_320px]"
       aria-busy={isValidating}
     >
       {anyError && (
@@ -304,79 +314,39 @@ export function DashboardPage() {
         </section>
       )}
       <div className="flex min-w-0 flex-col gap-4">
-        <section className="grid gap-3 2xl:grid-cols-[minmax(0,1.05fr)_minmax(420px,0.95fr)]">
-          <FigurePanel
-            figure="OVERVIEW"
-            title={t('dashboard.commandCenter')}
-            description={t('dashboard.commandCenterDescription')}
-            meta={<Badge variant="neutral">{rangeLabel}</Badge>}
-            contentClassName="space-y-4"
-          >
-            <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
-              <MetricBlock
-                variant="compact"
-                label={t('dashboard.totalSpend')}
-                value={formatCurrency(overview?.totalSpend)}
-                icon={WalletCards}
-                loading={overviewLoading}
-                tone={exceededBudgets.length > 0 ? 'warning' : 'success'}
-              />
-              <MetricBlock
-                variant="compact"
-                label={t('dashboard.totalSessions')}
-                value={String(overview?.sessionCount ?? 0)}
-                loading={overviewLoading}
-              />
-              <MetricBlock
-                variant="compact"
-                label={t('dashboard.totalTokens')}
-                value={formatTokens(totalTokens)}
-                loading={tokenLoading && !tokenData}
-                meta={t('dashboard.allSources')}
-                tone="info"
-              />
-              <MetricBlock
-                variant="compact"
-                label={t('dashboard.avgCostSession')}
-                value={formatCurrency(overview?.averageSessionCost)}
-                loading={overviewLoading}
-                meta={overview?.mostUsedCli ?? t('common.unknown')}
-              />
-            </div>
-          </FigurePanel>
-          <FigurePanel
-            figure="PULSE"
-            title={t('dashboard.graphQuality')}
-            description={t('dashboard.graphQualityDescription')}
-            meta={
-              <Badge variant={isValidating ? 'warning' : 'success'}>
-                {isValidating ? t('common.loading') : t('dashboard.live')}
-              </Badge>
-            }
-            contentClassName="flex flex-col gap-4"
-          >
-            <DataQualityMatrix items={qualityItems} />
-            <div className="grid gap-3 sm:grid-cols-2">
-              <MetricBlock
-                variant="compact"
-                label={t('dashboard.totalDuration')}
-                value={formatDuration(totalDurationMs)}
-                icon={Timer}
-                loading={overviewLoading}
-                tone="info"
-                meta={t('dashboard.indexed')}
-              />
-              <MetricBlock
-                variant="compact"
-                label={t('common.messages')}
-                value={formatTokens(totalMessages)}
-                icon={MessageSquare}
-                loading={overviewLoading}
-                tone="success"
-                meta={t('dashboard.allSources')}
-              />
-            </div>
-          </FigurePanel>
+        <section className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
+          <DashboardKpiCard
+            label={t('dashboard.totalSpend')}
+            value={formatCurrency(overview?.totalSpend)}
+            meta={rangeLabel}
+            icon={CircleDollarSign}
+            tone={exceededBudgets.length > 0 ? 'warning' : 'success'}
+            loading={overviewLoading}
+          />
+          <DashboardKpiCard
+            label={t('dashboard.totalSessions')}
+            value={String(overview?.sessionCount ?? 0)}
+            meta={t('dashboard.indexed')}
+            icon={Bot}
+            tone="info"
+            loading={overviewLoading}
+          />
+          <DashboardKpiCard
+            label={t('dashboard.totalTokens')}
+            value={formatTokens(totalTokens)}
+            meta={t('dashboard.allSources')}
+            icon={Network}
+            tone="info"
+            loading={tokenLoading && !tokenData}
+          />
+          <DashboardKpiCard
+            label={t('dashboard.avgCostSession')}
+            value={formatCurrency(overview?.averageSessionCost)}
+            meta={overview?.mostUsedCli ?? t('common.unknown')}
+            icon={Gauge}
+            tone="warning"
+            loading={overviewLoading}
+          />
         </section>
 
         {exceededBudgets.length > 0 && (
@@ -418,141 +388,159 @@ export function DashboardPage() {
           </div>
         )}
 
-        <section className="flex flex-col gap-3">
-          <div className="grid grid-cols-1 items-stretch gap-3 xl:grid-cols-2 2xl:grid-cols-4">
-            <FigurePanel
-              figure="FIG. 01"
-              className="xl:col-span-2"
-              title={t('project.spendOverTime')}
-              description={t('dashboard.spendTrendDescription')}
-              meta={<Badge variant="neutral">{rangeLabel}</Badge>}
-              contentClassName="pt-4"
-            >
-              {spendLoading && !spendData ? (
-                <ChartSkeleton />
-              ) : (
-                <ResponsiveContainer width="100%" height={280}>
-                  <AreaChart data={spendPoints}>
-                    <defs>
-                      <linearGradient id="spendGradient" x1="0" y1="0" x2="0" y2="1">
-                        <stop offset="5%" stopColor="var(--accent)" stopOpacity={0.35} />
-                        <stop offset="95%" stopColor="var(--accent)" stopOpacity={0.02} />
-                      </linearGradient>
-                    </defs>
-                    <CartesianGrid stroke="var(--border)" vertical={false} />
-                    <XAxis
-                      dataKey="date"
-                      tick={{ fontSize: 11, fill: 'var(--subtle-foreground)' }}
-                      tickLine={false}
-                      axisLine={false}
-                    />
-                    <YAxis
-                      tick={{ fontSize: 11, fill: 'var(--subtle-foreground)' }}
-                      tickLine={false}
-                      axisLine={false}
-                      tickFormatter={(value: number) => `$${value.toFixed(0)}`}
-                    />
-                    <Tooltip
-                      {...chartTooltipProps}
-                      formatter={(value: number) => [formatCurrency(value), t('common.cost')]}
-                    />
-                    <Area
-                      type="monotone"
-                      dataKey="spend"
-                      stroke="var(--accent)"
-                      fill="url(#spendGradient)"
-                      strokeWidth={2.4}
-                      dot={{ r: 3, fill: 'var(--accent)' }}
-                    />
-                  </AreaChart>
-                </ResponsiveContainer>
-              )}
-            </FigurePanel>
+        <section className="grid grid-cols-1 items-stretch gap-3 xl:grid-cols-[minmax(0,0.95fr)_minmax(190px,0.55fr)_minmax(190px,0.55fr)]">
+          <FigurePanel
+            figure="FIG. 01"
+            title={t('project.spendOverTime')}
+            description={t('dashboard.spendTrendDescription')}
+            meta={<Badge variant="neutral">{rangeLabel}</Badge>}
+            contentClassName="pt-4"
+          >
+            {spendLoading && !spendData ? (
+              <ChartSkeleton />
+            ) : (
+              <ResponsiveContainer width="100%" height={330}>
+                <AreaChart data={spendPoints}>
+                  <defs>
+                    <linearGradient id="spendGradient" x1="0" y1="0" x2="0" y2="1">
+                      <stop offset="5%" stopColor="var(--accent)" stopOpacity={0.35} />
+                      <stop offset="95%" stopColor="var(--accent)" stopOpacity={0.02} />
+                    </linearGradient>
+                  </defs>
+                  <CartesianGrid stroke="var(--border)" vertical={false} />
+                  <XAxis
+                    dataKey="date"
+                    tick={{ fontSize: 11, fill: 'var(--subtle-foreground)' }}
+                    tickLine={false}
+                    axisLine={false}
+                  />
+                  <YAxis
+                    tick={{ fontSize: 11, fill: 'var(--subtle-foreground)' }}
+                    tickLine={false}
+                    axisLine={false}
+                    tickFormatter={(value: number) => `$${value.toFixed(0)}`}
+                  />
+                  <Tooltip
+                    {...chartTooltipProps}
+                    formatter={(value: number) => [formatCurrency(value), t('common.cost')]}
+                  />
+                  <Area
+                    type="monotone"
+                    dataKey="spend"
+                    stroke="var(--accent)"
+                    fill="url(#spendGradient)"
+                    strokeWidth={2.4}
+                    dot={{ r: 3, fill: 'var(--accent)' }}
+                  />
+                </AreaChart>
+              </ResponsiveContainer>
+            )}
+          </FigurePanel>
 
-            <FigurePanel
-              figure="FIG. 02"
-              className="xl:col-span-2"
-              title={t('dashboard.tokenFlow')}
-              description={t('dashboard.tokenFlowDescription')}
-              meta={<Badge variant="neutral">{formatTokens(totalTokens)}</Badge>}
-              contentClassName="pt-4"
-            >
-              {tokenLoading && !tokenData ? (
-                <ChartSkeleton />
-              ) : (
-                <ResponsiveContainer width="100%" height={280}>
-                  <AreaChart data={tokenPoints}>
-                    <CartesianGrid stroke="var(--border)" vertical={false} />
-                    <XAxis
-                      dataKey="date"
-                      tick={{ fontSize: 11, fill: 'var(--subtle-foreground)' }}
-                      tickLine={false}
-                      axisLine={false}
-                    />
-                    <YAxis
-                      tick={{ fontSize: 11, fill: 'var(--subtle-foreground)' }}
-                      tickLine={false}
-                      axisLine={false}
-                      tickFormatter={(value: number) => formatTokens(value)}
-                    />
-                    <Tooltip
-                      {...chartTooltipProps}
-                      formatter={(value: number, name: string) => [formatTokens(value), name]}
-                    />
-                    <Area
-                      type="monotone"
-                      dataKey="inputTokens"
-                      name={t('common.input')}
-                      stroke="var(--info)"
-                      fill="var(--info-soft)"
-                      strokeWidth={2}
-                    />
-                    <Area
-                      type="monotone"
-                      dataKey="outputTokens"
-                      name={t('common.output')}
-                      stroke="var(--success)"
-                      fill="var(--success-soft)"
-                      strokeWidth={2}
-                    />
-                  </AreaChart>
-                </ResponsiveContainer>
-              )}
-            </FigurePanel>
+          <FigurePanel
+            figure="PULSE"
+            className="xl:col-span-2"
+            title={t('dashboard.graphQuality')}
+            description={t('dashboard.graphQualityDescription')}
+            meta={
+              <Badge variant={isValidating ? 'warning' : 'success'}>
+                {isValidating ? t('common.loading') : t('dashboard.live')}
+              </Badge>
+            }
+            contentClassName="space-y-3"
+          >
+            <QualitySignalGrid items={qualitySignals} />
+            <div className="grid grid-cols-2 gap-3 border-t border-border pt-3">
+              <InlineFact
+                label={t('dashboard.totalDuration')}
+                value={formatDuration(totalDurationMs)}
+              />
+              <InlineFact label={t('common.messages')} value={formatTokens(totalMessages)} />
+            </div>
+          </FigurePanel>
 
-            <DonutCard
-              figure="FIG. 03"
-              title={t('dashboard.spendByCli')}
-              data={cliData}
-              center={formatCurrency(overview?.totalSpend)}
-              centerLabel={t('common.total')}
-              emptyTitle={t('dashboard.noSpend.title')}
-              emptyDescription={t('dashboard.noSpend.description')}
-              loading={cliLoading && !cliBreakdown}
-              colorFor={(label, index) => CLI_COLORS[label] ?? chartColor(index)}
-            />
-            <DonutCard
-              figure="FIG. 04"
-              title={t('dashboard.spendByModel')}
-              data={modelData}
-              center={`${modelData.length}`}
-              centerLabel={t('dashboard.modelsLabel')}
-              emptyTitle={t('dashboard.noSpend.title')}
-              emptyDescription={t('dashboard.noSpend.description')}
-              loading={modelLoading && !modelBreakdown}
-              colorFor={(_, index) => chartColor(index)}
-            />
-          </div>
+          <FigurePanel
+            figure="FIG. 02"
+            title={t('dashboard.tokenFlow')}
+            description={t('dashboard.tokenFlowDescription')}
+            meta={<Badge variant="neutral">{formatTokens(totalTokens)}</Badge>}
+            contentClassName="pt-4"
+          >
+            {tokenLoading && !tokenData ? (
+              <ChartSkeleton />
+            ) : (
+              <ResponsiveContainer width="100%" height={280}>
+                <AreaChart data={tokenPoints}>
+                  <CartesianGrid stroke="var(--border)" vertical={false} />
+                  <XAxis
+                    dataKey="date"
+                    tick={{ fontSize: 11, fill: 'var(--subtle-foreground)' }}
+                    tickLine={false}
+                    axisLine={false}
+                  />
+                  <YAxis
+                    tick={{ fontSize: 11, fill: 'var(--subtle-foreground)' }}
+                    tickLine={false}
+                    axisLine={false}
+                    tickFormatter={(value: number) => formatTokens(value)}
+                  />
+                  <Tooltip
+                    {...chartTooltipProps}
+                    formatter={(value: number, name: string) => [formatTokens(value), name]}
+                  />
+                  <Area
+                    type="monotone"
+                    dataKey="inputTokens"
+                    name={t('common.input')}
+                    stroke="var(--info)"
+                    fill="var(--info-soft)"
+                    strokeWidth={2}
+                  />
+                  <Area
+                    type="monotone"
+                    dataKey="outputTokens"
+                    name={t('common.output')}
+                    stroke="var(--success)"
+                    fill="var(--success-soft)"
+                    strokeWidth={2}
+                  />
+                </AreaChart>
+              </ResponsiveContainer>
+            )}
+          </FigurePanel>
+
+          <DonutCard
+            figure="FIG. 03"
+            title={t('dashboard.spendByCli')}
+            data={cliData}
+            center={formatCurrency(overview?.totalSpend)}
+            centerLabel={t('common.total')}
+            emptyTitle={t('dashboard.noSpend.title')}
+            emptyDescription={t('dashboard.noSpend.description')}
+            loading={cliLoading && !cliBreakdown}
+            colorFor={(label, index) => CLI_COLORS[label] ?? chartColor(index)}
+          />
+          <DonutCard
+            figure="FIG. 04"
+            title={t('dashboard.spendByModel')}
+            data={modelData}
+            center={`${modelData.length}`}
+            centerLabel={t('dashboard.modelsLabel')}
+            emptyTitle={t('dashboard.noSpend.title')}
+            emptyDescription={t('dashboard.noSpend.description')}
+            loading={modelLoading && !modelBreakdown}
+            colorFor={(_, index) => chartColor(index)}
+          />
 
           <FigurePanel
             figure="LEDGER 01"
-            className="overflow-hidden"
+            className="overflow-hidden xl:col-span-3"
             title={t('dashboard.recentSessions')}
             description={t('dashboard.recentSessionsDescription')}
             action={
               <Link
                 to="/sessions"
-                className="inline-flex items-center gap-2 rounded-sm font-mono text-xs font-medium text-accent transition-colors hover:text-accent-hover focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/25"
+                className="inline-flex items-center justify-end gap-2 rounded-sm font-mono text-xs font-medium text-accent transition-colors hover:text-accent-hover focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/25"
               >
                 {t('dashboard.viewAllSessions')} <ArrowUpRight className="h-4 w-4" />
               </Link>
@@ -651,139 +639,287 @@ export function DashboardPage() {
         </section>
       </div>
 
-      <aside className="space-y-4 xl:sticky xl:top-24 xl:self-start">
+      <aside className="space-y-4 xl:self-start">
         {selectedSessionLoading && !selectedSession ? (
           <PanelSkeleton className="h-full min-h-[520px]" />
         ) : (
-          <DataPanel
-            variant="outlined"
-            className="h-full"
-            title={t('dashboard.sessionInspector')}
-            description={t('dashboard.sessionInspectorDescription')}
-            contentClassName="space-y-4"
-          >
-            <div className="flex items-start gap-3">
-              <BrandMark value={selectedSession?.cli} size="lg" />
-              <div className="min-w-0 flex-1">
-                <div className="flex items-center justify-between gap-2">
-                  <h2 className="truncate text-base font-semibold text-foreground">
-                    {selectedSession?.session_id?.slice(0, 8) ?? t('common.session')}
+          <Card variant="figure" className="overflow-hidden">
+            <CardContent className="space-y-4 p-4">
+              <div className="flex items-start justify-between gap-3">
+                <div>
+                  <h2 className="text-base font-semibold text-foreground">
+                    {t('dashboard.sessionInspector')}
                   </h2>
-                  <Badge
-                    variant={
-                      selectedSession?.source_confidence === 'HIGH'
-                        ? 'success'
-                        : selectedSession?.source_confidence === 'MEDIUM'
-                          ? 'default'
-                          : 'warning'
-                    }
-                  >
-                    {selectedSession?.source_confidence
-                      ? t(`common.confidence.${selectedSession.source_confidence.toLowerCase()}`)
-                      : '—'}
-                  </Badge>
+                  <p className="mt-3 text-[11px] font-semibold uppercase text-subtle-foreground">
+                    {t('common.session')}
+                  </p>
                 </div>
-                <p className="mt-1 truncate text-sm text-muted-foreground">
-                  {getBrandMeta(selectedSession?.cli).label} ·{' '}
-                  {selectedSession?.model ?? t('common.unknown')}
-                </p>
+                <Badge
+                  variant={
+                    selectedSession?.source_confidence === 'HIGH'
+                      ? 'success'
+                      : selectedSession?.source_confidence === 'MEDIUM'
+                        ? 'default'
+                        : 'warning'
+                  }
+                >
+                  {selectedSession?.source_confidence
+                    ? t(`common.confidence.${selectedSession.source_confidence.toLowerCase()}`)
+                    : '—'}
+                </Badge>
               </div>
-            </div>
 
-            {selectedSessionError ? (
-              <ErrorState
-                title={
-                  selectedSessionError.status === 404 ? t('session.notFound') : t('session.unable')
-                }
-                message={selectedSessionError.message}
-                code={selectedSessionError.code}
-                details={selectedSessionError.details}
-                onRetry={() => selectedId && setSelectedId(selectedId)}
-              />
-            ) : (
-              <>
-                <div className="grid gap-2 md:grid-cols-2 xl:grid-cols-1 2xl:grid-cols-2">
-                  <CompactStat
-                    label={t('common.cost')}
-                    value={formatCurrency(selectedSession?.total_cost_usd)}
-                    meta={selectedSession?.cost_source ?? t('common.unknown')}
-                  />
-                  <CompactStat
-                    label={t('common.tokens')}
-                    value={formatTokens(selectedUsage.input + selectedUsage.output)}
-                    meta={t('dashboard.allSources')}
-                  />
-                  <CompactStat
-                    label={t('common.tools')}
-                    value={String(selectedSession?.tool_call_count ?? 0)}
-                    meta={t('analytics.totalAcrossSessions')}
-                  />
-                  <CompactStat
-                    label={t('common.messages')}
-                    value={String(selectedSession?.message_count ?? 0)}
-                    meta={t('common.messages').toLowerCase()}
-                  />
-                  <CompactStat
-                    label={t('common.duration')}
-                    value={formatDuration(selectedSession?.duration_ms)}
-                    meta={t('common.activity')}
-                    className="md:col-span-2 xl:col-span-1 2xl:col-span-2"
-                  />
-                </div>
-
-                <div className="rounded-md border border-border p-3">
-                  <div className="mb-3 text-sm font-semibold text-foreground">
-                    {t('session.tokenUsage')}
+              <div className="flex items-center gap-3 py-2">
+                <BrandMark value={selectedSession?.cli} size="lg" />
+                <div className="min-w-0">
+                  <div className="truncate font-mono text-sm font-semibold text-foreground">
+                    {selectedSession?.session_id?.slice(0, 8) ?? t('common.session')}
                   </div>
-                  <TokenUsageBar
-                    input={selectedUsage.input}
-                    output={selectedUsage.output}
-                    cacheRead={selectedUsage.cacheRead}
-                    cacheWrite={selectedUsage.cacheWrite}
-                  />
+                  <p className="mt-1 truncate text-xs text-muted-foreground">
+                    {getBrandMeta(selectedSession?.cli).label} ·{' '}
+                    {selectedSession?.model ?? t('common.unknown')}
+                  </p>
                 </div>
+              </div>
 
-                <div className="rounded-md border border-border p-3 text-sm">
-                  <div className="mb-3 text-sm font-semibold text-foreground">
-                    {t('session.metadata')}
+              {selectedSessionError ? (
+                <ErrorState
+                  title={
+                    selectedSessionError.status === 404
+                      ? t('session.notFound')
+                      : t('session.unable')
+                  }
+                  message={selectedSessionError.message}
+                  code={selectedSessionError.code}
+                  details={selectedSessionError.details}
+                  onRetry={() => selectedId && setSelectedId(selectedId)}
+                />
+              ) : (
+                <>
+                  <div className="grid grid-cols-2 overflow-hidden rounded-md border border-border">
+                    <InspectorStat
+                      label={t('common.cost')}
+                      value={formatCurrency(selectedSession?.total_cost_usd)}
+                      meta={selectedSession?.cost_source ?? t('common.unknown')}
+                    />
+                    <InspectorStat
+                      label={t('common.tokens')}
+                      value={formatTokens(selectedUsage.input + selectedUsage.output)}
+                      meta={t('dashboard.allSources')}
+                    />
+                    <InspectorStat
+                      label={t('common.tools')}
+                      value={String(selectedSession?.tool_call_count ?? 0)}
+                      meta={t('analytics.totalAcrossSessions')}
+                    />
+                    <InspectorStat
+                      label={t('common.messages')}
+                      value={String(selectedSession?.message_count ?? 0)}
+                      meta={t('common.messages').toLowerCase()}
+                    />
+                    <InspectorStat
+                      label={t('common.duration')}
+                      value={formatDuration(selectedSession?.duration_ms)}
+                      meta={t('common.activity')}
+                      className="col-span-2"
+                    />
                   </div>
-                  <InfoRow
-                    label={t('common.project')}
-                    value={basename(selectedSession?.project_path)}
-                  />
-                  <InfoRow label={t('common.provider')} value={selectedSession?.provider ?? '—'} />
-                  <InfoRow
-                    label={t('common.model')}
-                    value={selectedSession?.model ?? t('common.unknown')}
-                  />
-                  <InfoRow
-                    label={t('common.started')}
-                    value={
-                      selectedSession?.started_at ? formatDate(selectedSession.started_at) : '—'
-                    }
-                  />
-                  <InfoRow
-                    label={t('common.ended')}
-                    value={selectedSession?.ended_at ? formatDate(selectedSession.ended_at) : '—'}
-                  />
-                  <InfoRow
-                    label={t('common.duration')}
-                    value={formatDuration(selectedSession?.duration_ms)}
-                  />
-                </div>
-              </>
-            )}
 
-            {selectedId && (
-              <Link to={`/sessions/${selectedId}`}>
-                <Button variant="outline" className="w-full">
-                  {t('dashboard.openSession')} <ArrowUpRight className="h-4 w-4" />
-                </Button>
-              </Link>
-            )}
-          </DataPanel>
+                  <div className="rounded-md border border-border bg-surface p-3">
+                    <div className="mb-3 text-[11px] font-semibold uppercase text-muted-foreground">
+                      {t('session.tokenUsage')}
+                    </div>
+                    <TokenUsageBar
+                      input={selectedUsage.input}
+                      output={selectedUsage.output}
+                      cacheRead={selectedUsage.cacheRead}
+                      cacheWrite={selectedUsage.cacheWrite}
+                    />
+                  </div>
+
+                  <div className="rounded-md border border-border bg-surface p-3 text-sm">
+                    <div className="mb-3 text-[11px] font-semibold uppercase text-muted-foreground">
+                      {t('session.metadata')}
+                    </div>
+                    <InfoRow
+                      label={t('common.project')}
+                      value={basename(selectedSession?.project_path)}
+                    />
+                    <InfoRow
+                      label={t('common.provider')}
+                      value={selectedSession?.provider ?? '—'}
+                    />
+                    <InfoRow
+                      label={t('common.model')}
+                      value={selectedSession?.model ?? t('common.unknown')}
+                    />
+                    <InfoRow
+                      label={t('common.started')}
+                      value={
+                        selectedSession?.started_at ? formatDate(selectedSession.started_at) : '—'
+                      }
+                    />
+                    <InfoRow
+                      label={t('common.ended')}
+                      value={selectedSession?.ended_at ? formatDate(selectedSession.ended_at) : '—'}
+                    />
+                    <InfoRow
+                      label={t('common.duration')}
+                      value={formatDuration(selectedSession?.duration_ms)}
+                    />
+                  </div>
+                </>
+              )}
+
+              {selectedId && (
+                <Link to={`/sessions/${selectedId}`}>
+                  <Button variant="outline" className="w-full">
+                    {t('dashboard.openSession')} <ArrowUpRight className="h-4 w-4" />
+                  </Button>
+                </Link>
+              )}
+            </CardContent>
+          </Card>
         )}
       </aside>
+    </div>
+  );
+}
+
+const kpiToneClasses: Record<QualityTone | 'success' | 'warning' | 'info', string> = {
+  real: 'border-success/25 bg-success-soft text-success',
+  partial: 'border-warning/25 bg-warning-soft text-warning',
+  estimated: 'border-info/25 bg-info-soft text-info',
+  unknown: 'border-border bg-surface-muted text-muted-foreground',
+  success: 'border-success/25 bg-success-soft text-success',
+  warning: 'border-warning/25 bg-warning-soft text-warning',
+  info: 'border-info/25 bg-info-soft text-info',
+};
+
+function DashboardKpiCard({
+  label,
+  value,
+  meta,
+  icon: Icon,
+  tone,
+  loading,
+}: {
+  label: string;
+  value: string;
+  meta: string;
+  icon: LucideIcon;
+  tone: 'success' | 'warning' | 'info';
+  loading?: boolean;
+}) {
+  return (
+    <Card variant="figure" className="overflow-hidden">
+      <CardContent className="min-h-[142px] p-4">
+        <div className="flex items-start justify-between gap-3">
+          <div
+            className={`grid size-10 shrink-0 place-items-center rounded-full border ${kpiToneClasses[tone]}`}
+          >
+            <Icon className="size-5" />
+          </div>
+          <Badge variant="neutral" className="max-w-[140px] truncate">
+            {meta}
+          </Badge>
+        </div>
+        <div className="mt-4">
+          <div className="text-[11px] font-semibold uppercase text-muted-foreground">{label}</div>
+          <div className="mt-3 truncate font-mono text-3xl font-semibold leading-none text-foreground tabular-nums">
+            {loading ? '...' : value}
+          </div>
+        </div>
+      </CardContent>
+    </Card>
+  );
+}
+
+function QualitySignalGrid({
+  items,
+}: {
+  items: { label: string; state: QualityTone; score: number; detail?: string }[];
+}) {
+  return (
+    <div className="grid gap-2 sm:grid-cols-2">
+      {items.map((item) => (
+        <QualitySignalCard key={item.label} item={item} />
+      ))}
+    </div>
+  );
+}
+
+function QualitySignalCard({
+  item,
+}: {
+  item: { label: string; state: QualityTone; score: number; detail?: string };
+}) {
+  const score = Math.max(0, Math.min(100, Number.isFinite(item.score) ? item.score : 0));
+
+  return (
+    <div className="min-h-[92px] rounded-md border border-border bg-surface p-3">
+      <div className="flex items-start justify-between gap-2">
+        <div className="min-w-0">
+          <div className="truncate text-[10px] font-semibold uppercase text-subtle-foreground">
+            {item.label}
+          </div>
+          {item.detail ? (
+            <div className="mt-1 truncate text-xs text-muted-foreground">{item.detail}</div>
+          ) : null}
+        </div>
+        <Badge variant={item.state}>{item.state}</Badge>
+      </div>
+      <div className="mt-3 flex items-end justify-between gap-3">
+        <div className="shrink-0">
+          <span className="font-mono text-2xl font-semibold leading-none text-foreground">
+            {score}
+          </span>
+          <span className="ml-1 font-mono text-xs text-subtle-foreground">/100</span>
+        </div>
+        <div className="h-1.5 min-w-16 flex-1 overflow-hidden rounded-full bg-surface-muted">
+          <div
+            className={
+              item.state === 'partial'
+                ? 'h-full rounded-full bg-warning'
+                : 'h-full rounded-full bg-accent'
+            }
+            style={{ width: `${score}%` }}
+          />
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function InlineFact({ label, value }: { label: string; value: string }) {
+  return (
+    <div className="min-w-0">
+      <div className="truncate text-[11px] font-semibold uppercase text-subtle-foreground">
+        {label}
+      </div>
+      <div className="mt-1 truncate font-mono text-lg font-semibold text-foreground">{value}</div>
+    </div>
+  );
+}
+
+function InspectorStat({
+  label,
+  value,
+  meta,
+  className,
+}: {
+  label: string;
+  value: string;
+  meta: string;
+  className?: string;
+}) {
+  return (
+    <div
+      className={`min-w-0 border-b border-r border-border p-3 last:border-b-0 ${className ?? ''}`}
+    >
+      <div className="text-[10px] font-semibold uppercase text-subtle-foreground">{label}</div>
+      <div className="mt-2 truncate font-mono text-sm font-semibold text-foreground">{value}</div>
+      <div className="mt-1 truncate text-xs text-muted-foreground">{meta}</div>
     </div>
   );
 }
@@ -814,16 +950,16 @@ function DonutCard({
   return (
     <FigurePanel
       figure={figure}
-      className="h-full min-h-[348px]"
+      className="h-full min-h-[300px]"
       title={title}
       description={t('dashboard.topContributors')}
-      contentClassName="grid min-h-[292px] grid-rows-[160px_1fr] gap-4 pt-3"
+      contentClassName="grid min-h-[244px] grid-rows-[132px_1fr] gap-3 pt-3"
     >
       {loading ? (
         <DonutSkeleton className="contents" />
       ) : (
         <>
-          <div className="relative mx-auto h-40 w-40">
+          <div className="relative mx-auto h-32 w-32">
             <ResponsiveContainer width="100%" height="100%">
               <PieChart>
                 <Pie
@@ -832,8 +968,8 @@ function DonutCard({
                   nameKey="label"
                   cx="50%"
                   cy="50%"
-                  innerRadius={54}
-                  outerRadius={76}
+                  innerRadius={44}
+                  outerRadius={62}
                   paddingAngle={2}
                   stroke="var(--background)"
                   strokeWidth={3}
@@ -850,12 +986,12 @@ function DonutCard({
             </ResponsiveContainer>
             <div className="pointer-events-none absolute inset-0 grid place-items-center text-center">
               <div>
-                <div className="text-sm font-semibold text-foreground">{center}</div>
+                <div className="text-base font-semibold text-foreground">{center}</div>
                 <div className="text-[10px] uppercase text-subtle-foreground">{centerLabel}</div>
               </div>
             </div>
           </div>
-          <div className="space-y-2.5">
+          <div className="space-y-2">
             {data.map((item, index) => (
               <div
                 key={item.label}
