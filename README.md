@@ -2,7 +2,7 @@
 
 # Sessionlens
 
-**Observabilidade local-first para AI Coding CLIs — multi-CLI, open-source, privado.**
+**Local-first observability for AI Coding CLIs — multi-CLI, open-source, private.**
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-00c853.svg?style=flat-square)](LICENSE)
 [![v0.9.0](https://img.shields.io/badge/v0.9.0-00c853?style=flat-square)](https://github.com/melloxyz/sessionlens/releases)
@@ -10,14 +10,19 @@
 [![pnpm](https://img.shields.io/badge/pnpm-%3E%3D9-f69220?style=flat-square&logo=pnpm&logoColor=white)](https://pnpm.io)
 [![TypeScript](https://img.shields.io/badge/TypeScript-5.9-3178c6?style=flat-square&logo=typescript&logoColor=white)](https://www.typescriptlang.org)
 
-*Rastreie custos, analise sessões e compare eficiência entre suas CLIs de IA — tudo offline, tudo local.*
+<p align="center">
+  <a href="README.md"><img src="https://img.shields.io/badge/README-English-00c853?style=for-the-badge" alt="English README"/></a>
+  <a href="README.pt-br.md"><img src="https://img.shields.io/badge/README-Português%20(BR)-00c853?style=for-the-badge" alt="README em Português (BR)"/></a>
+</p>
 
-[Funcionalidades](#funcionalidades) ·
+_Track costs, analyze sessions and compare efficiency across your AI CLIs — fully offline, fully local._
+
+[Features](#features) ·
 [Quick Start](#quick-start) ·
-[Stack](#stack-tecnológica) ·
-[Arquitetura](#arquitetura) ·
-[Integrações](#integrações-suportadas) ·
-[Contribuindo](CONTRIBUTING.md)
+[Stack](#tech-stack) ·
+[Architecture](#architecture) ·
+[Integrations](#supported-integrations) ·
+[Contributing](CONTRIBUTING.md)
 
 <br/>
 
@@ -36,212 +41,243 @@
 
 ---
 
-## Funcionalidades
+## Features
 
-| Recurso | Descrição |
-|---|---|
-| **Multi-CLI** | Suporte para 9 CLIs: Codex, Claude Code, OpenCode, Gemini CLI, Kimi, Aider, Qwen, Antigravity e CommandCode |
-| **Rastreamento de custos** | Custo real da CLI, estimativa por tokens e sync com OpenRouter para pricing atualizado |
-| **Sessões inteligentes** | Tokens (input/output/cache/reasoning), tool calls, duração, contexto do projeto |
-| **Analytics** | Dashboard com filtros contextuais, trends de gastos, breakdown por modelo/provider/projeto, páginas dedicadas de insight e anomalias |
-| **Confiabilidade de dados** | Origem da sessão, qualidade por campo, tools capturadas, arquivos tocados e coverage por CLI em Settings e Session Detail |
-| **Orçamentos** | Defina limites globais, por projeto, CLI, provider ou modelo, com histórico de alertas locais |
-| **Privacidade local-first** | SQLite via sql.js WASM — zero dados enviados externamente, zero telemetria |
-| **Auto-ingestão** | Filesystem watcher com debounce observa diretórios das CLIs e atualiza automaticamente |
-| **UI premium** | Design system próprio do Sessionlens, inspirado em interfaces editoriais e técnicas, com DataPanel, DataTable, CompactStat, ControlField, skeleton/loading states e tooltips |
-| **Temas** | Modo escuro e modo claro com contraste refinado, chart palette acessível e persistência via localStorage |
-| **i18n** | Inglês e Português (PT-BR) com formatação localizada de datas, durações e moedas |
-| **System Tray** | Ícone na bandeja do Windows com auto-start, ingestão rápida e status ao vivo |
-| **Controles de projeto** | Oculte/restaure projetos sem deletar dados, abra pasta do projeto, acompanhe timeline git e sessões relacionadas |
-| **API com cache** | Requisições com cache e validação para respostas mais rápidas e consistentes |
+| Feature                 | Description                                                                                                                                                                  |
+| ----------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **Multi-CLI**           | Support for 9 CLIs: Codex, Claude Code, OpenCode, Gemini CLI, Kimi, Aider, Qwen, Antigravity, and CommandCode                                                                |
+| **Cost tracking**       | Real CLI cost, token-based estimation, and OpenRouter sync for up-to-date pricing                                                                                            |
+| **Smart sessions**      | Tokens (input/output/cache/reasoning), tool calls, duration, project context, per-model usage                                                                                |
+| **Analytics**           | Dashboard with contextual filters, spend trends, breakdowns by model/provider/project, dedicated insight and anomaly pages                                                   |
+| **Data reliability**    | Session source, per-field quality, captured tools, touched files, and per-CLI coverage in Settings and Session Detail                                                        |
+| **Budgets**             | Set global, per-project, CLI, provider, or model limits with local alert history                                                                                             |
+| **Local-first privacy** | SQLite via sql.js WASM — zero data sent externally, zero telemetry                                                                                                           |
+| **Auto-ingestion**      | Filesystem watcher with debounce observes CLI directories and updates automatically                                                                                          |
+| **Premium UI**          | Sessionlens's own design system, inspired by editorial and technical interfaces, with DataPanel, DataTable, CompactStat, ControlField, skeleton/loading states, and tooltips |
+| **Themes**              | Dark and light mode with refined contrast, accessible chart palette, and persistence via localStorage                                                                        |
+| **i18n**                | English and Portuguese (PT-BR) with localized date, duration, and currency formatting                                                                                        |
+| **System Tray**         | Windows tray icon with auto-start, quick ingestion, and live status                                                                                                          |
+| **Project controls**    | Hide/restore projects without deleting data, open project folder, follow git timeline and related sessions                                                                   |
+| **Cached API**          | Cached and validated requests for faster and more consistent responses                                                                                                       |
 
-### Destaques da v0.9.0
+### Highlights after v0.9.0
 
-- Redesign global do Sessionlens com shell desktop-first, sidebar refinada, topbar consistente e componentes mais densos para leitura em monitores.
-- Analytics com filtros realmente aplicados, páginas dedicadas de insight, drill-downs para projetos/sessões e melhor leitura de gráficos em light/dark.
-- Budgets redesenhado com melhor distribuição de limites, alertas, progresso e estados de configuração.
-- Data quality por sessão e por integração: origem persistida, tools/files estruturados, score de completude por CLI e status honesto para fontes experimentais.
-- Projects e Project Detail com layout mais claro, correção de navegação para detalhes e integração melhor com sessões e histórico local.
-- Changelog dentro do app atualizado para acompanhar entregas, status do projeto, contribuidores e roadmap local-first.
-- Integração CommandCode adicionada a partir de arquivos locais em `~/.commandcode/projects`.
+> The `v0.9.0` badge reflects the last published release. Substantial work has shipped on top of that release (current code is in the `v0.9.x` line) — most notably the data-reliability and UI refinements listed below.
+
+- **Adapter Reliability & Data Quality (Phase 9.8):** persisted `source_path`, per-field `data_quality_json`, normalized `session_tools` and `session_files`; refined `tool_call_count` so it no longer depends solely on `usage_events`; new `DataQualityMatrix` and source/touch panels in Session Detail; `pnpm --filter @sessionlens/backend diagnose:adapters` and `backfill:quality` for safe, idempotent re-ingestion.
+- **Design System & UI Redesign (Phase 9.7):** new Sessionlens visual language — flat surfaces, warm neutral palette, accessible blue focus, less saturated chart palette, sans typography with mono reserved for IDs/numbers/models/costs. New primitives: `FigurePanel`, `FigureGrid`, `MetricBlock`, `QueryBar`, `AlertStrip`, `DashboardKpiCard`.
+- **Changelog & Product Polish (latest):** restructured in-app Changelog with timeline, contributors, in-progress and planned sections; redesigned Dashboard, Projects (with Git filters), and Session Detail layouts; refined copy and i18n across Analytics and Settings.
+- **Insight detail drill-downs (Phase 9.1–9.2):** contextual filters in Analytics, drill-down on charts, clickable insight/anomaly cards linking to `/sessions/:id` and `/analytics/insights/:id` with localized recommendations.
+- **Projects & Sessions UX (Phase 9.3–9.5):** project hide/restore toggle, opening the real local folder of a CLI integration from the sidebar, corrected session-detail navigation, and consistent sectioning across Settings, Projects, and Sessions.
+- **Honest data sources:** when a CLI doesn't expose cost, tokens, or tools, Sessionlens preserves the real data available and flags gaps — it never fabricates sessions from weak sources.
 
 ---
 
 ## Quick Start
 
-### Pré-requisitos
+### Prerequisites
 
 - [Node.js](https://nodejs.org) >= 20
 - [pnpm](https://pnpm.io) (`npm install -g pnpm`)
 
-### Instalação
+### Installation
 
 ```bash
-# Clone o repositório
+# Clone the repository
 git clone https://github.com/melloxyz/sessionlens.git
 cd sessionlens
 
-# Instale as dependências
+# Install dependencies
 pnpm install
 
-# Execute em modo desenvolvimento
+# Run in development mode
 pnpm dev
 ```
 
-Acesse o frontend em **http://localhost:5173** — o backend roda em **http://127.0.0.1:3030**.
+Open the frontend at **http://localhost:5173** — the backend runs on **http://127.0.0.1:3030**.
 
-### Comandos
+### Commands
 
-| Comando | Descrição |
-|---|---|
-| `pnpm dev` | Stack completo (backend + frontend) |
-| `pnpm typecheck` | Typecheck em todos os packages |
-| `pnpm lint` | Lint em todos os packages |
-| `pnpm build` | Build de produção |
-| `pnpm --filter @sessionlens/backend dev` | Apenas backend |
-| `pnpm --filter @sessionlens/backend diagnose:adapters` | Diagnóstico local de adapters, capabilities e fontes detectadas |
-| `pnpm --filter @sessionlens/backend backfill:quality` | Reingestão/backfill de tools, files e data quality |
-| `pnpm --filter @sessionlens/frontend dev` | Apenas frontend |
-| `pnpm --filter @sessionlens/frontend build` | Build do frontend |
-
----
-
-## Stack Tecnológica
-
-| Camada | Tecnologia | Versão |
-|---|---|---|
-| **Runtime** | Node.js | >= 20 |
-| **Gerenciador** | pnpm | >= 9 |
-| **Linguagem** | TypeScript | 5.9 |
-| **Backend** | Fastify | 5.x |
-| **Database** | SQLite via sql.js | WASM |
-| **Frontend** | React + Vite | 6.x |
-| **Estilo** | Tailwind CSS | v4 |
-| **Gráficos** | Recharts | 2.x |
-| **Ícones** | Lucide React | latest |
-| **Pricing** | OpenRouter API | sync |
-| **Tray** | trayicon | Windows |
+| Command                                                | Description                                                                |
+| ------------------------------------------------------ | -------------------------------------------------------------------------- |
+| `pnpm dev`                                             | Full stack (backend + frontend)                                            |
+| `pnpm typecheck`                                       | Typecheck across all packages                                              |
+| `pnpm lint`                                            | Lint across all packages                                                   |
+| `pnpm build`                                           | Production build                                                           |
+| `pnpm --filter @sessionlens/backend dev`               | Backend only                                                               |
+| `pnpm --filter @sessionlens/backend diagnose:adapters` | Local adapter diagnostic (capabilities, detected sources, quality summary) |
+| `pnpm --filter @sessionlens/backend backfill:quality`  | Idempotent backfill of tools, files, and data quality                      |
+| `pnpm --filter @sessionlens/frontend dev`              | Frontend only                                                              |
+| `pnpm --filter @sessionlens/frontend build`            | Frontend build                                                             |
 
 ---
 
-## Arquitetura
+## Tech Stack
+
+| Layer               | Technology        | Version |
+| ------------------- | ----------------- | ------- |
+| **Runtime**         | Node.js           | >= 20   |
+| **Package manager** | pnpm              | >= 9    |
+| **Language**        | TypeScript        | 5.9     |
+| **Backend**         | Fastify           | 5.x     |
+| **Database**        | SQLite via sql.js | WASM    |
+| **Frontend**        | React + Vite      | 6.x     |
+| **Styling**         | Tailwind CSS      | v4      |
+| **Charts**          | Recharts          | 2.x     |
+| **Icons**           | Lucide React      | latest  |
+| **Pricing**         | OpenRouter API    | sync    |
+| **Tray**            | trayicon          | Windows |
+
+---
+
+## Architecture
 
 ```
 sessionlens/
 ├── assets/
-│   ├── logo/              # Logotipos preto e branco (theme-aware)
-│   └── screenshots/       # Prints da interface para documentação
+│   ├── logo/              # Black and white logos (theme-aware)
+│   └── screenshots/       # UI screenshots for documentation
 ├── packages/
 │   ├── backend/           # Fastify + sql.js + OpenRouter sync + adapters + tray
 │   ├── frontend/          # React + Vite + Tailwind v4 + Recharts + shadcn-like UI
-│   └── shared/            # Tipos TypeScript compartilhados
+│   └── shared/            # Shared TypeScript types
 ├── scripts/               # Dev scripts (Windows-safe orchestration)
 ├── .github/workflows/     # CI + Release (git-cliff)
-└── tsconfig.base.json     # Configuração TypeScript base
+└── tsconfig.base.json     # Base TypeScript configuration
 ```
 
 ### Backend (`@sessionlens/backend`)
 
-- **Runtime:** Fastify em `127.0.0.1:3030`
-- **Database:** SQLite via sql.js WASM (zero binários nativos)
-- **Migrations:** Incrementais em `packages/backend/src/db/migrations/`
-- **Custos:** Motor central com `actual`/`estimated`/`unknown` + fallback por tokens
-- **Sync:** OpenRouter pricing em background no startup
-- **Ingestão:** Auto-ingestão com filesystem watcher + debounce + scan periódico
-- **Orçamentos:** Rotas de budget com limites e alertas por projeto/período
-- **Tray:** Gerenciador de bandeja do Windows com auto-start e status ao vivo
+- **Runtime:** Fastify on `127.0.0.1:3030`
+- **Database:** SQLite via sql.js WASM (zero native binaries)
+- **Migrations:** Incremental files in `packages/backend/src/db/migrations/`
+- **Costing engine:** central `cost_source` field with `actual` / `estimated` / `unknown`, plus token-based fallback
+- **Pricing sync:** OpenRouter background sync at startup with `/api/models/sync-openrouter` endpoint
+- **Ingestion:** Auto-ingestion via filesystem watcher with debounce and periodic scan
+- **Budgets:** budget routes with limits and alerts by project / period
+- **Tray:** Windows tray manager with auto-start and live status
+- **Diagnostics:** `diagnose:adapters` and `backfill:quality` scripts for safe local diagnostics and idempotent backfills
 
 ### Frontend (`@sessionlens/frontend`)
 
-- **Dev server:** Vite em `5173` com proxy `/api` → backend
-- **Componentes:** DataPanel, DataTable, CompactStat, ControlField, SectionHeader, Tooltip, Skeleton
-- **Estilo:** Tailwind v4 com CSS variables e design system próprio do Sessionlens
-- **Gráficos:** Recharts (AreaChart, LineChart, PieChart, BarChart) com tooltips customizados
-- **Temas:** Escuro/claro com contraste refinado, superfícies planas e chart palette acessível
-- **Idiomas:** English e Português (PT-BR) via `LanguageProvider` com locale-aware formatting
-- **Cache:** Camada de API com cache e validação para respostas consistentes
+- **Dev server:** Vite on `5173` with `/api` proxy → backend
+- **Components:** `DataPanel`, `DataTable`, `FigurePanel`, `FigureGrid`, `CompactStat`, `ControlField`, `MetricBlock`, `QueryBar`, `SectionHeader`, `Tooltip`, `Skeleton`, `AlertStrip`
+- **Styling:** Tailwind v4 with CSS variables and Sessionlens's own design system
+- **Charts:** Recharts (AreaChart, LineChart, PieChart, BarChart) with custom tooltips
+- **Themes:** Dark/light with refined contrast, flat surfaces, and an accessible chart palette
+- **Languages:** English and Portuguese (PT-BR) via `LanguageProvider` with locale-aware formatting
+- **Cache:** API layer with cache and validation for consistent responses
 
 ### Shared (`@sessionlens/shared`)
 
-- Tipos TypeScript compartilhados: `Session`, `CliProvider`, `SourceConfidence`, etc.
-- Usado por backend e frontend para manter contrato consistente
+- Shared TypeScript types: `Session`, `CliProvider`, `SourceConfidence`, `SessionFilters`, `PaginatedResponse`, etc.
+- Used by both backend and frontend to keep the contract consistent
 
 ---
 
-## Integrações Suportadas
+## Supported Integrations
 
-| CLI | Status | Localização dos Dados | Confiança |
-|---|---|---|---|
-| **Codex CLI** | ✅ Suportado | `~/.codex/state_5.sqlite` + rollout JSONL | HIGH |
-| **Claude Code** | ✅ Suportado | `~/.claude/projects/**/*.jsonl` | MEDIUM |
-| **OpenCode** | ✅ Suportado | `~/.local/share/opencode/opencode.db` | HIGH |
-| **Gemini CLI** | ✅ Suportado | `~/.gemini/tmp/**/chats/*.jsonl` | HIGH |
-| **Kimi CLI** | ⚠️ Experimental honesto | `~/.kimi/sessions/**/context.jsonl` ou `KIMI_SHARE_DIR` | PARTIAL |
-| **Aider** | ⚠️ Experimental honesto | `.aider.chat.history.md` + `.aider.llm.history` | PARTIAL |
-| **Qwen CLI** | ⚠️ Experimental honesto | `~/.qwen/sessions/**/*.json` e equivalentes | PARTIAL |
-| **Antigravity** | ⚠️ Experimental honesto | `~/.gemini/antigravity/` | PARTIAL |
-| **CommandCode** | ✅ Suportado | `~/.commandcode/projects/**/*.jsonl` + `.meta.json` + `.checkpoints.jsonl` | HIGH |
+| CLI             | Status                 | Data location                                                              | Confidence |
+| --------------- | ---------------------- | -------------------------------------------------------------------------- | ---------- |
+| **Codex CLI**   | ✅ Supported           | `~/.codex/state_5.sqlite` + rollout JSONL                                  | HIGH       |
+| **Claude Code** | ✅ Supported           | `~/.claude/projects/**/*.jsonl`                                            | MEDIUM     |
+| **OpenCode**    | ✅ Supported           | `~/.local/share/opencode/opencode.db`                                      | HIGH       |
+| **Gemini CLI**  | ✅ Supported           | `~/.gemini/tmp/**/chats/*.jsonl`                                           | HIGH       |
+| **Kimi CLI**    | ⚠️ Honest experimental | `~/.kimi/sessions/**/context.jsonl` or `KIMI_SHARE_DIR`                    | PARTIAL    |
+| **Aider**       | ⚠️ Honest experimental | `.aider.chat.history.md` + `.aider.llm.history`                            | PARTIAL    |
+| **Qwen CLI**    | ⚠️ Honest experimental | `~/.qwen/sessions/**/*.json` and equivalents                               | PARTIAL    |
+| **Antigravity** | ⚠️ Honest experimental | `~/.gemini/antigravity/`                                                   | PARTIAL    |
+| **CommandCode** | ✅ Supported           | `~/.commandcode/projects/**/*.jsonl` + `.meta.json` + `.checkpoints.jsonl` | HIGH       |
 
-> Cada adapter é isolado — uma mudança no schema de uma CLI não afeta as outras.
-> A confiança representa a qualidade dos dados disponíveis por fonte. Algumas CLIs não expõem custo, tokens ou ferramentas de forma completa; nesses casos o Sessionlens preserva os dados reais disponíveis e marca lacunas para melhoria.
+> Each adapter is isolated — a schema change in one CLI does not affect the others.
+> Confidence reflects the quality of data exposed by each source. Some CLIs don't expose cost, tokens, or tools in full; in those cases Sessionlens preserves the real data available and flags gaps for improvement.
 
 ---
 
-## Configuração
+## Configuration
 
-### Variáveis de Ambiente
+### Environment Variables
 
-Copie `.env.example` para `.env` e ajuste conforme necessário:
+Copy `.env.example` to `.env` and adjust as needed:
 
-| Variável | Descrição | Padrão |
-|---|---|---|
-| `SESSIONLENS_PORT` | Porta do backend | `3030` |
-| `SESSIONLENS_FRONTEND_URL` | URL do frontend (usado pelo tray) | `http://127.0.0.1:5173` |
-| `DATABASE_PATH` | Caminho do arquivo SQLite | `./data/sessionlens.db` |
+| Variable                   | Description                     | Default                 |
+| -------------------------- | ------------------------------- | ----------------------- |
+| `SESSIONLENS_PORT`         | Backend port                    | `3030`                  |
+| `SESSIONLENS_FRONTEND_URL` | Frontend URL (used by the tray) | `http://127.0.0.1:5173` |
+| `DATABASE_PATH`            | SQLite file path                | `./data/sessionlens.db` |
 
-### Auto-Ingestão
+### Auto-Ingestion
 
-O Sessionlens observa automaticamente os diretórios de dados das CLIs suportadas e atualiza os dados quando novos arquivos são escritos. Você pode desligar em **Settings > Auto-ingestion**.
+Sessionlens automatically watches the supported CLI data directories and updates data as new files are written. You can disable this in **Settings > Auto-ingestion**.
 
 ### System Tray (Windows)
 
-O Sessionlens oferece um ícone de bandeja no Windows com:
-- **Auto-start:** Inicie o Sessionlens ao fazer login
-- **Ingestão rápida:** Acione a ingestão manualmente pelo menu do tray
-- **Status ao vivo:** Veja o total de sessões indexadas diretamente no ícone
+Sessionlens provides a Windows tray icon with:
+
+- **Auto-start:** Launch Sessionlens on login
+- **Quick ingestion:** Trigger ingestion manually from the tray menu
+- **Live status:** See the total indexed sessions directly on the icon
 
 ---
 
 ## Roadmap
 
-| Fase | Status | Descrição |
-|---|---|---|
-| Fase 0-2 | ✅ Concluído | Bootstrap, Foundation, Core Product |
-| Fase 3 | ✅ Concluído | Multi-CLI (Codex, Claude, OpenCode) |
-| Fase 3.5 | ✅ Concluído | UI/UX Premium inicial |
-| Fase 4 | ✅ Concluído | Advanced Analytics (insights, anomalias, multi-model) |
-| Fase 5 | ✅ Concluído | CLI Expansion (Gemini, Kimi, Aider, Qwen, Antigravity) |
-| Fase 6 | ✅ Concluído | UI Polish & Brand Assets |
-| Fase 7 | ✅ Concluído | Runtime & Ingestion (auto-ingestão, filesystem watcher) |
-| Fase 8 | ✅ Concluído | Controls & Alerts (budget limits, alertas locais) |
-| Fase 9 | ✅ Concluído | Tray & Runtime (system tray, CI/CD, auto-start) |
-| Fase 9.7 | ✅ Concluído | Design System & UI Redesign (Sessionlens visual language, shell, páginas principais, QA visual) |
-| Fase 10 | 📋 Planejado | Sharing & Webhooks (export local-first, Discord webhooks, templates de compartilhamento) |
-| Fase 11 | 📋 Planejado | Extensibility (plugin SDK, IDE integration) |
-| Fase 12 | 📋 Planejado | Future / Cloud Optional (opt-in sync, team analytics) |
+| Phase     | Status     | Description                                                                                 |
+| --------- | ---------- | ------------------------------------------------------------------------------------------- |
+| Phase 0–2 | ✅ Done    | Bootstrap, Foundation, Core Product                                                         |
+| Phase 3   | ✅ Done    | Multi-CLI (Codex, Claude, OpenCode)                                                         |
+| Phase 3.5 | ✅ Done    | Initial Premium UI/UX                                                                       |
+| Phase 4   | ✅ Done    | Advanced Analytics (insights, anomalies, multi-model)                                       |
+| Phase 5   | ✅ Done    | CLI Expansion (Gemini, Kimi, Aider, Qwen, Antigravity)                                      |
+| Phase 6   | ✅ Done    | UI Polish & Brand Assets                                                                    |
+| Phase 7   | ✅ Done    | Runtime & Ingestion (auto-ingestion, filesystem watcher)                                    |
+| Phase 8   | ✅ Done    | Controls & Alerts (budget limits, local alerts)                                             |
+| Phase 9   | ✅ Done    | Tray & Runtime (system tray, CI/CD, auto-start)                                             |
+| Phase 9.5 | ✅ Done    | UX Polish & Feature Refinement (Analytics, Insights, Settings, Projects, Sidebar)           |
+| Phase 9.7 | ✅ Done    | Design System & UI Redesign (Sessionlens visual language, shell, main pages, visual QA)     |
+| Phase 9.8 | ✅ Done    | Adapter Reliability & Data Quality (per-field quality, tools, files, diagnostics, backfill) |
+| Phase 9.9 | ✅ Done    | UI/UX Prime Intellect Planning (design analysis, tokens, components map, phased plan)       |
+| Phase 10  | 📋 Planned | Sharing & Webhooks (local-first export, Discord webhooks, sharing templates)                |
+| Phase 11  | 📋 Planned | Extensibility (plugin SDK, IDE integration)                                                 |
+| Phase 12  | 📋 Planned | Future / Cloud Optional (opt-in sync, team analytics)                                       |
+
+> Detailed roadmap, including the Phase 11 product opportunities backlog (side-by-side CLI comparison, report export, Git ROI, MCP server, CLI companion, session replay, GitHub Actions, native OS notifications, activity heatmap), lives in `.commandcode/ROADMAP.md`.
 
 ---
 
-## Licença
+## Documentation Roadmap
 
-Este projeto está sob a [MIT License](LICENSE).
+The current documentation set covers onboarding (this README) and contribution guidelines ([CONTRIBUTING.md](CONTRIBUTING.md)). The following files are planned for a future documentation pass to give the project a more complete, multi-audience doc surface:
+
+| File                               | Purpose                                                                                                                                                                                                                                      |
+| ---------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `CHANGELOG.md`                     | Mirror of the in-app `/changelog` page, in plain Markdown for release notes and RSS feeds                                                                                                                                                    |
+| `SECURITY.md`                      | Vulnerability disclosure policy, supported versions, contact channel, and SLAs                                                                                                                                                               |
+| `CODE_OF_CONDUCT.md`               | Community standards (Contributor Covenant v2.1)                                                                                                                                                                                              |
+| `docs/ARCHITECTURE.md`             | Module diagram, ingestion flow, watcher, costing engine, OpenRouter sync                                                                                                                                                                     |
+| `docs/ADAPTERS.md`                 | `Adapter` interface, `AdapterCapabilities`, `SessionDataQuality`, `detect → discover → parse → normalize` flow, per-CLI examples                                                                                                             |
+| `docs/API.md`                      | REST endpoint reference (`/api/overview`, `/api/sessions`, `/api/analytics/*`, `/api/projects`, `/api/models`, `/api/budgets`, `/api/alerts`, `/api/integrations/status`, `/api/ingest*`, `/api/tray/*`, `/api/health`)                      |
+| `docs/DATA-MODEL.md`               | SQLite schema (`sessions`, `usage_events`, `messages`, `projects`, `models`, `pricing`, `session_model_usage`, `hidden_projects`, `budget_limits`, `alert_history`, `app_settings`) and the semantics of `cost_source` / `source_confidence` |
+| `docs/TROUBLESHOOTING.md`          | Common issues: port `3030` busy, CLI paths not detected, stuck ingestion, OpenRouter sync failures, Windows tray, large chunk warning on frontend build                                                                                      |
+| `.github/ISSUE_TEMPLATE/`          | Bug report and feature request templates                                                                                                                                                                                                     |
+| `.github/PULL_REQUEST_TEMPLATE.md` | Structured PR template to replace the inline one in CONTRIBUTING                                                                                                                                                                             |
+
+These are tracked as proposals for a follow-up documentation PR — contributions are welcome.
+
+---
+
+## License
+
+This project is licensed under the [MIT License](LICENSE).
 
 ---
 
 <div align="center">
 
-[Contribua](https://github.com/melloxyz/sessionlens/issues) · [Reporte Bugs](https://github.com/melloxyz/sessionlens/issues) · [Sugira Funcionalidades](https://github.com/melloxyz/sessionlens/issues)
+[Contribute](https://github.com/melloxyz/sessionlens/issues) ·
+[Report Bugs](https://github.com/melloxyz/sessionlens/issues) ·
+[Suggest Features](https://github.com/melloxyz/sessionlens/issues)
 
-**Sessionlens** — observabilidade local-first para AI Coding CLIs.
+**Sessionlens** — local-first observability for AI Coding CLIs.
 
 </div>
