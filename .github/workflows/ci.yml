@@ -2,9 +2,9 @@ name: CI
 
 on:
   push:
-    branches: [main]
+    branches: [master]
   pull_request:
-    branches: [main]
+    branches: [master]
 
 concurrency:
   group: ci-${{ github.ref }}
@@ -12,7 +12,7 @@ concurrency:
 
 jobs:
   ci:
-    name: Typecheck, Lint & Build
+    name: Typecheck, Lint, Build & Test
     runs-on: ubuntu-latest
 
     steps:
@@ -44,3 +44,6 @@ jobs:
 
       - name: Build backend
         run: pnpm --filter @sessionlens/backend build
+
+      - name: Test
+        run: pnpm -r test
