@@ -124,6 +124,12 @@ export function SettingsPage() {
   } = useApi<TrayStatus>('/api/tray/status');
   const [trayUpdating, setTrayUpdating] = useState(false);
   const [trayMutationError, setTrayMutationError] = useState<string | null>(null);
+  const {
+    data: privacySettings,
+    loading: privacyLoading,
+    refetch: refetchPrivacy,
+  } = useApi<{ redactSensitiveData: boolean }>('/api/privacy/settings');
+  const [privacyUpdating, setPrivacyUpdating] = useState(false);
 
   const {
     data: alertsData,
@@ -213,6 +219,20 @@ export function SettingsPage() {
       setTrayMutationError(err instanceof Error ? err.message : String(err));
     } finally {
       setTrayUpdating(false);
+    }
+  }
+
+  async function updateRedactSetting(value: boolean) {
+    setPrivacyUpdating(true);
+    try {
+      await fetch('/api/privacy/settings', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ redactSensitiveData: value }),
+      });
+      await refetchPrivacy();
+    } finally {
+      setPrivacyUpdating(false);
     }
   }
 
@@ -396,6 +416,18 @@ export function SettingsPage() {
                 description={t('settings.manualExport.description')}
               />
             </div>
+            <Card variant="inset">
+              <CardContent className="divide-y divide-border p-0">
+                <SwitchRow
+                  title={t('settings.redactSensitiveData')}
+                  description={t('settings.redactSensitiveData.description')}
+                  enabled={Boolean(privacySettings?.redactSensitiveData)}
+                  loading={privacyLoading && !privacySettings}
+                  disabled={privacyUpdating || privacyLoading}
+                  onChange={() => updateRedactSetting(!privacySettings?.redactSensitiveData)}
+                />
+              </CardContent>
+            </Card>
           </SettingsSection>
 
           <SettingsSection

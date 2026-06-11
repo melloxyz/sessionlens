@@ -6,6 +6,8 @@ import { resolveSessionCost, initPricingCache, clearPricingCache } from '../cost
 import { buildSessionDataQuality, countToolCalls } from './session-quality.js';
 import { validSessionSql } from '../db/session-filters.js';
 import { normalizeProvider, normalizeModel } from '../db/normalize.js';
+import { getBooleanSetting } from '../db/settings.js';
+import { redactText, redactInput } from '../privacy/redact.js';
 
 function normalizePath(p: string | null): string | null {
   if (!p) return null;
@@ -24,10 +26,14 @@ function persistToolEvents(
   db: ReturnType<typeof getDatabase>,
   sessionPk: number,
   rows: RawToolEvent[],
+  redact: boolean,
 ): void {
   db.run(`DELETE FROM session_tools WHERE session_fk = ?`, [sessionPk]);
 
   for (const row of rows) {
+    const input = redact && row.input ? redactInput(row.input) : row.input;
+    const outputPreview =
+      redact && row.outputPreview ? redactText(row.outputPreview) : (row.outputPreview ?? null);
     db.run(
       `INSERT INTO session_tools (session_fk, timestamp, tool_name, operation, input_json, output_preview, source_confidence)
        VALUES (?, ?, ?, ?, ?, ?, ?)`,
@@ -36,8 +42,8 @@ function persistToolEvents(
         row.timestamp,
         row.toolName,
         row.operation,
-        row.input ? JSON.stringify(row.input) : null,
-        row.outputPreview ?? null,
+        input ? JSON.stringify(input) : null,
+        outputPreview,
         row.sourceConfidence,
       ],
     );
@@ -99,6 +105,7 @@ export async function runIngestion(forceReprocess = false): Promise<IngestionSta
 
 async function runIngestionInternal(forceReprocess = false): Promise<IngestionStatus> {
   const _db = getDatabase();
+  const redact = getBooleanSetting('privacy.redactSensitiveData', false);
   const errors: string[] = [];
   let newSessions = 0;
   let updatedSessions = 0;
@@ -143,7 +150,7 @@ async function runIngestionInternal(forceReprocess = false): Promise<IngestionSt
 
             for (const raw of rawSessions) {
               const normalized = adapter.normalize(raw);
-              const result = upsertSession(normalized);
+              const result = upsertSession(normalized, redact);
               if (result === 'new') newSessions++;
               else if (result === 'updated') updatedSessions++;
             }
@@ -258,7 +265,7 @@ function _aggregateModelUsage(raw: RawSession): RawModelUsage[] {
   ];
 }
 
-function upsertSession(raw: RawSession): 'new' | 'updated' | 'skipped' {
+function upsertSession(raw: RawSession, redact: boolean): 'new' | 'updated' | 'skipped' {
   const db = getDatabase();
 
   const normalizedProvider = normalizeProvider(raw.provider);
@@ -304,8 +311,8 @@ function upsertSession(raw: RawSession): 'new' | 'updated' | 'skipped' {
     db.run(`DELETE FROM usage_events WHERE session_fk = ?`, [sessionPk]);
     db.run(`DELETE FROM messages WHERE session_fk = ?`, [sessionPk]);
     db.run(`DELETE FROM session_model_usage WHERE session_fk = ?`, [sessionPk]);
-    insertEvents(db, sessionPk, raw);
-    persistToolEvents(db, sessionPk, raw.toolEvents ?? []);
+    insertEvents(db, sessionPk, raw, redact);
+    persistToolEvents(db, sessionPk, raw.toolEvents ?? [], redact);
     persistFileEvents(db, sessionPk, raw.fileEvents ?? []);
     persistModelUsage(sessionPk, cost.modelUsage);
     return 'updated';
@@ -340,8 +347,8 @@ function upsertSession(raw: RawSession): 'new' | 'updated' | 'skipped' {
 
   const lastId = db.exec(`SELECT last_insert_rowid()`);
   sessionPk = Number(lastId[0].values[0][0]);
-  insertEvents(db, sessionPk, raw);
-  persistToolEvents(db, sessionPk, raw.toolEvents ?? []);
+  insertEvents(db, sessionPk, raw, redact);
+  persistToolEvents(db, sessionPk, raw.toolEvents ?? [], redact);
   persistFileEvents(db, sessionPk, raw.fileEvents ?? []);
   persistModelUsage(sessionPk, cost.modelUsage);
   return 'new';
@@ -423,12 +430,14 @@ function insertEvents(
   db: ReturnType<typeof getDatabase>,
   sessionFk: number,
   raw: RawSession,
+  redact: boolean,
 ): void {
   for (const msg of raw.messages) {
+    const content = redact ? redactText(msg.content) : msg.content;
     db.run(`INSERT INTO messages (session_fk, role, content, timestamp) VALUES (?, ?, ?, ?)`, [
       sessionFk,
       msg.role,
-      msg.content.substring(0, 10000),
+      content.substring(0, 10000),
       msg.timestamp,
     ]);
   }

@@ -491,6 +491,9 @@ const dictionaries = {
     'settings.section.privacy.description': 'Local-first guarantees and manual data controls.',
     'settings.manualExport': 'Manual export',
     'settings.manualExport.description': 'Export your data whenever you want, manually.',
+    'settings.redactSensitiveData': 'Redact sensitive data',
+    'settings.redactSensitiveData.description':
+      'Masks API keys, tokens and passwords before storing tool inputs and messages. Affects future ingestions only.',
     'settings.section.startup': 'Startup and system',
     'settings.section.startup.description': 'System tray, login and startup behavior.',
     'settings.checkUpdates': 'Check updates on startup',
@@ -1414,6 +1417,9 @@ const dictionaries = {
     'settings.section.privacy.description': 'Garantias local-first e controles manuais de dados.',
     'settings.manualExport': 'Exportação manual',
     'settings.manualExport.description': 'Exporte seus dados quando quiser, manualmente.',
+    'settings.redactSensitiveData': 'Redigir dados sensíveis',
+    'settings.redactSensitiveData.description':
+      'Mascara chaves de API, tokens e senhas antes de armazenar entradas de ferramentas e mensagens. Afeta apenas ingestões futuras.',
     'settings.section.startup': 'Inicialização e sistema',
     'settings.section.startup.description': 'Bandeja, login e comportamento de inicialização.',
     'settings.checkUpdates': 'Verificar atualizações ao iniciar',
