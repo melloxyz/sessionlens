@@ -245,11 +245,22 @@ export function registerProjectRoutes(app: FastifyInstance): void {
   });
 }
 
-function getGitCommits(path: string): {
+interface GitCommitsResult {
   branch: string | null;
   commits: { hash: string; author: string; date: string; message: string }[];
-} {
+}
+
+const GIT_COMMITS_CACHE_TTL_MS = 60_000;
+const gitCommitsCache = new Map<string, { data: GitCommitsResult; cachedAt: number }>();
+
+function getGitCommits(path: string): GitCommitsResult {
   if (!path || path === 'unknown' || !existsSync(path)) return { branch: null, commits: [] };
+
+  const cached = gitCommitsCache.get(path);
+  if (cached && Date.now() - cached.cachedAt < GIT_COMMITS_CACHE_TTL_MS) {
+    return cached.data;
+  }
+
   try {
     const branch =
       execFileSync('git', ['-C', path, 'rev-parse', '--abbrev-ref', 'HEAD'], {
@@ -276,7 +287,9 @@ function getGitCommits(path: string): {
         const [hash, author, date, message] = line.split('\x1f');
         return { hash: hash ?? '', author: author ?? '', date: date ?? '', message: message ?? '' };
       });
-    return { branch, commits };
+    const data: GitCommitsResult = { branch, commits };
+    gitCommitsCache.set(path, { data, cachedAt: Date.now() });
+    return data;
   } catch {
     return { branch: null, commits: [] };
   }

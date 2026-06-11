@@ -1,7 +1,7 @@
 import { getDatabase, saveDatabase } from '../db/connection.js';
 import { registry } from '../adapters/registry.js';
 import type { RawFileEvent, RawModelUsage, RawSession, RawToolEvent } from '../adapters/types.js';
-import { execSync } from 'node:child_process';
+import { execFileSync } from 'node:child_process';
 import { resolveSessionCost, initPricingCache, clearPricingCache } from '../costing.js';
 import { buildSessionDataQuality, countToolCalls } from './session-quality.js';
 import { validSessionSql } from '../db/session-filters.js';
@@ -543,14 +543,16 @@ function refreshProjects(): void {
     )
   `);
 
-  const projects = db.exec(`SELECT id, path FROM projects WHERE path != 'unknown'`);
+  // Only query projects that don't have a cached remote yet — remotes rarely change.
+  const projects = db.exec(
+    `SELECT id, path FROM projects WHERE path != 'unknown' AND git_remote IS NULL`,
+  );
   if (projects.length > 0 && projects[0].values) {
     for (const row of projects[0].values) {
       const id = Number(row[0]);
       const p = normalizePath(row[1] as string) ?? '';
       try {
-        const result = execSync('git remote get-url origin', {
-          cwd: p,
+        const result = execFileSync('git', ['-C', p, 'remote', 'get-url', 'origin'], {
           encoding: 'utf-8',
           stdio: ['ignore', 'pipe', 'ignore'],
           timeout: 3000,
