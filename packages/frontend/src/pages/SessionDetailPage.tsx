@@ -328,9 +328,9 @@ export function SessionDetailPage() {
           className="min-w-0"
           title={t('session.conversation')}
           description={`${messages.length} ${t('session.normalizedMessages')}`}
-          contentClassName="p-0"
+          contentClassName="p-0 lg:flex lg:flex-col lg:flex-1 lg:min-h-0"
         >
-          <div className="max-h-[68vh] overflow-y-auto p-4">
+          <div className="h-[260vh] overflow-y-auto over p-4">
             <div className="space-y-3 rounded-md border border-border bg-surface-muted/40 p-3">
               {messages.map((message) => (
                 <MessageBubble key={message.id} message={message} />
