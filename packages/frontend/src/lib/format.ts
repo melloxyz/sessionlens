@@ -1,4 +1,7 @@
 let currentLocale = 'en-US';
+let currentDateFormat = 'medium';
+let currentCurrency = 'USD';
+let currentTimeZone = 'America/Sao_Paulo';
 
 const relativeStrings: Record<string, { now: string; min: string; hour: string; day: string }> = {
   'en-US': { now: 'now', min: 'm ago', hour: 'h ago', day: 'd ago' },
@@ -14,10 +17,27 @@ export function setFormatLocale(locale: string) {
   currentLocale = locale === 'pt-BR' ? 'pt-BR' : 'en-US';
 }
 
+export function setFormatPreferences(preferences: {
+  dateFormat?: string;
+  currency?: string;
+  timeZone?: string;
+}) {
+  if (preferences.dateFormat) currentDateFormat = preferences.dateFormat;
+  if (preferences.currency) currentCurrency = preferences.currency;
+  if (preferences.timeZone) currentTimeZone = preferences.timeZone;
+}
+
 export function formatCurrency(value: number | null | undefined): string {
-  if (value == null) return '$0.00';
-  if (value >= 1000) return `$${(value / 1000).toFixed(1)}k`;
-  return `$${value.toFixed(2)}`;
+  const normalizedValue = value ?? 0;
+  const notation = Math.abs(normalizedValue) >= 1000 ? 'compact' : 'standard';
+
+  return new Intl.NumberFormat(currentLocale, {
+    style: 'currency',
+    currency: currentCurrency,
+    notation,
+    maximumFractionDigits: notation === 'compact' ? 1 : 2,
+    minimumFractionDigits: notation === 'compact' ? 0 : 2,
+  }).format(normalizedValue);
 }
 
 export function formatTokens(value: number | null | undefined): string {
@@ -39,18 +59,13 @@ export function formatDuration(ms: number | null | undefined): string {
 export function formatDate(iso: string | null | undefined): string {
   if (!iso) return '—';
   const d = new Date(iso);
-  return d.toLocaleDateString(currentLocale, { month: 'short', day: 'numeric', year: 'numeric' });
+  return formatDateWithPreference(d, false);
 }
 
 export function formatDateTime(iso: string | null | undefined): string {
   if (!iso) return '—';
   const d = new Date(iso);
-  return d.toLocaleDateString(currentLocale, {
-    month: 'short',
-    day: 'numeric',
-    hour: '2-digit',
-    minute: '2-digit',
-  });
+  return formatDateWithPreference(d, true);
 }
 
 export function formatRelativeTime(iso: string | null | undefined): string {
@@ -83,4 +98,41 @@ export function basename(path: string | null | undefined): string {
       .filter(Boolean)
       .pop() ?? path
   );
+}
+
+function formatDateWithPreference(date: Date, includeTime: boolean) {
+  if (!['dd/MM/yyyy', 'MM/dd/yyyy', 'yyyy-MM-dd'].includes(currentDateFormat)) {
+    return new Intl.DateTimeFormat(currentLocale, {
+      month: 'short',
+      day: 'numeric',
+      year: 'numeric',
+      ...(includeTime ? { hour: '2-digit', minute: '2-digit' } : {}),
+      timeZone: currentTimeZone,
+    }).format(date);
+  }
+
+  const parts = new Intl.DateTimeFormat('en-US', {
+    day: '2-digit',
+    month: '2-digit',
+    year: 'numeric',
+    hour: '2-digit',
+    minute: '2-digit',
+    hourCycle: 'h23',
+    timeZone: currentTimeZone,
+  })
+    .formatToParts(date)
+    .reduce<Record<string, string>>((acc, part) => {
+      acc[part.type] = part.value;
+      return acc;
+    }, {});
+
+  const dateValue =
+    currentDateFormat === 'yyyy-MM-dd'
+      ? `${parts.year}-${parts.month}-${parts.day}`
+      : currentDateFormat === 'MM/dd/yyyy'
+        ? `${parts.month}/${parts.day}/${parts.year}`
+        : `${parts.day}/${parts.month}/${parts.year}`;
+
+  if (!includeTime) return dateValue;
+  return `${dateValue}, ${parts.hour}:${parts.minute}`;
 }

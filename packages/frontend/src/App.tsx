@@ -4,6 +4,7 @@ import { DashboardLayout } from './components/layout/DashboardLayout.js';
 import { ThemeProvider } from './components/theme/ThemeProvider.js';
 import { LanguageProvider } from './components/i18n/LanguageProvider.js';
 import { DateRangeProvider } from './components/filters/DateRangeProvider.js';
+import { PreferencesProvider } from './components/preferences/PreferencesProvider.js';
 import { LoadingState } from './components/ui/LoadingState.js';
 
 const DashboardPage = lazy(() =>
@@ -50,25 +51,27 @@ export function App() {
   return (
     <ThemeProvider>
       <LanguageProvider>
-        <DateRangeProvider>
-          <Suspense fallback={<LoadingState />}>
-            <Routes>
-              <Route element={<DashboardLayout />}>
-                <Route path="/" element={<DashboardPage />} />
-                <Route path="/sessions" element={<SessionsPage />} />
-                <Route path="/sessions/:id" element={<SessionDetailPage />} />
-                <Route path="/projects" element={<ProjectsPage />} />
-                <Route path="/projects/:id" element={<ProjectDetailPage />} />
-                <Route path="/analytics" element={<AnalyticsPage />} />
-                <Route path="/analytics/insights/:id" element={<InsightDetailPage />} />
-                <Route path="/models" element={<ModelsPage />} />
-                <Route path="/settings" element={<SettingsPage />} />
-                <Route path="/budgets" element={<BudgetsPage />} />
-                <Route path="/changelog" element={<ChangelogPage />} />
-              </Route>
-            </Routes>
-          </Suspense>
-        </DateRangeProvider>
+        <PreferencesProvider>
+          <DateRangeProvider>
+            <Suspense fallback={<LoadingState />}>
+              <Routes>
+                <Route element={<DashboardLayout />}>
+                  <Route path="/" element={<DashboardPage />} />
+                  <Route path="/sessions" element={<SessionsPage />} />
+                  <Route path="/sessions/:id" element={<SessionDetailPage />} />
+                  <Route path="/projects" element={<ProjectsPage />} />
+                  <Route path="/projects/:id" element={<ProjectDetailPage />} />
+                  <Route path="/analytics" element={<AnalyticsPage />} />
+                  <Route path="/analytics/insights/:id" element={<InsightDetailPage />} />
+                  <Route path="/models" element={<ModelsPage />} />
+                  <Route path="/settings" element={<SettingsPage />} />
+                  <Route path="/budgets" element={<BudgetsPage />} />
+                  <Route path="/changelog" element={<ChangelogPage />} />
+                </Route>
+              </Routes>
+            </Suspense>
+          </DateRangeProvider>
+        </PreferencesProvider>
       </LanguageProvider>
     </ThemeProvider>
   );
