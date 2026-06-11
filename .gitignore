@@ -10,3 +10,4 @@ AGENTS.md
 *.log
 .commandcode/
 .playwright*
+.agents/
