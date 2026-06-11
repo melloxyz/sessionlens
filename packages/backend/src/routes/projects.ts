@@ -3,6 +3,7 @@ import { existsSync } from 'node:fs';
 import { execFileSync, spawn } from 'node:child_process';
 import { platform } from 'node:process';
 import { getDatabase, saveDatabase } from '../db/connection.js';
+import { validSessionSql } from '../db/session-filters.js';
 
 export function registerProjectRoutes(app: FastifyInstance): void {
   app.get('/api/projects', async (req, reply) => {
@@ -86,7 +87,7 @@ export function registerProjectRoutes(app: FastifyInstance): void {
     // Sessions for this project
     const sessionResult = db.exec(
       `SELECT id, session_id, cli, model, started_at, ended_at, duration_ms, total_cost_usd, cost_source, source_confidence, message_count, tool_call_count
-       FROM sessions WHERE COALESCE(project_path, 'unknown') = ? ORDER BY started_at DESC LIMIT 100`,
+       FROM sessions WHERE COALESCE(project_path, 'unknown') = ? AND ${validSessionSql()} ORDER BY started_at DESC LIMIT 100`,
       [path],
     );
     const sessions: Record<string, unknown>[] = [];
@@ -102,7 +103,7 @@ export function registerProjectRoutes(app: FastifyInstance): void {
     // Provider breakdown
     const providerResult = db.exec(
       `SELECT provider, COUNT(*) as cnt, COALESCE(SUM(total_cost_usd), 0) as cost
-       FROM sessions WHERE COALESCE(project_path, 'unknown') = ? GROUP BY provider ORDER BY cost DESC`,
+       FROM sessions WHERE COALESCE(project_path, 'unknown') = ? AND ${validSessionSql()} GROUP BY provider ORDER BY cost DESC`,
       [path],
     );
     const providerBreakdown: Record<string, unknown>[] = [];
@@ -118,7 +119,7 @@ export function registerProjectRoutes(app: FastifyInstance): void {
     // Model breakdown
     const modelResult = db.exec(
       `SELECT COALESCE(model, 'unknown') as model, COUNT(*) as cnt, COALESCE(SUM(total_cost_usd), 0) as cost
-       FROM sessions WHERE COALESCE(project_path, 'unknown') = ? GROUP BY model ORDER BY cost DESC`,
+       FROM sessions WHERE COALESCE(project_path, 'unknown') = ? AND ${validSessionSql()} GROUP BY model ORDER BY cost DESC`,
       [path],
     );
     const modelBreakdown: Record<string, unknown>[] = [];
@@ -134,7 +135,7 @@ export function registerProjectRoutes(app: FastifyInstance): void {
     // Spend over time for project
     const spendResult = db.exec(
       `SELECT date(started_at) as day, COALESCE(SUM(total_cost_usd), 0) as spend, COUNT(*) as cnt
-       FROM sessions WHERE COALESCE(project_path, 'unknown') = ? AND total_cost_usd IS NOT NULL
+       FROM sessions WHERE COALESCE(project_path, 'unknown') = ? AND total_cost_usd IS NOT NULL AND ${validSessionSql()}
        GROUP BY day ORDER BY day`,
       [path],
     );

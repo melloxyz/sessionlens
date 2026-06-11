@@ -1,17 +1,5 @@
 import { getDatabase } from '../db/connection.js';
-
-function validSessionSql(alias?: string): string {
-  const prefix = alias ? `${alias}.` : '';
-  return `NOT (
-    ${prefix}session_id = 'unknown'
-    AND (${prefix}project_path IS NULL OR ${prefix}project_path = 'unknown')
-    AND (${prefix}model IS NULL OR ${prefix}model = 'unknown')
-    AND COALESCE(${prefix}message_count, 0) = 0
-    AND COALESCE(${prefix}tool_call_count, 0) = 0
-    AND COALESCE(${prefix}total_cost_usd, 0) = 0
-  )
-  AND NOT EXISTS (SELECT 1 FROM hidden_projects hp WHERE hp.path = COALESCE(${prefix}project_path, 'unknown'))`;
-}
+import { visibleSessionSql } from '../db/session-filters.js';
 
 export interface AnalyticsInsight {
   id: string;
@@ -447,7 +435,7 @@ function querySessions(
   filters: AnalyticsFilters,
 ): SessionRow[] {
   const range = buildWhere(filters);
-  const validSession = validSessionSql();
+  const validSession = visibleSessionSql();
   const result = db.exec(
     `SELECT id, session_id, cli, provider, model, project_path, started_at, duration_ms, total_cost_usd, message_count, tool_call_count
       FROM sessions
@@ -464,7 +452,7 @@ function queryUsageAggregates(
   filters: AnalyticsFilters,
 ): UsageAggregate[] {
   const range = buildWhere(filters, 's');
-  const validSession = validSessionSql('s');
+  const validSession = visibleSessionSql('s');
   const result = db.exec(
     `SELECT
        s.id AS session_id,
@@ -497,7 +485,7 @@ function queryFileAggregates(
   filters: AnalyticsFilters,
 ): FileAggregate[] {
   const range = buildWhere(filters, 's');
-  const validSession = validSessionSql('s');
+  const validSession = visibleSessionSql('s');
   const result = db.exec(
     `SELECT s.id AS session_id, COUNT(sf.id) AS file_count
      FROM sessions s
@@ -515,7 +503,7 @@ function queryProjectSummaries(
   filters: AnalyticsFilters,
 ): ProjectSummary[] {
   const range = buildWhere(filters);
-  const validSession = validSessionSql();
+  const validSession = visibleSessionSql();
   const result = db.exec(
     `SELECT COALESCE(project_path, 'unknown') AS project, COALESCE(SUM(total_cost_usd), 0) AS spend, COUNT(*) AS sessions
      FROM sessions
@@ -533,7 +521,7 @@ function queryModelSummaries(
   filters: AnalyticsFilters,
 ): ModelSummary[] {
   const range = buildWhere(filters);
-  const validSession = validSessionSql();
+  const validSession = visibleSessionSql();
   const result = db.exec(
     `SELECT
        COALESCE(provider, 'unknown') AS provider,
@@ -559,7 +547,7 @@ function queryModelUsageBreakdown(
   filters: AnalyticsFilters,
 ): ModelUsageSummary[] {
   const range = buildWhere(filters, 's');
-  const validSession = validSessionSql('s');
+  const validSession = visibleSessionSql('s');
   const result = db.exec(
     `SELECT smu.provider, smu.model,
             COALESCE(SUM(smu.message_count), 0) AS messageCount,
@@ -586,7 +574,7 @@ function queryDailyTrend(
   filters: AnalyticsFilters,
 ): { date: string; spend: number }[] {
   const range = buildWhere(filters);
-  const validSession = validSessionSql();
+  const validSession = visibleSessionSql();
   const anchorResult = db.exec(
     `SELECT date(MAX(started_at)) AS anchor FROM sessions WHERE ${validSession}${range.sql}`,
     range.params,

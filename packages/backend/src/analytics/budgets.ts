@@ -1,4 +1,5 @@
 import { getDatabase, saveDatabase } from '../db/connection.js';
+import { visibleSessionSql } from '../db/session-filters.js';
 
 interface BudgetLimit {
   id: number;
@@ -157,7 +158,7 @@ export function getBudgetStatus(): BudgetStatus[] {
       continue;
     }
 
-    const sql = `SELECT COALESCE(SUM(total_cost_usd), 0) FROM sessions WHERE ${whereClause} ${dateFilter}`;
+    const sql = `SELECT COALESCE(SUM(total_cost_usd), 0) FROM sessions WHERE ${visibleSessionSql()} AND ${whereClause} ${dateFilter}`;
     const result = db.exec(sql, params);
     const currentSpend =
       result.length > 0 && result[0].values.length > 0 ? Number(result[0].values[0][0]) : 0;

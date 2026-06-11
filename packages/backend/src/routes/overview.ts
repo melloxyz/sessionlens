@@ -1,17 +1,6 @@
 import type { FastifyInstance } from 'fastify';
 import { getDatabase } from '../db/connection.js';
-
-const VALID_SESSION_SQL = `NOT (
-  session_id = 'unknown'
-  AND (project_path IS NULL OR project_path = 'unknown')
-  AND (model IS NULL OR model = 'unknown')
-  AND COALESCE(message_count, 0) = 0
-  AND COALESCE(tool_call_count, 0) = 0
-  AND COALESCE(total_cost_usd, 0) = 0
-)`;
-
-const VISIBLE_SESSION_SQL = `${VALID_SESSION_SQL}
-  AND NOT EXISTS (SELECT 1 FROM hidden_projects hp WHERE hp.path = COALESCE(project_path, 'unknown'))`;
+import { visibleSessionSql } from '../db/session-filters.js';
 
 export function registerOverviewRoutes(app: FastifyInstance): void {
   app.get('/api/overview', async (req, reply) => {
@@ -54,7 +43,7 @@ export function registerOverviewRoutes(app: FastifyInstance): void {
           COALESCE(SUM(COALESCE(duration_ms, 0)), 0) AS total_duration_ms,
           COALESCE(SUM(COALESCE(message_count, 0)), 0) AS total_messages
         FROM sessions
-        WHERE ${VISIBLE_SESSION_SQL}${rangeClause}
+        WHERE ${visibleSessionSql()}${rangeClause}
       `,
         [todayStr, weekStr, monthStr, ...rangeParams],
       );
@@ -62,7 +51,7 @@ export function registerOverviewRoutes(app: FastifyInstance): void {
         `
         SELECT cli
         FROM sessions
-        WHERE ${VISIBLE_SESSION_SQL}${rangeClause}
+        WHERE ${visibleSessionSql()}${rangeClause}
         GROUP BY cli
         ORDER BY COUNT(*) DESC
         LIMIT 1

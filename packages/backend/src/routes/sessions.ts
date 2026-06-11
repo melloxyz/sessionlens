@@ -4,18 +4,7 @@ import { spawn } from 'node:child_process';
 import { platform } from 'node:process';
 import { getDatabase } from '../db/connection.js';
 import type { SessionDataQuality } from '../adapters/types.js';
-
-const VALID_SESSION_SQL = `NOT (
-  session_id = 'unknown'
-  AND (project_path IS NULL OR project_path = 'unknown')
-  AND (model IS NULL OR model = 'unknown')
-  AND COALESCE(message_count, 0) = 0
-  AND COALESCE(tool_call_count, 0) = 0
-  AND COALESCE(total_cost_usd, 0) = 0
-)`;
-
-const VISIBLE_SESSION_SQL = `${VALID_SESSION_SQL}
-  AND NOT EXISTS (SELECT 1 FROM hidden_projects hp WHERE hp.path = COALESCE(project_path, 'unknown'))`;
+import { visibleSessionSql } from '../db/session-filters.js';
 
 export function registerSessionRoutes(app: FastifyInstance): void {
   app.get('/api/sessions', async (req, reply) => {
@@ -48,7 +37,7 @@ export function registerSessionRoutes(app: FastifyInstance): void {
       const sortCol = allowedSort.includes(sortBy) ? sortBy : 'started_at';
 
       // Count query
-      let countSql = `SELECT COUNT(*) FROM sessions WHERE ${VISIBLE_SESSION_SQL}`;
+      let countSql = `SELECT COUNT(*) FROM sessions WHERE ${visibleSessionSql()}`;
       const countParams: (string | number | null)[] = [];
       if (cli) {
         countSql += ` AND cli = ?`;
@@ -90,7 +79,7 @@ export function registerSessionRoutes(app: FastifyInstance): void {
       let dataSql = `
       SELECT id, provider, cli, session_id, project_path, model, started_at, ended_at,
               duration_ms, total_cost_usd, cost_source, source_confidence, message_count, tool_call_count, created_at
-      FROM sessions WHERE ${VISIBLE_SESSION_SQL}
+      FROM sessions WHERE ${visibleSessionSql()}
     `;
       const dataParams: (string | number | null)[] = [];
       if (cli) {

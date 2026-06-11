@@ -4,6 +4,7 @@ import type { RawFileEvent, RawModelUsage, RawSession, RawToolEvent } from '../a
 import { execSync } from 'node:child_process';
 import { resolveSessionCost } from '../costing.js';
 import { buildSessionDataQuality, countToolCalls } from './session-quality.js';
+import { validSessionSql } from '../db/session-filters.js';
 
 function normalizePath(p: string | null): string | null {
   if (!p) return null;
@@ -206,15 +207,7 @@ async function runIngestionInternal(): Promise<IngestionStatus> {
 
 function deleteInvalidSessions(): void {
   const db = getDatabase();
-  db.run(`
-    DELETE FROM sessions
-    WHERE session_id = 'unknown'
-      AND (project_path IS NULL OR project_path = 'unknown')
-      AND (model IS NULL OR model = 'unknown')
-      AND COALESCE(message_count, 0) = 0
-      AND COALESCE(tool_call_count, 0) = 0
-      AND COALESCE(total_cost_usd, 0) = 0
-  `);
+  db.run(`DELETE FROM sessions WHERE NOT (${validSessionSql()})`);
 }
 
 function persistModelUsage(sessionPk: number, rows: RawModelUsage[]): void {
