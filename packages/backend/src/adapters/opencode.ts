@@ -101,7 +101,8 @@ export function createOpencodeAdapter(): Adapter {
       try {
         const results = db.exec(`SELECT time_updated FROM session WHERE id = ?`, [sessionId]);
         if (results.length > 0 && results[0].values.length > 0) {
-          return { lastFileMtime: 0, lastFileSize: 0, lastSessionId: sessionId };
+          const timeUpdated = Number(results[0].values[0][0]);
+          return { lastFileMtime: timeUpdated, lastFileSize: 0, lastSessionId: sessionId };
         }
         return null;
       } finally {
@@ -109,11 +110,19 @@ export function createOpencodeAdapter(): Adapter {
       }
     },
 
-    async parse(sessionId: string, _checkpoint: Checkpoint | null): Promise<RawSession[]> {
+    async parse(sessionId: string, checkpoint: Checkpoint | null): Promise<RawSession[]> {
       const sql = await getSqlJs();
       const db = new sql.Database(readFileSync(OPENCODE_DB));
 
       try {
+        if (checkpoint !== null) {
+          const timeResults = db.exec(`SELECT time_updated FROM session WHERE id = ?`, [sessionId]);
+          if (timeResults.length > 0 && timeResults[0].values.length > 0) {
+            const timeUpdated = Number(timeResults[0].values[0][0]);
+            if (timeUpdated === checkpoint.lastFileMtime) return [];
+          }
+        }
+
         const session = readSessionRow(db, sessionId);
         if (!session) return [];
 

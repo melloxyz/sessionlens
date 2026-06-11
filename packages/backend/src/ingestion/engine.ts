@@ -89,15 +89,15 @@ export function isIngestionRunning(): boolean {
   return activeIngestion !== null;
 }
 
-export async function runIngestion(): Promise<IngestionStatus> {
+export async function runIngestion(forceReprocess = false): Promise<IngestionStatus> {
   if (activeIngestion) return activeIngestion;
-  activeIngestion = runIngestionInternal().finally(() => {
+  activeIngestion = runIngestionInternal(forceReprocess).finally(() => {
     activeIngestion = null;
   });
   return activeIngestion;
 }
 
-async function runIngestionInternal(): Promise<IngestionStatus> {
+async function runIngestionInternal(forceReprocess = false): Promise<IngestionStatus> {
   const _db = getDatabase();
   const errors: string[] = [];
   let newSessions = 0;
@@ -129,7 +129,9 @@ async function runIngestionInternal(): Promise<IngestionStatus> {
 
       for (const sessionPath of sessionPaths) {
         try {
-          const checkpoint = registry.getCheckpoint(adapter.cli, sessionPath);
+          const checkpoint = forceReprocess
+            ? null
+            : registry.getCheckpoint(adapter.cli, sessionPath);
           const rawSessions = await adapter.parse(sessionPath, checkpoint);
           recordAdapterSource(adapter.cli, sessionPath, {
             detected: true,

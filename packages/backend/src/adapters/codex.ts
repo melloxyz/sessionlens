@@ -102,8 +102,15 @@ export function createCodexAdapter(): Adapter {
       };
     },
 
-    async parse(sessionPath: string, _checkpoint: Checkpoint | null): Promise<RawSession[]> {
+    async parse(sessionPath: string, checkpoint: Checkpoint | null): Promise<RawSession[]> {
       if (!existsSync(sessionPath)) return [];
+
+      if (checkpoint !== null) {
+        const stat = statSync(sessionPath);
+        if (stat.mtimeMs === checkpoint.lastFileMtime && stat.size === checkpoint.lastFileSize) {
+          return [];
+        }
+      }
 
       const raw = await readFile(sessionPath, 'utf-8');
       const lines = raw.trim().split('\n').filter(Boolean);

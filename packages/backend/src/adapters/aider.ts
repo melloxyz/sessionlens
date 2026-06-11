@@ -1,4 +1,4 @@
-import { existsSync, readdirSync, readFileSync } from 'node:fs';
+import { existsSync, readdirSync, readFileSync, statSync } from 'node:fs';
 import { join, dirname, resolve } from 'node:path';
 import type { Adapter, AdapterCapabilities, Checkpoint, RawMessage, RawSession } from './types.js';
 import type { CliProvider, SourceConfidence } from '@sessionlens/shared';
@@ -39,7 +39,7 @@ export function createAiderAdapter(): Adapter {
 
     async computeCheckpoint(sessionPath: string): Promise<Checkpoint | null> {
       if (!existsSync(sessionPath)) return null;
-      const stat = await import('node:fs').then((fs) => fs.statSync(sessionPath));
+      const stat = statSync(sessionPath);
       return {
         lastFileMtime: stat.mtimeMs,
         lastFileSize: stat.size,
@@ -47,8 +47,15 @@ export function createAiderAdapter(): Adapter {
       };
     },
 
-    async parse(sessionPath: string, _checkpoint: Checkpoint | null): Promise<RawSession[]> {
+    async parse(sessionPath: string, checkpoint: Checkpoint | null): Promise<RawSession[]> {
       if (!existsSync(sessionPath)) return [];
+
+      if (checkpoint !== null) {
+        const stat = statSync(sessionPath);
+        if (stat.mtimeMs === checkpoint.lastFileMtime && stat.size === checkpoint.lastFileSize) {
+          return [];
+        }
+      }
 
       const projectPath = dirname(sessionPath);
       const llmHistoryFile = findLlmHistoryFile(projectPath);

@@ -132,8 +132,9 @@ async function main() {
       }
     });
 
-    app.post('/api/ingest', async () => {
-      const status = await runIngestion();
+    app.post('/api/ingest', async (req) => {
+      const body = req.body as { force?: unknown } | undefined;
+      const status = await runIngestion(body?.force === true);
       return status;
     });
 
