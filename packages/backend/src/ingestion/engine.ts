@@ -528,8 +528,7 @@ function inferSourceType(sessionPath: string): string {
 function refreshProjects(): void {
   const db = getDatabase();
 
-  db.run(`DELETE FROM projects`);
-
+  // Upsert: preserve id and git_remote for existing projects; only recalculate stats.
   db.run(`
     INSERT INTO projects (path, total_sessions, total_cost)
     SELECT
@@ -538,7 +537,17 @@ function refreshProjects(): void {
       COALESCE(SUM(total_cost_usd), 0)
     FROM sessions
     GROUP BY COALESCE(project_path, 'unknown')
-    ORDER BY COALESCE(SUM(total_cost_usd), 0) DESC
+    ON CONFLICT(path) DO UPDATE SET
+      total_sessions = excluded.total_sessions,
+      total_cost = excluded.total_cost
+  `);
+
+  // Remove projects that no longer have any sessions.
+  db.run(`
+    DELETE FROM projects
+    WHERE path NOT IN (
+      SELECT DISTINCT COALESCE(project_path, 'unknown') FROM sessions
+    )
   `);
 
   const projects = db.exec(`SELECT id, path FROM projects WHERE path != 'unknown'`);
