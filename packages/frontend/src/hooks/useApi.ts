@@ -16,9 +16,17 @@ export interface ApiError {
 
 interface CacheEntry {
   data: unknown;
+  cachedAt: number;
 }
 
+const CACHE_TTL_MS = 5 * 60 * 1000;
+const CACHE_MAX_SIZE = 50;
+
 const responseCache = new Map<string, CacheEntry>();
+
+export function invalidateAllCaches(): void {
+  responseCache.clear();
+}
 const inFlightRequests = new Map<string, Promise<unknown>>();
 
 export function useApi<T>(url: string | null, options: UseApiOptions<T> = {}) {
@@ -65,7 +73,11 @@ export function useApi<T>(url: string | null, options: UseApiOptions<T> = {}) {
       try {
         const json = await request;
         if (cache) {
-          responseCache.set(url, { data: json });
+          if (responseCache.size >= CACHE_MAX_SIZE) {
+            const firstKey = responseCache.keys().next().value;
+            if (firstKey !== undefined) responseCache.delete(firstKey);
+          }
+          responseCache.set(url, { data: json, cachedAt: Date.now() });
         }
 
         if (mountedRef.current && requestIdRef.current === requestId) {
@@ -127,7 +139,13 @@ export function useApi<T>(url: string | null, options: UseApiOptions<T> = {}) {
 
 function getCachedData<T>(url: string | null): T | undefined {
   if (!url) return undefined;
-  return responseCache.get(url)?.data as T | undefined;
+  const entry = responseCache.get(url);
+  if (!entry) return undefined;
+  if (Date.now() - entry.cachedAt > CACHE_TTL_MS) {
+    responseCache.delete(url);
+    return undefined;
+  }
+  return entry.data as T;
 }
 
 async function requestWithRetries<T>(url: string, retries: number): Promise<T> {

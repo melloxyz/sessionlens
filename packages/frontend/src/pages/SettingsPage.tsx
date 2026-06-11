@@ -31,7 +31,7 @@ import { ErrorState } from '../components/ui/ErrorState.js';
 import { Select } from '../components/ui/Select.js';
 import { Skeleton } from '../components/ui/Skeleton.js';
 import type { IntegrationStatusItem } from '../components/layout/IntegrationStatus.js';
-import { useApi } from '../hooks/useApi.js';
+import { useApi, invalidateAllCaches } from '../hooks/useApi.js';
 import { formatCurrency, formatDateTime } from '../lib/format.js';
 import { cn } from '../lib/utils.js';
 
@@ -173,6 +173,7 @@ export function SettingsPage() {
     setIngestionRunning(true);
     try {
       await fetch('/api/ingest', { method: 'POST' });
+      invalidateAllCaches();
       await Promise.all([refetchIngest(), refetchOverview(), refetchAuto()]);
     } finally {
       setIngestionRunning(false);
