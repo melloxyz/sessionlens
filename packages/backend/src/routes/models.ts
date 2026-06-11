@@ -1,5 +1,5 @@
 import type { FastifyInstance } from 'fastify';
-import { getDatabase } from '../db/connection.js';
+import { getDatabase, saveDatabase } from '../db/connection.js';
 import { syncOpenRouterPricing } from '../openrouter.js';
 import { backfillEstimatedCosts } from '../ingestion/engine.js';
 
@@ -110,6 +110,7 @@ export function registerModelRoutes(app: FastifyInstance): void {
     try {
       const result = await syncOpenRouterPricing();
       backfillEstimatedCosts();
+      saveDatabase();
       return result;
     } catch (error) {
       reply.code(502);
@@ -127,6 +128,7 @@ export function registerModelRoutes(app: FastifyInstance): void {
     try {
       const result = await syncOpenRouterPricing();
       backfillEstimatedCosts();
+      saveDatabase();
       return result;
     } catch (error) {
       reply.code(502);

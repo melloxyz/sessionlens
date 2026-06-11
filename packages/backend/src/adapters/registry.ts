@@ -1,5 +1,5 @@
 import type { Adapter, Checkpoint } from './types.js';
-import { getDatabase, saveDatabase } from '../db/connection.js';
+import { getDatabase } from '../db/connection.js';
 
 export class AdapterRegistry {
   private adapters: Map<string, Adapter> = new Map();
@@ -28,7 +28,6 @@ export class AdapterRegistry {
         checkpoint.lastSessionId,
       ],
     );
-    saveDatabase();
   }
 
   getCheckpoint(cli: string, sessionPath: string): Checkpoint | null {

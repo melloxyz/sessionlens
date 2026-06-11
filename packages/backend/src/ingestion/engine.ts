@@ -420,7 +420,6 @@ export function backfillEstimatedCosts(): void {
     );
     persistModelUsage(id, cost.modelUsage);
   }
-  saveDatabase();
 }
 
 function insertEvents(
