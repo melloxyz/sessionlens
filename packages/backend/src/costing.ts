@@ -57,9 +57,18 @@ export function resolveSessionCost(raw: RawSession): CostResolution {
   const rows = raw.modelUsage?.length ? raw.modelUsage : aggregateUsage(raw);
   const actualTotal = normalizeCost(raw.totalCostUsd) ?? sumActualCost(rows);
   if (actualTotal != null && actualTotal > 0) {
+    // Respect the adapter's declared cost quality when present; only fall back to
+    // 'actual' for adapters that don't declare dataQuality (backward-compatible).
+    const declaredQuality = raw.dataQuality?.cost;
+    const costSource: CostSource =
+      declaredQuality === 'estimated'
+        ? 'estimated'
+        : declaredQuality === 'unknown'
+          ? 'unknown'
+          : 'actual';
     return {
       totalCostUsd: actualTotal,
-      costSource: 'actual',
+      costSource,
       modelUsage: distributeActualCost(rows, actualTotal),
     };
   }

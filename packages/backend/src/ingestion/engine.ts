@@ -369,8 +369,14 @@ function upsertSession(raw: RawSession): 'new' | 'updated' | 'skipped' {
 
 export function backfillEstimatedCosts(): void {
   const db = getDatabase();
+  // Sync cost_source to match data_quality_json.cost for any sessions where they disagree.
+  // data_quality_json.cost is the authoritative value set by each adapter at ingest time.
   db.run(
-    `UPDATE sessions SET cost_source = 'actual' WHERE COALESCE(total_cost_usd, 0) > 0 AND cost_source = 'unknown'`,
+    `UPDATE sessions
+     SET cost_source = json_extract(data_quality_json, '$.cost')
+     WHERE data_quality_json IS NOT NULL
+       AND json_extract(data_quality_json, '$.cost') IS NOT NULL
+       AND cost_source != json_extract(data_quality_json, '$.cost')`,
   );
   const sessions = db.exec(
     `SELECT id, provider, cli, session_id, project_path, model, started_at, ended_at, duration_ms, source_confidence FROM sessions`,
