@@ -30,12 +30,12 @@ export function registerAnalyticsRoutes(app: FastifyInstance): void {
       const q = req.query as Record<string, string>;
       return buildAnalyticsReport(parseAnalyticsFilters(q));
     } catch (error) {
+      req.log.error(error, 'Failed to build analytics report');
       reply.code(500);
       return {
         error: {
           code: 'ANALYTICS_REPORT_FAILED',
           message: 'Failed to build analytics report',
-          details: String(error),
         },
       };
     }
@@ -57,12 +57,12 @@ export function registerAnalyticsRoutes(app: FastifyInstance): void {
       }
       return detail;
     } catch (error) {
+      req.log.error(error, 'Failed to load insight detail');
       reply.code(500);
       return {
         error: {
           code: 'INSIGHT_DETAIL_FAILED',
           message: 'Failed to load insight detail',
-          details: String(error),
         },
       };
     }
@@ -141,12 +141,12 @@ export function registerAnalyticsRoutes(app: FastifyInstance): void {
 
       return { points };
     } catch (error) {
+      req.log.error(error, 'Failed to load spend timeline');
       reply.code(500);
       return {
         error: {
           code: 'SPEND_TIMELINE_FAILED',
           message: 'Failed to load spend timeline',
-          details: String(error),
         },
       };
     }
@@ -227,12 +227,12 @@ export function registerAnalyticsRoutes(app: FastifyInstance): void {
 
       return { points };
     } catch (error) {
+      req.log.error(error, 'Failed to load token timeline');
       reply.code(500);
       return {
         error: {
           code: 'TOKENS_TIMELINE_FAILED',
           message: 'Failed to load token timeline',
-          details: String(error),
         },
       };
     }
@@ -314,12 +314,12 @@ export function registerAnalyticsRoutes(app: FastifyInstance): void {
 
       return { breakdown };
     } catch (error) {
+      req.log.error(error, 'Failed to load analytics breakdown');
       reply.code(500);
       return {
         error: {
           code: 'BREAKDOWN_FAILED',
           message: 'Failed to load analytics breakdown',
-          details: String(error),
         },
       };
     }
@@ -394,12 +394,12 @@ export function registerAnalyticsRoutes(app: FastifyInstance): void {
         ),
       };
     } catch (error) {
+      req.log.error(error, 'Failed to load analytics filter options');
       reply.code(500);
       return {
         error: {
           code: 'ANALYTICS_FILTER_OPTIONS_FAILED',
           message: 'Failed to load analytics filter options',
-          details: String(error),
         },
       };
     }

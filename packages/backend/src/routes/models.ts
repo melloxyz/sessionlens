@@ -113,12 +113,12 @@ export function registerModelRoutes(app: FastifyInstance): void {
       saveDatabase();
       return result;
     } catch (error) {
+      req.log.error(error, 'Failed to sync OpenRouter pricing');
       reply.code(502);
       return {
         error: {
           code: 'OPENROUTER_SYNC_FAILED',
           message: 'Failed to sync OpenRouter pricing',
-          details: String(error),
         },
       };
     }
@@ -131,12 +131,12 @@ export function registerModelRoutes(app: FastifyInstance): void {
       saveDatabase();
       return result;
     } catch (error) {
+      req.log.error(error, 'Failed to sync OpenRouter pricing');
       reply.code(502);
       return {
         error: {
           code: 'OPENROUTER_SYNC_FAILED',
           message: 'Failed to sync OpenRouter pricing',
-          details: String(error),
         },
       };
     }

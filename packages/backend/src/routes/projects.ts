@@ -47,12 +47,12 @@ export function registerProjectRoutes(app: FastifyInstance): void {
 
       return { data };
     } catch (error) {
+      req.log.error(error, 'Failed to load projects');
       reply.code(500);
       return {
         error: {
           code: 'PROJECTS_FAILED',
           message: 'Failed to load projects',
-          details: String(error),
         },
       };
     }
@@ -170,12 +170,12 @@ export function registerProjectRoutes(app: FastifyInstance): void {
       saveDatabase();
       return { ok: true };
     } catch (error) {
+      req.log.error(error, 'Failed to hide project');
       reply.code(500);
       return {
         error: {
           code: 'PROJECT_HIDE_FAILED',
           message: 'Failed to hide project',
-          details: String(error),
         },
       };
     }
@@ -200,12 +200,12 @@ export function registerProjectRoutes(app: FastifyInstance): void {
       saveDatabase();
       return { ok: true };
     } catch (error) {
+      req.log.error(error, 'Failed to restore project');
       reply.code(500);
       return {
         error: {
           code: 'PROJECT_RESTORE_FAILED',
           message: 'Failed to restore project',
-          details: String(error),
         },
       };
     }
@@ -233,12 +233,12 @@ export function registerProjectRoutes(app: FastifyInstance): void {
       child.unref();
       return { ok: true };
     } catch (error) {
+      req.log.error(error, 'Failed to open project folder');
       reply.code(500);
       return {
         error: {
           code: 'OPEN_PROJECT_FAILED',
           message: 'Failed to open project folder',
-          details: String(error),
         },
       };
     }

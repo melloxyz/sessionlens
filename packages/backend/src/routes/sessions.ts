@@ -134,12 +134,12 @@ export function registerSessionRoutes(app: FastifyInstance): void {
 
       return { data, total, page, limit };
     } catch (error) {
+      req.log.error(error, 'Failed to load sessions');
       reply.code(500);
       return {
         error: {
           code: 'SESSIONS_LIST_FAILED',
           message: 'Failed to load sessions',
-          details: String(error),
         },
       };
     }
@@ -292,12 +292,12 @@ export function registerSessionRoutes(app: FastifyInstance): void {
 
       return { ...session, messages, usageEvents, modelUsage, tools, files };
     } catch (error) {
+      req.log.error(error, 'Failed to load session detail');
       reply.code(500);
       return {
         error: {
           code: 'SESSION_DETAIL_FAILED',
           message: 'Failed to load session detail',
-          details: String(error),
         },
       };
     }
@@ -324,12 +324,12 @@ export function registerSessionRoutes(app: FastifyInstance): void {
       child.unref();
       return { ok: true };
     } catch (error) {
+      req.log.error(error, 'Failed to open project folder');
       reply.code(500);
       return {
         error: {
           code: 'OPEN_PROJECT_FAILED',
           message: 'Failed to open project folder',
-          details: String(error),
         },
       };
     }

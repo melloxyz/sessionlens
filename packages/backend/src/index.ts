@@ -39,7 +39,12 @@ async function main() {
     registerAllAdapters();
 
     const app = Fastify({ logger: true });
-    await app.register(cors, { origin: true });
+    const allowedOrigins = [
+      'http://localhost:5173',
+      'http://127.0.0.1:5173',
+      ...(process.env.SESSIONLENS_FRONTEND_URL ? [process.env.SESSIONLENS_FRONTEND_URL] : []),
+    ];
+    await app.register(cors, { origin: allowedOrigins });
 
     app.get('/api/health', async () => ({ status: 'ok', timestamp: new Date().toISOString() }));
 
@@ -121,12 +126,12 @@ async function main() {
         openFolder(target);
         return { ok: true, path: target };
       } catch (error) {
+        req.log.error(error, 'Failed to open integration folder');
         reply.code(500);
         return {
           error: {
             code: 'OPEN_INTEGRATION_FAILED',
             message: 'Failed to open integration folder',
-            details: String(error),
           },
         };
       }

@@ -87,12 +87,12 @@ export function registerOverviewRoutes(app: FastifyInstance): void {
         totalMessages: Number(r[7]) || 0,
       };
     } catch (error) {
+      req.log.error(error, 'Failed to load overview');
       reply.code(500);
       return {
         error: {
           code: 'OVERVIEW_FAILED',
           message: 'Failed to load overview',
-          details: String(error),
         },
       };
     }
