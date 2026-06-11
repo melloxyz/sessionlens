@@ -40,6 +40,9 @@ const ModelsPage = lazy(() =>
 const SettingsPage = lazy(() =>
   import('./pages/SettingsPage.js').then((module) => ({ default: module.SettingsPage })),
 );
+const ProfilePage = lazy(() =>
+  import('./pages/ProfilePage.js').then((module) => ({ default: module.ProfilePage })),
+);
 const BudgetsPage = lazy(() =>
   import('./pages/BudgetsPage.js').then((module) => ({ default: module.BudgetsPage })),
 );
@@ -65,6 +68,7 @@ export function App() {
                   <Route path="/analytics/insights/:id" element={<InsightDetailPage />} />
                   <Route path="/models" element={<ModelsPage />} />
                   <Route path="/settings" element={<SettingsPage />} />
+                  <Route path="/profile" element={<ProfilePage />} />
                   <Route path="/budgets" element={<BudgetsPage />} />
                   <Route path="/changelog" element={<ChangelogPage />} />
                 </Route>

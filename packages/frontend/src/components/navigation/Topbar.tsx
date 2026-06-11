@@ -28,9 +28,9 @@ export function Topbar({ section, title, subtitle, onRefresh, showDateRange }: T
       <div className="flex flex-col gap-3 xl:flex-row xl:items-center xl:justify-between">
         <div className="min-w-0">
           <div className="mb-2 flex flex-wrap items-center gap-2 text-[11px] font-semibold uppercase text-subtle-foreground">
-            <span className="font-mono text-foreground">AREA {section}</span>
+            <span className="font-mono text-foreground">ÁREA {section}</span>
             <span>/</span>
-            <span>Sessionlens</span>
+            <span>SESSIONLENS</span>
           </div>
           <h1 className="truncate text-2xl font-semibold leading-tight text-foreground">{title}</h1>
           {subtitle && <p className="mt-1 truncate text-sm text-muted-foreground">{subtitle}</p>}

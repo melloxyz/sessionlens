@@ -12,6 +12,7 @@ import {
   Settings,
   Sun,
   Github,
+  UserRound,
   WalletCards,
   type LucideIcon,
 } from 'lucide-react';
@@ -23,15 +24,18 @@ import type { IntegrationStatusItem } from './IntegrationStatus.js';
 import { BrandMark, getBrandMeta } from '../brand/BrandMark.js';
 import { Tooltip } from '../ui/Tooltip.js';
 
+type NavLabelKey =
+  | 'nav.dashboard'
+  | 'nav.sessions'
+  | 'nav.projects'
+  | 'nav.models'
+  | 'nav.analytics'
+  | 'nav.budgets'
+  | 'nav.profile';
+
 const NAV_ITEMS: {
   to: string;
-  labelKey:
-    | 'nav.dashboard'
-    | 'nav.sessions'
-    | 'nav.projects'
-    | 'nav.models'
-    | 'nav.analytics'
-    | 'nav.budgets';
+  labelKey: NavLabelKey;
   icon: LucideIcon;
   code: string;
 }[] = [
@@ -41,6 +45,11 @@ const NAV_ITEMS: {
   { to: '/analytics', labelKey: 'nav.analytics', icon: BarChart3, code: '04' },
   { to: '/models', labelKey: 'nav.models', icon: PackageOpen, code: '05' },
   { to: '/budgets', labelKey: 'nav.budgets', icon: WalletCards, code: '06' },
+];
+
+const MOBILE_NAV_ITEMS = [
+  ...NAV_ITEMS,
+  { to: '/profile', labelKey: 'nav.profile' as const, icon: UserRound, code: '09' },
 ];
 
 export function Sidebar() {
@@ -159,13 +168,30 @@ export function Sidebar() {
           </div>
           {t('sidebar.localFirst.description')}
         </div>
-        <div className="grid grid-cols-4 gap-1 rounded-full border border-border bg-surface p-1 shadow-[var(--shadow-card)]">
+        <div className="grid grid-cols-5 gap-1 rounded-full border border-border bg-surface p-1 shadow-[var(--shadow-card)]">
           <NavLink
             to="/settings"
-            className="grid h-8 place-items-center rounded-full border border-transparent text-muted-foreground transition-colors hover:border-border hover:bg-surface-hover hover:text-foreground"
+            className={({ isActive }) =>
+              cn(
+                'grid h-8 place-items-center rounded-full border border-transparent text-muted-foreground transition-colors hover:border-border hover:bg-surface-hover hover:text-foreground',
+                isActive && 'border-accent/20 bg-accent-soft text-accent',
+              )
+            }
             aria-label={t('nav.settings')}
           >
             <Settings className="h-4 w-4" />
+          </NavLink>
+          <NavLink
+            to="/profile"
+            className={({ isActive }) =>
+              cn(
+                'grid h-8 place-items-center rounded-full border border-transparent text-muted-foreground transition-colors hover:border-border hover:bg-surface-hover hover:text-foreground',
+                isActive && 'border-accent/20 bg-accent-soft text-accent',
+              )
+            }
+            aria-label={t('nav.profile')}
+          >
+            <UserRound className="h-4 w-4" />
           </NavLink>
           <button
             type="button"
@@ -202,8 +228,8 @@ export function MobileNavigation() {
 
   return (
     <nav className="fixed inset-x-0 bottom-0 z-30 border-t border-border bg-surface/95 backdrop-blur lg:hidden pb-[env(safe-area-inset-bottom)]">
-      <div className="grid grid-cols-6 gap-1 p-2">
-        {NAV_ITEMS.map((item) => (
+      <div className="grid grid-cols-7 gap-1 p-2">
+        {MOBILE_NAV_ITEMS.map((item) => (
           <NavLink
             key={item.to}
             to={item.to}

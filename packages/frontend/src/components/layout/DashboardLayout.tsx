@@ -34,6 +34,11 @@ const PAGE_KEYS: Record<
     subtitle: 'topbar.settings.subtitle',
     section: '07',
   },
+  '/profile': {
+    title: 'topbar.profile.title',
+    subtitle: 'topbar.profile.subtitle',
+    section: '09',
+  },
   '/changelog': {
     title: 'topbar.changelog.title',
     subtitle: 'topbar.changelog.subtitle',
