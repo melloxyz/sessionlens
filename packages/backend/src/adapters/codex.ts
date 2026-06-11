@@ -40,6 +40,10 @@ async function getSqlJs(): Promise<import('sql.js').SqlJsStatic> {
   return sqlJsStatic;
 }
 
+// Per-ingestion cache: opened once in onIngestionStart, closed in onIngestionEnd.
+let _cachedDb: import('sql.js').Database | null = null;
+let _threadCache: Map<string, ThreadRow> | null = null;
+
 interface ThreadRow {
   id: string;
   rollout_path: string;
@@ -67,10 +71,24 @@ export function createCodexAdapter(): Adapter {
       return existsSync(STATE_DB);
     },
 
+    async onIngestionStart(): Promise<void> {
+      if (!existsSync(STATE_DB)) return;
+      const sql = await getSqlJs();
+      _cachedDb = new sql.Database(readFileSync(STATE_DB));
+      _threadCache = loadAllThreads(_cachedDb);
+    },
+
+    async onIngestionEnd(): Promise<void> {
+      _cachedDb?.close();
+      _cachedDb = null;
+      _threadCache = null;
+    },
+
     async discover(): Promise<string[]> {
       const sql = await getSqlJs();
-      const buffer = readFileSync(STATE_DB);
-      const db = new sql.Database(buffer);
+      if (!existsSync(STATE_DB)) return [];
+      const ownDb = _cachedDb === null;
+      const db = _cachedDb ?? new sql.Database(readFileSync(STATE_DB));
 
       const paths = new Set<string>();
       try {
@@ -83,7 +101,7 @@ export function createCodexAdapter(): Adapter {
           }
         }
       } finally {
-        db.close();
+        if (ownDb) db.close();
       }
       return [...paths];
     },
@@ -116,7 +134,10 @@ export function createCodexAdapter(): Adapter {
       const lines = raw.trim().split('\n').filter(Boolean);
       if (lines.length === 0) return [];
 
-      const thread = await getThreadData(sessionPath);
+      const thread =
+        _threadCache !== null
+          ? (_threadCache.get(sessionPath) ?? null)
+          : await getThreadData(sessionPath);
       if (!thread) return [];
 
       const events: Record<string, unknown>[] = [];
@@ -365,14 +386,44 @@ function readString(value: unknown): string | null {
   return typeof value === 'string' && value.length > 0 ? value : null;
 }
 
+function loadAllThreads(db: import('sql.js').Database): Map<string, ThreadRow> {
+  const map = new Map<string, ThreadRow>();
+  const results = db.exec(
+    `SELECT id, rollout_path, created_at, updated_at, created_at_ms, updated_at_ms,
+     model_provider, model, cwd, title, tokens_used, has_user_event, archived,
+     git_origin_url, git_branch, source FROM threads WHERE rollout_path IS NOT NULL`,
+  );
+  if (!results[0]?.values) return map;
+  for (const r of results[0].values) {
+    const thread: ThreadRow = {
+      id: r[0] as string,
+      rollout_path: r[1] as string,
+      created_at: r[2] as number,
+      updated_at: r[3] as number,
+      created_at_ms: (r[4] ?? null) as number | null,
+      updated_at_ms: (r[5] ?? null) as number | null,
+      model_provider: r[6] as string,
+      model: (r[7] ?? null) as string | null,
+      cwd: r[8] as string,
+      title: r[9] as string,
+      tokens_used: r[10] as number,
+      has_user_event: r[11] as number,
+      archived: r[12] as number,
+      git_origin_url: (r[13] ?? null) as string | null,
+      git_branch: (r[14] ?? null) as string | null,
+      source: r[15] as string,
+    };
+    map.set(thread.rollout_path, thread);
+  }
+  return map;
+}
+
 async function getThreadData(sessionPath: string): Promise<ThreadRow | null> {
   const sql = await getSqlJs();
-  let db: import('sql.js').Database | null = null;
+  const ownDb = _cachedDb === null;
+  if (!existsSync(STATE_DB)) return null;
+  const db: import('sql.js').Database = _cachedDb ?? new sql.Database(readFileSync(STATE_DB));
   try {
-    if (!existsSync(STATE_DB)) return null;
-    const buffer = readFileSync(STATE_DB);
-    db = new sql.Database(buffer);
-
     const results = db.exec(
       `SELECT id, rollout_path, created_at, updated_at, created_at_ms, updated_at_ms, model_provider, model, cwd, title, tokens_used, has_user_event, archived, git_origin_url, git_branch, source FROM threads WHERE rollout_path = ? LIMIT 1`,
       [sessionPath],
@@ -399,6 +450,6 @@ async function getThreadData(sessionPath: string): Promise<ThreadRow | null> {
       source: r[15] as string,
     };
   } finally {
-    db?.close();
+    if (ownDb) db.close();
   }
 }

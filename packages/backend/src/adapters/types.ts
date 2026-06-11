@@ -104,6 +104,12 @@ export interface Adapter {
 
   detect(): Promise<boolean>;
 
+  /** Called once before discover/parse/computeCheckpoint for this ingestion run. */
+  onIngestionStart?(): Promise<void>;
+
+  /** Called once after all sessions for this adapter are processed. */
+  onIngestionEnd?(): Promise<void>;
+
   discover(): Promise<string[]>;
 
   watchPaths?(): Promise<string[]>;

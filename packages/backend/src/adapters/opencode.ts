@@ -38,6 +38,15 @@ async function getSqlJs(): Promise<import('sql.js').SqlJsStatic> {
   return sqlJsStatic;
 }
 
+// Per-ingestion cache: opened once in onIngestionStart, closed in onIngestionEnd.
+let _cachedDb: import('sql.js').Database | null = null;
+
+async function getOrOpenDb(): Promise<{ db: import('sql.js').Database; owned: boolean }> {
+  if (_cachedDb !== null) return { db: _cachedDb, owned: false };
+  const sql = await getSqlJs();
+  return { db: new sql.Database(readFileSync(OPENCODE_DB)), owned: true };
+}
+
 interface SessionRow {
   id: string;
   directory: string | null;
@@ -74,9 +83,19 @@ export function createOpencodeAdapter(): Adapter {
       return existsSync(OPENCODE_DB);
     },
 
-    async discover(): Promise<string[]> {
+    async onIngestionStart(): Promise<void> {
+      if (!existsSync(OPENCODE_DB)) return;
       const sql = await getSqlJs();
-      const db = new sql.Database(readFileSync(OPENCODE_DB));
+      _cachedDb = new sql.Database(readFileSync(OPENCODE_DB));
+    },
+
+    async onIngestionEnd(): Promise<void> {
+      _cachedDb?.close();
+      _cachedDb = null;
+    },
+
+    async discover(): Promise<string[]> {
+      const { db, owned } = await getOrOpenDb();
       const ids: string[] = [];
       try {
         const results = db.exec(
@@ -86,7 +105,7 @@ export function createOpencodeAdapter(): Adapter {
           for (const row of results[0].values) ids.push(String(row[0]));
         }
       } finally {
-        db.close();
+        if (owned) db.close();
       }
       return ids;
     },
@@ -96,8 +115,7 @@ export function createOpencodeAdapter(): Adapter {
     },
 
     async computeCheckpoint(sessionId: string): Promise<Checkpoint | null> {
-      const sql = await getSqlJs();
-      const db = new sql.Database(readFileSync(OPENCODE_DB));
+      const { db, owned } = await getOrOpenDb();
       try {
         const results = db.exec(`SELECT time_updated FROM session WHERE id = ?`, [sessionId]);
         if (results.length > 0 && results[0].values.length > 0) {
@@ -106,13 +124,12 @@ export function createOpencodeAdapter(): Adapter {
         }
         return null;
       } finally {
-        db.close();
+        if (owned) db.close();
       }
     },
 
     async parse(sessionId: string, checkpoint: Checkpoint | null): Promise<RawSession[]> {
-      const sql = await getSqlJs();
-      const db = new sql.Database(readFileSync(OPENCODE_DB));
+      const { db, owned } = await getOrOpenDb();
 
       try {
         if (checkpoint !== null) {
@@ -327,7 +344,7 @@ export function createOpencodeAdapter(): Adapter {
           },
         ];
       } finally {
-        db.close();
+        if (owned) db.close();
       }
     },
 

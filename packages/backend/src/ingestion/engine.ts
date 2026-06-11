@@ -123,40 +123,45 @@ async function runIngestionInternal(forceReprocess = false): Promise<IngestionSt
 
       if (!detected) continue;
 
-      const sessionPaths = await adapter.discover();
-      adapterInfo[adapter.cli].paths = sessionPaths.length;
-      persistDiscoveredSources(adapter.cli, sessionPaths);
+      await adapter.onIngestionStart?.();
+      try {
+        const sessionPaths = await adapter.discover();
+        adapterInfo[adapter.cli].paths = sessionPaths.length;
+        persistDiscoveredSources(adapter.cli, sessionPaths);
 
-      for (const sessionPath of sessionPaths) {
-        try {
-          const checkpoint = forceReprocess
-            ? null
-            : registry.getCheckpoint(adapter.cli, sessionPath);
-          const rawSessions = await adapter.parse(sessionPath, checkpoint);
-          recordAdapterSource(adapter.cli, sessionPath, {
-            detected: true,
-            sessionCount: rawSessions.length,
-            lastError: null,
-          });
+        for (const sessionPath of sessionPaths) {
+          try {
+            const checkpoint = forceReprocess
+              ? null
+              : registry.getCheckpoint(adapter.cli, sessionPath);
+            const rawSessions = await adapter.parse(sessionPath, checkpoint);
+            recordAdapterSource(adapter.cli, sessionPath, {
+              detected: true,
+              sessionCount: rawSessions.length,
+              lastError: null,
+            });
 
-          for (const raw of rawSessions) {
-            const normalized = adapter.normalize(raw);
-            const result = upsertSession(normalized);
-            if (result === 'new') newSessions++;
-            else if (result === 'updated') updatedSessions++;
+            for (const raw of rawSessions) {
+              const normalized = adapter.normalize(raw);
+              const result = upsertSession(normalized);
+              if (result === 'new') newSessions++;
+              else if (result === 'updated') updatedSessions++;
+            }
+
+            const newCheckpoint = await adapter.computeCheckpoint(sessionPath);
+            if (newCheckpoint) {
+              registry.saveCheckpoint(adapter.cli, sessionPath, newCheckpoint);
+            }
+          } catch (err) {
+            recordAdapterSource(adapter.cli, sessionPath, {
+              detected: true,
+              lastError: String(err),
+            });
+            errors.push(`${adapter.cli}/${sessionPath}: ${String(err)}`);
           }
-
-          const newCheckpoint = await adapter.computeCheckpoint(sessionPath);
-          if (newCheckpoint) {
-            registry.saveCheckpoint(adapter.cli, sessionPath, newCheckpoint);
-          }
-        } catch (err) {
-          recordAdapterSource(adapter.cli, sessionPath, {
-            detected: true,
-            lastError: String(err),
-          });
-          errors.push(`${adapter.cli}/${sessionPath}: ${String(err)}`);
         }
+      } finally {
+        await adapter.onIngestionEnd?.();
       }
     } catch (err) {
       errors.push(`${adapter.cli}: ${String(err)}`);
