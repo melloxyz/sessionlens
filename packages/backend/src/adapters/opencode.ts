@@ -143,7 +143,10 @@ export function createOpencodeAdapter(): Adapter {
         let totalReasoningTokens = 0;
         let totalCacheReadTokens = 0;
         let totalCacheWriteTokens = 0;
-        let totalCostUsd = session.cost > 0 ? session.cost : 0;
+        // Accumulate message costs separately; session.cost is chosen as the total
+        // only if > 0 (it is the authoritative aggregate from opencode.db).
+        // The two must never be summed together — that would double-count.
+        let messageCostTotal = 0;
 
         for (const row of messageRows) {
           let data: Record<string, unknown> | null = null;
@@ -180,7 +183,7 @@ export function createOpencodeAdapter(): Adapter {
           totalCacheWriteTokens += tokens.cacheWriteTokens;
 
           const messageCost = readNumber(data.cost) ?? 0;
-          totalCostUsd += messageCost;
+          messageCostTotal += messageCost;
 
           const partList = partsByMessage.get(row.id) ?? [];
           const contentParts: string[] = [];
@@ -241,7 +244,9 @@ export function createOpencodeAdapter(): Adapter {
         if (totalCacheWriteTokens === 0 && session.tokens_cache_write > 0) {
           totalCacheWriteTokens = session.tokens_cache_write;
         }
-        if (totalCostUsd === 0 && session.cost > 0) totalCostUsd = session.cost;
+        // Use exactly one cost source: session.cost when present (authoritative total),
+        // otherwise fall back to the sum of per-message costs.
+        const totalCostUsd = session.cost > 0 ? session.cost : messageCostTotal;
 
         const hasTokens =
           totalInputTokens > 0 ||

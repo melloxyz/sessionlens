@@ -222,7 +222,9 @@ function buildSession(events: Record<string, unknown>[], thread: ThreadRow): Raw
 
   const confidence: SourceConfidence =
     messages.length > 0 || toolEvents.length > 0 ? 'HIGH' : totalTokens > 0 ? 'MEDIUM' : 'LOW';
-  const totalCostUsd = totalTokens > 0 ? estimateCodexCost(totalTokens, thread.model) : null;
+  // Let the costing engine price from real tokens via findPricing; never pre-estimate here.
+  // usageEvents already holds either real per-event tokens or the 70/30 fallback when
+  // only thread.tokens_used is available — the engine will use those for estimation.
   const modelUsage: RawModelUsage[] =
     messages.length > 0 || totalTokens > 0 || toolEvents.length > 0
       ? [
@@ -236,7 +238,7 @@ function buildSession(events: Record<string, unknown>[], thread: ThreadRow): Raw
             cacheReadTokens: usageEvents.reduce((sum, item) => sum + item.cacheReadTokens, 0),
             cacheWriteTokens: usageEvents.reduce((sum, item) => sum + item.cacheWriteTokens, 0),
             toolCallsCount: toolEvents.length,
-            totalCostUsd: totalCostUsd ?? 0,
+            totalCostUsd: 0,
           },
         ]
       : [];
@@ -252,7 +254,7 @@ function buildSession(events: Record<string, unknown>[], thread: ThreadRow): Raw
       startedAt: startTime,
       endedAt: endTime,
       durationMs,
-      totalCostUsd,
+      totalCostUsd: null,
       sourceConfidence: confidence,
       messages,
       usageEvents,
@@ -392,18 +394,4 @@ async function getThreadData(sessionPath: string): Promise<ThreadRow | null> {
   } finally {
     db?.close();
   }
-}
-
-const COST_RATES: Record<string, { input: number; output: number }> = {
-  'gpt-5.4': { input: 1.75, output: 14.0 },
-  'gpt-5.4-mini': { input: 0.15, output: 0.6 },
-  'gpt-5.5': { input: 2.5, output: 20.0 },
-  'gpt-5.3-codex': { input: 3.0, output: 15.0 },
-};
-
-function estimateCodexCost(totalTokens: number, model: string | null): number {
-  const rates = model ? COST_RATES[model] : undefined;
-  const inputRate = (rates?.input ?? 1.75) / 1_000_000;
-  const outputRate = (rates?.output ?? 14.0) / 1_000_000;
-  return Math.floor(totalTokens * 0.7) * inputRate + Math.floor(totalTokens * 0.3) * outputRate;
 }

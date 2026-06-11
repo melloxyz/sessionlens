@@ -8,6 +8,7 @@ import type {
   Checkpoint,
   RawFileEvent,
   RawMessage,
+  RawModelUsage,
   RawSession,
   RawToolEvent,
 } from './types.js';
@@ -19,14 +20,14 @@ const CLAUDE_CAPABILITIES: AdapterCapabilities = {
   messages: 'real',
   tokens: 'real',
   cost: 'estimated',
-  model: 'unknown',
+  model: 'real',
   provider: 'real',
   projectPath: 'real',
   duration: 'real',
   toolCalls: 'real',
   fileReads: 'partial',
   fileWrites: 'partial',
-  multiModel: 'unavailable',
+  multiModel: 'partial',
 };
 
 export function createClaudeAdapter(): Adapter {
@@ -106,10 +107,18 @@ function buildClaudeSessions(events: Record<string, unknown>[], filePath: string
       firstTs: string;
       lastTs: string;
       cwd: string | null;
-      totalInputTokens: number;
-      totalOutputTokens: number;
-      totalCacheRead: number;
-      totalCacheWrite: number;
+      modelTokens: Map<
+        string,
+        {
+          inputTokens: number;
+          outputTokens: number;
+          cacheReadTokens: number;
+          cacheWriteTokens: number;
+          reasoningTokens: number;
+          toolCallsCount: number;
+          messageCount: number;
+        }
+      >;
       toolEvents: RawToolEvent[];
       fileEvents: RawFileEvent[];
     }
@@ -128,10 +137,7 @@ function buildClaudeSessions(events: Record<string, unknown>[], filePath: string
         firstTs: ts,
         lastTs: ts,
         cwd: null,
-        totalInputTokens: 0,
-        totalOutputTokens: 0,
-        totalCacheRead: 0,
-        totalCacheWrite: 0,
+        modelTokens: new Map(),
         toolEvents: [],
         fileEvents: [],
       });
@@ -166,10 +172,23 @@ function buildClaudeSessions(events: Record<string, unknown>[], filePath: string
 
         const usage = message.usage as Record<string, unknown> | undefined;
         if (usage) {
-          sess.totalInputTokens += Number(usage.input_tokens) || 0;
-          sess.totalOutputTokens += Number(usage.output_tokens) || 0;
-          sess.totalCacheRead += Number(usage.cache_read_input_tokens) || 0;
-          sess.totalCacheWrite += Number(usage.cache_creation_input_tokens) || 0;
+          const modelName = (message.model as string) || 'unknown';
+          const acc = sess.modelTokens.get(modelName) ?? {
+            inputTokens: 0,
+            outputTokens: 0,
+            cacheReadTokens: 0,
+            cacheWriteTokens: 0,
+            reasoningTokens: 0,
+            toolCallsCount: 0,
+            messageCount: 0,
+          };
+          acc.inputTokens += Number(usage.input_tokens) || 0;
+          acc.outputTokens += Number(usage.output_tokens) || 0;
+          acc.cacheReadTokens += Number(usage.cache_read_input_tokens) || 0;
+          acc.cacheWriteTokens += Number(usage.cache_creation_input_tokens) || 0;
+          acc.reasoningTokens += Number(usage.reasoning_tokens) || 0;
+          acc.messageCount += 1;
+          sess.modelTokens.set(modelName, acc);
         }
 
         const blocks = Array.isArray(message.content) ? message.content : [];
@@ -205,8 +224,43 @@ function buildClaudeSessions(events: Record<string, unknown>[], filePath: string
 
   const sessions: RawSession[] = [];
   for (const [sessionId, data] of sessionMap) {
-    const totalTokens = data.totalInputTokens + data.totalOutputTokens;
-    const hasTokenData = totalTokens > 0;
+    // Build per-model usage from accumulated token data
+    const modelUsage: RawModelUsage[] = [];
+    let totalInputTokens = 0;
+    let totalOutputTokens = 0;
+    let totalCacheRead = 0;
+    let totalCacheWrite = 0;
+    let totalReasoning = 0;
+
+    for (const [model, tokens] of data.modelTokens) {
+      modelUsage.push({
+        provider: 'anthropic',
+        model,
+        messageCount: tokens.messageCount,
+        inputTokens: tokens.inputTokens,
+        outputTokens: tokens.outputTokens,
+        reasoningTokens: tokens.reasoningTokens,
+        cacheReadTokens: tokens.cacheReadTokens,
+        cacheWriteTokens: tokens.cacheWriteTokens,
+        toolCallsCount: 0,
+        totalCostUsd: 0,
+      });
+      totalInputTokens += tokens.inputTokens;
+      totalOutputTokens += tokens.outputTokens;
+      totalCacheRead += tokens.cacheReadTokens;
+      totalCacheWrite += tokens.cacheWriteTokens;
+      totalReasoning += tokens.reasoningTokens;
+    }
+
+    const hasTokenData =
+      totalInputTokens + totalOutputTokens + totalCacheRead + totalCacheWrite + totalReasoning > 0;
+
+    // Primary model: the one with the most output tokens (most substantive responses)
+    const primaryModel =
+      modelUsage.length > 0
+        ? modelUsage.reduce((a, b) => (b.outputTokens > a.outputTokens ? b : a)).model
+        : null;
+
     const confidence: SourceConfidence =
       hasTokenData || data.toolEvents.length > 0
         ? 'HIGH'
@@ -221,17 +275,7 @@ function buildClaudeSessions(events: Record<string, unknown>[], filePath: string
         ? new Date(data.lastTs).getTime() - new Date(data.firstTs).getTime()
         : null;
 
-    let totalCostUsd: number | null = null;
-    if (hasTokenData) {
-      totalCostUsd = estimateCost(data.totalInputTokens, data.totalOutputTokens);
-    }
-
-    if (
-      data.messages.length === 0 &&
-      !hasTokenData &&
-      data.toolEvents.length === 0 &&
-      !totalCostUsd
-    ) {
+    if (data.messages.length === 0 && !hasTokenData && data.toolEvents.length === 0) {
       continue;
     }
 
@@ -241,26 +285,27 @@ function buildClaudeSessions(events: Record<string, unknown>[], filePath: string
       cli: 'claude',
       projectPath: data.cwd,
       sourcePath: filePath,
-      model: null,
+      model: primaryModel,
       startedAt: startTime,
       endedAt: endTime,
       durationMs,
-      totalCostUsd,
+      totalCostUsd: null,
       sourceConfidence: confidence,
       messages: data.messages,
       usageEvents: hasTokenData
         ? [
             {
               timestamp: startTime,
-              inputTokens: data.totalInputTokens,
-              outputTokens: data.totalOutputTokens,
-              cacheReadTokens: data.totalCacheRead,
-              cacheWriteTokens: data.totalCacheWrite,
-              reasoningTokens: 0,
+              inputTokens: totalInputTokens,
+              outputTokens: totalOutputTokens,
+              cacheReadTokens: totalCacheRead,
+              cacheWriteTokens: totalCacheWrite,
+              reasoningTokens: totalReasoning,
               toolCallsCount: data.toolEvents.length,
             },
           ]
         : [],
+      modelUsage: modelUsage.length > 0 ? modelUsage : undefined,
       toolEvents: data.toolEvents,
       fileEvents: data.fileEvents,
       dataQuality: {
@@ -269,19 +314,13 @@ function buildClaudeSessions(events: Record<string, unknown>[], filePath: string
         cost: hasTokenData ? 'estimated' : 'unknown',
         tools: data.toolEvents.length > 0 ? 'real' : 'unavailable',
         files: data.fileEvents.length > 0 ? 'heuristic' : 'unavailable',
-        model: 'unknown',
+        model: primaryModel ? 'real' : 'unknown',
         projectPath: data.cwd ? 'real' : 'unknown',
       },
     });
   }
 
   return sessions;
-}
-
-function estimateCost(inputTokens: number, outputTokens: number): number {
-  const inputRate = 3.0 / 1_000_000;
-  const outputRate = 15.0 / 1_000_000;
-  return inputTokens * inputRate + outputTokens * outputRate;
 }
 
 function extractTextBlocks(content: unknown): string {

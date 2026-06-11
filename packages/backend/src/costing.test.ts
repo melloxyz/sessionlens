@@ -91,3 +91,21 @@ test('resolveSessionCost: estimated cost from codex is not labeled actual', () =
   assert.equal(result.costSource, 'estimated');
   assert.notEqual(result.costSource, 'actual');
 });
+
+test('resolveSessionCost: codex null totalCostUsd with no usage data → unknown, never actual', () => {
+  // After T2.4 the Codex adapter sets totalCostUsd: null; sessions with no token data
+  // should fall through to 'unknown', not be incorrectly promoted to 'actual'.
+  const raw = makeSession({
+    cli: 'codex',
+    provider: 'openai',
+    model: 'gpt-5.4',
+    totalCostUsd: null,
+    usageEvents: [],
+    modelUsage: undefined,
+    dataQuality: dataQuality('estimated'),
+  });
+  const result = resolveSessionCost(raw);
+  assert.notEqual(result.costSource, 'actual');
+  assert.equal(result.costSource, 'unknown');
+  assert.equal(result.totalCostUsd, null);
+});
