@@ -1,5 +1,6 @@
 import { getDatabase } from './db/connection.js';
 import type { RawModelUsage, RawSession } from './adapters/types.js';
+import { normalizeProvider, normalizeModel } from './db/normalize.js';
 
 export type CostSource = 'actual' | 'estimated' | 'unknown';
 
@@ -160,6 +161,7 @@ function estimateRowCost(row: RawModelUsage): number | null {
 function findPricing(provider: string, model: string): PricingRow | null {
   const normalizedProvider = normalizeProvider(provider);
   const normalizedModel = normalizeModel(model);
+  if (normalizedModel == null) return null;
   const db = getDatabase();
   const exact = db.exec(
     `SELECT provider, model_name, input_cost_per_million, output_cost_per_million, cached_input_cost
@@ -203,17 +205,6 @@ function mapPricing(result: ReturnType<ReturnType<typeof getDatabase>['exec']>):
 function normalizeCost(value: number | null | undefined): number | null {
   if (value == null || Number.isNaN(value) || value <= 0) return null;
   return value;
-}
-
-function normalizeProvider(value: string): string {
-  const lower = value.toLowerCase();
-  if (lower === 'github-copilot') return 'openai';
-  return lower;
-}
-
-function normalizeModel(value: string): string {
-  const lower = value.toLowerCase();
-  return lower.includes('/') ? lower.split('/').slice(1).join('/') : lower;
 }
 
 function billableTokens(row: RawModelUsage): number {

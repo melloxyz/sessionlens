@@ -5,31 +5,11 @@ import { execSync } from 'node:child_process';
 import { resolveSessionCost } from '../costing.js';
 import { buildSessionDataQuality, countToolCalls } from './session-quality.js';
 import { validSessionSql } from '../db/session-filters.js';
+import { normalizeProvider, normalizeModel } from '../db/normalize.js';
 
 function normalizePath(p: string | null): string | null {
   if (!p) return null;
   return p.replace(/^\\\\\?\\/, '');
-}
-
-const PROVIDER_MAP: Record<string, string> = {
-  openai: 'openai',
-  anthropic: 'anthropic',
-  google: 'google',
-  deepseek: 'deepseek',
-  minimax: 'minimax',
-  opencode: 'opencode',
-};
-
-function normalizeProvider(raw: string): string {
-  return PROVIDER_MAP[raw.toLowerCase()] ?? raw.toLowerCase();
-}
-
-function normalizeModel(raw: string | null): string | null {
-  if (!raw) return null;
-  if (raw.includes('/')) {
-    return raw.split('/').slice(1).join('/');
-  }
-  return raw;
 }
 
 function resolveToolCallCount(raw: RawSession): number {
