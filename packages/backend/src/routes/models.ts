@@ -109,7 +109,7 @@ export function registerModelRoutes(app: FastifyInstance): void {
   app.get('/api/models/sync-openrouter', async (req, reply) => {
     try {
       const result = await syncOpenRouterPricing();
-      backfillEstimatedCosts();
+      backfillEstimatedCosts(true);
       saveDatabase();
       return result;
     } catch (error) {
@@ -127,7 +127,7 @@ export function registerModelRoutes(app: FastifyInstance): void {
   app.post('/api/models/sync-openrouter', async (req, reply) => {
     try {
       const result = await syncOpenRouterPricing();
-      backfillEstimatedCosts();
+      backfillEstimatedCosts(true);
       saveDatabase();
       return result;
     } catch (error) {

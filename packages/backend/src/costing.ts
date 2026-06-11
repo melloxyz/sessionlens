@@ -18,6 +18,16 @@ interface PricingRow {
   cachedInputCost: number | null;
 }
 
+let _pricingCache: Map<string, PricingRow | null> | null = null;
+
+export function initPricingCache(): void {
+  _pricingCache = new Map();
+}
+
+export function clearPricingCache(): void {
+  _pricingCache = null;
+}
+
 const FALLBACK_PRICING: Record<string, Omit<PricingRow, 'provider' | 'modelName'>> = {
   'gpt-5.5': { inputCostPerMillion: 2.5, outputCostPerMillion: 20, cachedInputCost: 1.25 },
   'gpt-5.4': { inputCostPerMillion: 1.75, outputCostPerMillion: 14, cachedInputCost: 0.875 },
@@ -162,6 +172,22 @@ function findPricing(provider: string, model: string): PricingRow | null {
   const normalizedProvider = normalizeProvider(provider);
   const normalizedModel = normalizeModel(model);
   if (normalizedModel == null) return null;
+
+  const cacheKey = `${normalizedProvider}:${normalizedModel}`;
+  if (_pricingCache !== null) {
+    if (_pricingCache.has(cacheKey)) return _pricingCache.get(cacheKey)!;
+    const result = lookupPricingFromDb(normalizedProvider, normalizedModel);
+    _pricingCache.set(cacheKey, result);
+    return result;
+  }
+
+  return lookupPricingFromDb(normalizedProvider, normalizedModel);
+}
+
+function lookupPricingFromDb(
+  normalizedProvider: string,
+  normalizedModel: string,
+): PricingRow | null {
   const db = getDatabase();
   const exact = db.exec(
     `SELECT provider, model_name, input_cost_per_million, output_cost_per_million, cached_input_cost

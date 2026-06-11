@@ -2,7 +2,7 @@ import { getDatabase, saveDatabase } from '../db/connection.js';
 import { registry } from '../adapters/registry.js';
 import type { RawFileEvent, RawModelUsage, RawSession, RawToolEvent } from '../adapters/types.js';
 import { execSync } from 'node:child_process';
-import { resolveSessionCost } from '../costing.js';
+import { resolveSessionCost, initPricingCache, clearPricingCache } from '../costing.js';
 import { buildSessionDataQuality, countToolCalls } from './session-quality.js';
 import { validSessionSql } from '../db/session-filters.js';
 import { normalizeProvider, normalizeModel } from '../db/normalize.js';
@@ -165,7 +165,7 @@ async function runIngestionInternal(forceReprocess = false): Promise<IngestionSt
 
   try {
     deleteInvalidSessions();
-    backfillEstimatedCosts();
+    backfillEstimatedCosts(forceReprocess);
     refreshProjects();
   } catch (err) {
     errors.push(`refresh-projects: ${String(err)}`);
@@ -342,7 +342,7 @@ function upsertSession(raw: RawSession): 'new' | 'updated' | 'skipped' {
   return 'new';
 }
 
-export function backfillEstimatedCosts(): void {
+export function backfillEstimatedCosts(forceAll = false): void {
   const db = getDatabase();
   // Sync cost_source to match data_quality_json.cost for any sessions where they disagree.
   // data_quality_json.cost is the authoritative value set by each adapter at ingest time.
@@ -353,53 +353,64 @@ export function backfillEstimatedCosts(): void {
        AND json_extract(data_quality_json, '$.cost') IS NOT NULL
        AND cost_source != json_extract(data_quality_json, '$.cost')`,
   );
+
+  // Only re-estimate sessions that still need it, unless a full rebuild is requested.
+  const sessionFilter = forceAll
+    ? ''
+    : `WHERE total_cost_usd IS NULL OR total_cost_usd = 0 OR cost_source = 'unknown'`;
   const sessions = db.exec(
-    `SELECT id, provider, cli, session_id, project_path, model, started_at, ended_at, duration_ms, source_confidence FROM sessions`,
+    `SELECT id, provider, cli, session_id, project_path, model, started_at, ended_at, duration_ms, source_confidence FROM sessions ${sessionFilter}`,
   );
   if (sessions.length === 0 || !sessions[0].values) return;
 
-  for (const row of sessions[0].values) {
-    const id = Number(row[0]);
-    const usageRows = db.exec(
-      `SELECT timestamp, input_tokens, output_tokens, cache_read_tokens, cache_write_tokens, reasoning_tokens, tool_calls_count FROM usage_events WHERE session_fk = ?`,
-      [id],
-    );
-    const messageCount = Number(
-      db.exec(`SELECT COUNT(*) FROM messages WHERE session_fk = ?`, [id])[0]?.values?.[0]?.[0] ?? 0,
-    );
-    const raw: RawSession = {
-      sessionId: String(row[3]),
-      provider: String(row[1]),
-      cli: row[2] as RawSession['cli'],
-      projectPath: row[4] as string | null,
-      model: row[5] as string | null,
-      startedAt: String(row[6]),
-      endedAt: row[7] as string | null,
-      durationMs: row[8] == null ? null : Number(row[8]),
-      totalCostUsd: null,
-      sourceConfidence: row[9] as RawSession['sourceConfidence'],
-      messages: Array.from({ length: messageCount }, () => ({
-        role: 'user',
-        content: '',
-        timestamp: String(row[6]),
-      })),
-      usageEvents: (usageRows[0]?.values ?? []).map((usage) => ({
-        timestamp: String(usage[0]),
-        inputTokens: Number(usage[1]) || 0,
-        outputTokens: Number(usage[2]) || 0,
-        cacheReadTokens: Number(usage[3]) || 0,
-        cacheWriteTokens: Number(usage[4]) || 0,
-        reasoningTokens: Number(usage[5]) || 0,
-        toolCallsCount: Number(usage[6]) || 0,
-      })),
-    };
-    const cost = resolveSessionCost(raw);
-    if (cost.costSource === 'unknown') continue;
-    db.run(
-      `UPDATE sessions SET total_cost_usd = ?, cost_source = ? WHERE id = ? AND (total_cost_usd IS NULL OR total_cost_usd = 0 OR cost_source = 'unknown')`,
-      [cost.totalCostUsd, cost.costSource, id],
-    );
-    persistModelUsage(id, cost.modelUsage);
+  initPricingCache();
+  try {
+    for (const row of sessions[0].values) {
+      const id = Number(row[0]);
+      const usageRows = db.exec(
+        `SELECT timestamp, input_tokens, output_tokens, cache_read_tokens, cache_write_tokens, reasoning_tokens, tool_calls_count FROM usage_events WHERE session_fk = ?`,
+        [id],
+      );
+      const messageCount = Number(
+        db.exec(`SELECT COUNT(*) FROM messages WHERE session_fk = ?`, [id])[0]?.values?.[0]?.[0] ??
+          0,
+      );
+      const raw: RawSession = {
+        sessionId: String(row[3]),
+        provider: String(row[1]),
+        cli: row[2] as RawSession['cli'],
+        projectPath: row[4] as string | null,
+        model: row[5] as string | null,
+        startedAt: String(row[6]),
+        endedAt: row[7] as string | null,
+        durationMs: row[8] == null ? null : Number(row[8]),
+        totalCostUsd: null,
+        sourceConfidence: row[9] as RawSession['sourceConfidence'],
+        messages: Array.from({ length: messageCount }, () => ({
+          role: 'user',
+          content: '',
+          timestamp: String(row[6]),
+        })),
+        usageEvents: (usageRows[0]?.values ?? []).map((usage) => ({
+          timestamp: String(usage[0]),
+          inputTokens: Number(usage[1]) || 0,
+          outputTokens: Number(usage[2]) || 0,
+          cacheReadTokens: Number(usage[3]) || 0,
+          cacheWriteTokens: Number(usage[4]) || 0,
+          reasoningTokens: Number(usage[5]) || 0,
+          toolCallsCount: Number(usage[6]) || 0,
+        })),
+      };
+      const cost = resolveSessionCost(raw);
+      if (cost.costSource === 'unknown') continue;
+      db.run(
+        `UPDATE sessions SET total_cost_usd = ?, cost_source = ? WHERE id = ? AND (total_cost_usd IS NULL OR total_cost_usd = 0 OR cost_source = 'unknown')`,
+        [cost.totalCostUsd, cost.costSource, id],
+      );
+      persistModelUsage(id, cost.modelUsage);
+    }
+  } finally {
+    clearPricingCache();
   }
 }
 
