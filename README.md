@@ -5,7 +5,7 @@
 **Local-first observability for AI Coding CLIs — multi-CLI, open-source, private.**
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-00c853.svg?style=flat-square)](LICENSE)
-[![v0.9.0](https://img.shields.io/badge/v0.9.0-00c853?style=flat-square)](https://github.com/melloxyz/sessionlens/releases)
+[![v0.9.3](https://img.shields.io/badge/v0.9.3-00c853?style=flat-square)](https://github.com/melloxyz/sessionlens/releases)
 [![Node.js](https://img.shields.io/badge/node-%3E%3D20-339933?style=flat-square&logo=node.js&logoColor=white)](https://nodejs.org)
 [![pnpm](https://img.shields.io/badge/pnpm-%3E%3D9-f69220?style=flat-square&logo=pnpm&logoColor=white)](https://pnpm.io)
 [![TypeScript](https://img.shields.io/badge/TypeScript-5.9-3178c6?style=flat-square&logo=typescript&logoColor=white)](https://www.typescriptlang.org)
@@ -60,16 +60,18 @@ _Track costs, analyze sessions and compare efficiency across your AI CLIs — fu
 | **Project controls**    | Hide/restore projects without deleting data, open project folder, follow git timeline and related sessions                                                                   |
 | **Cached API**          | Cached and validated requests for faster and more consistent responses                                                                                                       |
 
-### Highlights after v0.9.0
+### Highlights in v0.9.3
 
-> The `v0.9.0` badge reflects the last published release. Substantial work has shipped on top of that release (current code is in the `v0.9.x` line) — most notably the data-reliability and UI refinements listed below.
+> `v0.9.3` is the current release. All changes listed below are live.
 
-- **Adapter Reliability & Data Quality (Phase 9.8):** persisted `source_path`, per-field `data_quality_json`, normalized `session_tools` and `session_files`; refined `tool_call_count` so it no longer depends solely on `usage_events`; new `DataQualityMatrix` and source/touch panels in Session Detail; `pnpm --filter @sessionlens/backend diagnose:adapters` and `backfill:quality` for safe, idempotent re-ingestion.
-- **Design System & UI Redesign (Phase 9.7):** new Sessionlens visual language — flat surfaces, warm neutral palette, accessible blue focus, less saturated chart palette, sans typography with mono reserved for IDs/numbers/models/costs. New primitives: `FigurePanel`, `FigureGrid`, `MetricBlock`, `QueryBar`, `AlertStrip`, `DashboardKpiCard`.
-- **Changelog & Product Polish (latest):** restructured in-app Changelog with timeline, contributors, in-progress and planned sections; redesigned Dashboard, Projects (with Git filters), and Session Detail layouts; refined copy and i18n across Analytics and Settings.
-- **Insight detail drill-downs (Phase 9.1–9.2):** contextual filters in Analytics, drill-down on charts, clickable insight/anomaly cards linking to `/sessions/:id` and `/analytics/insights/:id` with localized recommendations.
-- **Projects & Sessions UX (Phase 9.3–9.5):** project hide/restore toggle, opening the real local folder of a CLI integration from the sidebar, corrected session-detail navigation, and consistent sectioning across Settings, Projects, and Sessions.
-- **Honest data sources:** when a CLI doesn't expose cost, tokens, or tools, Sessionlens preserves the real data available and flags gaps — it never fabricates sessions from weak sources.
+- **Cost integrity across all adapters (Fase 2):** `resolveSessionCost` now reads each adapter's declared `dataQuality.cost` field instead of defaulting every session with a cost value to `actual`. Sessions correctly show `actual`, `estimated` or `unknown` based on real adapter evidence.
+- **Claude: per-model pricing:** the Claude adapter now extracts the exact model from each assistant event (`message.model`) and accumulates tokens per model. Costs are estimated by the engine per model instead of using a hardcoded Sonnet rate.
+- **Codex: engine-delegated pricing:** removed the internal 70/30 token-split cost estimate. The adapter sets `totalCostUsd: null` and the costing engine uses real token events (or the 70/30 fallback only when no per-event data exists) to price correctly.
+- **OpenCode: eliminated double-counting:** `session.cost` and per-message cost sums were being added together. The fix uses `session.cost` when available, or falls back to the message sum — never both.
+- **PreferencesProvider foundation:** user preference state management extracted into a dedicated context provider.
+- **Database reliability:** redundant `saveDatabase` calls removed; backup handling improved.
+- **CI/CD:** branch name corrected from `main` to `master` in the release workflow; job names improved.
+- **Test coverage:** `resolveSessionCost` unit tests and adapter-level integration tests for Claude, Codex and OpenCode cost handling.
 
 ---
 

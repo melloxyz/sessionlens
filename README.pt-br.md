@@ -5,7 +5,7 @@
 **Observabilidade local-first para AI Coding CLIs — multi-CLI, open-source, privado.**
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-00c853.svg?style=flat-square)](LICENSE)
-[![v0.9.0](https://img.shields.io/badge/v0.9.0-00c853?style=flat-square)](https://github.com/melloxyz/sessionlens/releases)
+[![v0.9.3](https://img.shields.io/badge/v0.9.3-00c853?style=flat-square)](https://github.com/melloxyz/sessionlens/releases)
 [![Node.js](https://img.shields.io/badge/node-%3E%3D20-339933?style=flat-square&logo=node.js&logoColor=white)](https://nodejs.org)
 [![pnpm](https://img.shields.io/badge/pnpm-%3E%3D9-f69220?style=flat-square&logo=pnpm&logoColor=white)](https://pnpm.io)
 [![TypeScript](https://img.shields.io/badge/TypeScript-5.9-3178c6?style=flat-square&logo=typescript&logoColor=white)](https://www.typescriptlang.org)
@@ -60,15 +60,18 @@ _Rastreie custos, analise sessões e compare eficiência entre suas CLIs de IA �
 | **Controles de projeto**    | Oculte/restaure projetos sem deletar dados, abra pasta do projeto, acompanhe timeline git e sessões relacionadas                                                             |
 | **API com cache**           | Requisições com cache e validação para respostas mais rápidas e consistentes                                                                                                 |
 
-### Destaques da v0.9.0
+### Destaques da v0.9.3
 
-- Redesign global do Sessionlens com shell desktop-first, sidebar refinada, topbar consistente e componentes mais densos para leitura em monitores.
-- Analytics com filtros realmente aplicados, páginas dedicadas de insight, drill-downs para projetos/sessões e melhor leitura de gráficos em light/dark.
-- Budgets redesenhado com melhor distribuição de limites, alertas, progresso e estados de configuração.
-- Data quality por sessão e por integração: origem persistida, tools/files estruturados, score de completude por CLI e status honesto para fontes experimentais.
-- Projects e Project Detail com layout mais claro, correção de navegação para detalhes e integração melhor com sessões e histórico local.
-- Changelog dentro do app atualizado para acompanhar entregas, status do projeto, contribuidores e roadmap local-first.
-- Integração CommandCode adicionada a partir de arquivos locais em `~/.commandcode/projects`.
+> `v0.9.3` é a release atual. Todas as mudanças abaixo estão no ar.
+
+- **Integridade de custo em todos os adapters (Fase 2):** `resolveSessionCost` agora lê o campo `dataQuality.cost` declarado por cada adapter em vez de assumir `actual` para qualquer sessão com valor de custo. Sessões mostram corretamente `actual`, `estimated` ou `unknown` com base em evidência real do adapter.
+- **Claude: precificação por modelo:** o adapter Claude agora extrai o modelo exato de cada evento do assistente (`message.model`) e acumula tokens por modelo. Os custos são estimados pelo engine por modelo em vez de usar uma taxa fixa do Sonnet.
+- **Codex: precificação delegada ao engine:** removida a estimativa interna de custo pela divisão 70/30 de tokens. O adapter define `totalCostUsd: null` e o engine de custo usa eventos de token reais (ou o fallback 70/30 somente quando não há dados por evento) para precificar corretamente.
+- **OpenCode: eliminação de duplicação:** `session.cost` e a soma de custos por mensagem eram somados juntos. A correção usa `session.cost` quando disponível, ou cai para a soma das mensagens — nunca os dois.
+- **Fundação do PreferencesProvider:** gerenciamento de estado de preferências do usuário extraído para um context provider dedicado.
+- **Confiabilidade do banco:** chamadas redundantes de `saveDatabase` removidas; backup melhorado.
+- **CI/CD:** nome do branch corrigido de `main` para `master` no workflow de release.
+- **Cobertura de testes:** testes unitários de `resolveSessionCost` e testes de integração de custo para Claude, Codex e OpenCode.
 
 ---
 
@@ -231,6 +234,10 @@ O Sessionlens oferece um ícone de bandeja no Windows com:
 | Fase 7   | ✅ Concluído | Runtime & Ingestion (auto-ingestão, filesystem watcher)                                  |
 | Fase 8   | ✅ Concluído | Controls & Alerts (budget limits, alertas locais)                                        |
 | Fase 9   | ✅ Concluído | Tray & Runtime (system tray, CI/CD, auto-start)                                          |
+| Fase 9.5 | ✅ Concluído | UX Polish & Refinamento (Analytics, Insights, Settings, Projects, Sidebar)               |
+| Fase 9.7 | ✅ Concluído | Design System & Redesign de UI (linguagem visual Sessionlens, shell, páginas principais) |
+| Fase 9.8 | ✅ Concluído | Confiabilidade de Adapters & Data Quality (qualidade por campo, tools, files, backfill)  |
+| Fase 9.9 | ✅ Concluído | Integridade de Custo (classificação real vs estimado, modelos Claude, Codex, OpenCode)   |
 | Fase 10  | 📋 Planejado | Sharing & Webhooks (export local-first, Discord webhooks, templates de compartilhamento) |
 | Fase 11  | 📋 Planejado | Extensibility (plugin SDK, IDE integration)                                              |
 | Fase 12  | 📋 Planejado | Future / Cloud Optional (opt-in sync, team analytics)                                    |

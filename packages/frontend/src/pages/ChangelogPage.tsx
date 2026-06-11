@@ -3,20 +3,16 @@ import {
   ArrowDownToLine,
   ArrowRight,
   BookOpen,
-  CalendarDays,
   Check,
   CheckCircle2,
   ChevronDown,
-  Download,
+  ChevronUp,
   ExternalLink,
   FileText,
   Github,
   GitPullRequest,
   History,
-  MessageSquare,
-  RefreshCw,
   Rocket,
-  Search,
   Sparkles,
   Star,
   Users,
@@ -25,7 +21,6 @@ import {
 import { Badge } from '../components/ui/Badge.js';
 import { Button } from '../components/ui/Button.js';
 import { Card, CardContent } from '../components/ui/Card.js';
-import { Input } from '../components/ui/Input.js';
 import { useI18n } from '../components/i18n/LanguageProvider.js';
 import { useTheme } from '../components/theme/ThemeProvider.js';
 import { cn } from '../lib/utils.js';
@@ -43,13 +38,24 @@ interface ReleaseEntry {
   tags: string[];
 }
 
+const INITIAL_VISIBLE = 7;
+
 const releaseTimeline: ReleaseEntry[] = [
+  {
+    key: 'changelog.released.14',
+    date: '2026-06-11',
+    channel: 'stable',
+    commits: 10,
+    contributors: 1,
+    categories: ['adapters', 'infra'],
+    tags: ['changelog.adapters', 'changelog.core'],
+  },
   {
     key: 'changelog.released.13',
     date: '2026-06-02',
     channel: 'stable',
     commits: 9,
-    contributors: 2,
+    contributors: 1,
     categories: ['product', 'analytics'],
     tags: ['changelog.ui', 'changelog.analytics'],
   },
@@ -58,7 +64,7 @@ const releaseTimeline: ReleaseEntry[] = [
     date: '2026-06-01',
     channel: 'stable',
     commits: 12,
-    contributors: 3,
+    contributors: 1,
     categories: ['product', 'analytics', 'localFirst'],
     tags: ['changelog.ui', 'changelog.analytics'],
   },
@@ -67,7 +73,7 @@ const releaseTimeline: ReleaseEntry[] = [
     date: '2026-05-29',
     channel: 'stable',
     commits: 7,
-    contributors: 2,
+    contributors: 1,
     categories: ['localFirst', 'infra'],
     tags: ['changelog.core', 'changelog.localFirst'],
   },
@@ -76,7 +82,7 @@ const releaseTimeline: ReleaseEntry[] = [
     date: '2026-05-16',
     channel: 'milestone',
     commits: 11,
-    contributors: 3,
+    contributors: 1,
     categories: ['product', 'localFirst'],
     tags: ['changelog.ui', 'changelog.i18n'],
   },
@@ -85,7 +91,7 @@ const releaseTimeline: ReleaseEntry[] = [
     date: '2026-05-08',
     channel: 'stable',
     commits: 6,
-    contributors: 2,
+    contributors: 1,
     categories: ['localFirst', 'infra'],
     tags: ['changelog.core', 'changelog.localFirst'],
   },
@@ -94,7 +100,7 @@ const releaseTimeline: ReleaseEntry[] = [
     date: '2026-04-29',
     channel: 'stable',
     commits: 7,
-    contributors: 2,
+    contributors: 1,
     categories: ['product'],
     tags: ['changelog.core', 'changelog.ui'],
   },
@@ -103,7 +109,7 @@ const releaseTimeline: ReleaseEntry[] = [
     date: '2026-04-17',
     channel: 'stable',
     commits: 5,
-    contributors: 2,
+    contributors: 1,
     categories: ['analytics'],
     tags: ['changelog.analytics', 'changelog.pricing'],
   },
@@ -112,7 +118,7 @@ const releaseTimeline: ReleaseEntry[] = [
     date: '2026-04-07',
     channel: 'stable',
     commits: 6,
-    contributors: 2,
+    contributors: 1,
     categories: ['analytics', 'localFirst'],
     tags: ['changelog.pricing', 'changelog.localFirst'],
   },
@@ -121,7 +127,7 @@ const releaseTimeline: ReleaseEntry[] = [
     date: '2026-03-25',
     channel: 'stable',
     commits: 6,
-    contributors: 2,
+    contributors: 1,
     categories: ['product', 'infra'],
     tags: ['changelog.core'],
   },
@@ -130,7 +136,7 @@ const releaseTimeline: ReleaseEntry[] = [
     date: '2026-03-12',
     channel: 'stable',
     commits: 8,
-    contributors: 2,
+    contributors: 1,
     categories: ['product'],
     tags: ['changelog.ui'],
   },
@@ -139,7 +145,7 @@ const releaseTimeline: ReleaseEntry[] = [
     date: '2026-02-21',
     channel: 'stable',
     commits: 10,
-    contributors: 3,
+    contributors: 1,
     categories: ['adapters'],
     tags: ['changelog.adapters'],
   },
@@ -148,7 +154,7 @@ const releaseTimeline: ReleaseEntry[] = [
     date: '2026-02-04',
     channel: 'stable',
     commits: 7,
-    contributors: 2,
+    contributors: 1,
     categories: ['analytics'],
     tags: ['changelog.analytics'],
   },
@@ -157,7 +163,7 @@ const releaseTimeline: ReleaseEntry[] = [
     date: '2026-01-18',
     channel: 'stable',
     commits: 9,
-    contributors: 2,
+    contributors: 1,
     categories: ['adapters', 'infra'],
     tags: ['changelog.adapters'],
   },
@@ -183,58 +189,34 @@ const categoryFilters: { key: ReleaseCategory; labelKey: string }[] = [
 
 const recentActivities = [
   {
-    versionKey: 'changelog.released.13.version',
+    versionKey: 'changelog.released.14.version',
     labelKey: 'changelog.activity.1',
     tone: 'success',
   },
   {
-    versionKey: 'changelog.released.12.version',
+    versionKey: 'changelog.released.13.version',
     labelKey: 'changelog.activity.2',
     tone: 'success',
   },
   {
-    versionKey: 'changelog.released.11.version',
+    versionKey: 'changelog.released.12.version',
     labelKey: 'changelog.activity.3',
     tone: 'success',
   },
   {
-    versionKey: 'changelog.released.10.version',
+    versionKey: 'changelog.released.11.version',
     labelKey: 'changelog.activity.4',
-    tone: 'warning',
+    tone: 'success',
   },
-  { versionKey: 'changelog.released.0.version', labelKey: 'changelog.activity.5', tone: 'info' },
+  { versionKey: 'changelog.released.10.version', labelKey: 'changelog.activity.5', tone: 'info' },
 ] as const;
 
 const contributorRows = [
   {
     name: 'Mello',
-    detailKey: 'changelog.contributors.mello.commits',
+    detailKey: 'changelog.contributors.mello.role',
     initials: 'M',
     featured: true,
-  },
-  {
-    name: 'Gui Ferreiro',
-    detailKey: 'changelog.contributors.gui.commits',
-    initials: 'GF',
-    featured: false,
-  },
-  {
-    name: 'Kiro CLI',
-    detailKey: 'changelog.contributors.kiro.commits',
-    initials: 'K',
-    featured: false,
-  },
-  {
-    name: 'Anthropic',
-    detailKey: 'changelog.contributors.anthropic.commits',
-    initials: 'A',
-    featured: false,
-  },
-  {
-    name: 'Command/Code',
-    detailKey: 'changelog.contributors.commandcode.commits',
-    initials: 'C',
-    featured: false,
   },
 ] as const;
 
@@ -266,10 +248,11 @@ export function ChangelogPage() {
   const { locale, t } = useI18n();
   const { theme } = useTheme();
   const [category, setCategory] = useState<ReleaseCategory>('all');
-  const [query, setQuery] = useState('');
+  const [expandedKey, setExpandedKey] = useState<string | null>(null);
+  const [showAll, setShowAll] = useState(false);
 
   const latestRelease = releaseTimeline[0];
-  const totalReleases = 18;
+  const totalReleases = 19;
   const dateFormatter = useMemo(
     () =>
       new Intl.DateTimeFormat(locale, {
@@ -281,61 +264,47 @@ export function ChangelogPage() {
   );
 
   const filteredReleases = useMemo(() => {
-    const normalizedQuery = query.trim().toLowerCase();
-
     return releaseTimeline.filter((release) => {
-      const matchesCategory = category === 'all' || release.categories.includes(category);
-      const searchable = [
-        t(`${release.key}.version`),
-        t(`${release.key}.title`),
-        t(`${release.key}.1`),
-        t(`${release.key}.2`),
-        t(`${release.key}.3`),
-        ...release.tags.map((tag) => t(tag)),
-      ]
-        .join(' ')
-        .toLowerCase();
-
-      return matchesCategory && (!normalizedQuery || searchable.includes(normalizedQuery));
+      return category === 'all' || release.categories.includes(category);
     });
-  }, [category, query, t]);
+  }, [category]);
 
   const groupedReleases = useMemo(() => {
-    return filteredReleases.reduce<Array<{ month: string; releases: ReleaseEntry[] }>>(
-      (groups, release) => {
-        const releaseDate = new Date(`${release.date}T00:00:00`);
-        const month = new Intl.DateTimeFormat(locale, {
-          month: 'long',
-          year: 'numeric',
-        })
-          .format(releaseDate)
-          .toUpperCase();
-        const currentGroup = groups[groups.length - 1];
+    const visible = showAll ? filteredReleases : filteredReleases.slice(0, INITIAL_VISIBLE);
+    return visible.reduce<Array<{ month: string; releases: ReleaseEntry[] }>>((groups, release) => {
+      const releaseDate = new Date(`${release.date}T00:00:00`);
+      const month = new Intl.DateTimeFormat(locale, {
+        month: 'long',
+        year: 'numeric',
+      })
+        .format(releaseDate)
+        .toUpperCase();
+      const currentGroup = groups[groups.length - 1];
 
-        if (currentGroup?.month === month) {
-          currentGroup.releases.push(release);
-          return groups;
-        }
-
-        groups.push({ month, releases: [release] });
+      if (currentGroup?.month === month) {
+        currentGroup.releases.push(release);
         return groups;
-      },
-      [],
-    );
-  }, [filteredReleases, locale]);
+      }
+
+      groups.push({ month, releases: [release] });
+      return groups;
+    }, []);
+  }, [filteredReleases, showAll, locale]);
 
   const logoSrc = theme === 'dark' ? '/sessionlens-white-logo.png' : '/sessionlens-black-logo.png';
 
   return (
     <div className="mx-auto flex min-h-full w-full max-w-[1780px] flex-col gap-5 overflow-y-auto p-4 lg:p-6">
       <div className="flex flex-wrap items-center justify-start gap-2 xl:justify-end">
-        <Button variant="subtle" size="sm">
-          <MessageSquare className="h-4 w-4" />
-          {t('changelog.feed')}
-        </Button>
-        <Button variant="outline" size="icon-sm" aria-label={t('common.refresh')}>
-          <RefreshCw className="h-4 w-4" />
-        </Button>
+        <a
+          href="https://github.com/melloxyz/sessionlens"
+          target="_blank"
+          rel="noreferrer"
+          className="inline-flex h-8 items-center gap-2 rounded-md border border-border bg-surface px-3 text-xs font-medium text-foreground transition-colors hover:border-border-strong hover:bg-surface-hover"
+        >
+          <Github className="h-3.5 w-3.5" />
+          GitHub
+        </a>
       </div>
 
       <div className="grid gap-3 lg:grid-cols-[minmax(0,1fr)_minmax(320px,520px)]">
@@ -370,43 +339,40 @@ export function ChangelogPage() {
         </div>
 
         <Card variant="flat" className="flex flex-col justify-between overflow-hidden">
-          <CardContent className="space-y-4 p-4">
-            <div className="flex flex-wrap items-center justify-between gap-3">
+          <CardContent className="flex h-full flex-col justify-between gap-4 p-4">
+            <div className="flex items-center justify-between gap-3">
               <div className="text-[10px] font-semibold uppercase text-subtle-foreground">
-                {t('changelog.controls.title')}
+                {t('changelog.stars.label')}
               </div>
               <Badge variant="success">{t('changelog.current')}</Badge>
             </div>
-            <div className="grid gap-2 sm:grid-cols-[160px_minmax(0,1fr)] xl:grid-cols-1 2xl:grid-cols-[160px_minmax(0,1fr)]">
-              <Button variant="secondary" size="sm" className="justify-between">
-                <span className="inline-flex items-center gap-2">
-                  <CalendarDays className="h-4 w-4" />
-                  {t('common.last30')}
-                </span>
-                <ChevronDown className="h-4 w-4 text-subtle-foreground" />
-              </Button>
-              <div className="relative">
-                <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-subtle-foreground" />
-                <Input
-                  value={query}
-                  onChange={(event) => setQuery(event.target.value)}
-                  placeholder={t('changelog.search.placeholder')}
-                  className="pl-9 pr-12"
-                />
-                <span className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 rounded border border-border px-1.5 py-0.5 font-mono text-[10px] text-subtle-foreground">
-                  /K
-                </span>
+            <div className="space-y-1.5">
+              <div className="text-sm font-medium text-foreground">
+                {t('changelog.stars.title')}
               </div>
+              <p className="text-xs leading-5 text-muted-foreground">
+                {t('changelog.stars.description')}
+              </p>
             </div>
-            <div className="grid gap-2 sm:grid-cols-2">
-              <Button variant="default" size="sm">
-                <MessageSquare className="h-4 w-4" />
-                {t('changelog.subscribe')}
-              </Button>
-              <Button variant="outline" size="sm">
-                <Download className="h-4 w-4" />
-                {t('changelog.download')}
-              </Button>
+            <a
+              href="https://github.com/melloxyz/sessionlens"
+              target="_blank"
+              rel="noreferrer"
+              className="inline-flex h-9 w-full items-center justify-center gap-2 rounded-md bg-foreground px-4 text-sm font-medium text-background transition-colors hover:opacity-90"
+            >
+              <Star className="h-4 w-4 fill-current" />
+              {t('changelog.stars.cta')}
+            </a>
+            <div className="grid grid-cols-2 gap-2">
+              <ActionLink href="https://github.com/melloxyz/sessionlens" icon={Github}>
+                GitHub
+              </ActionLink>
+              <ActionLink
+                href="https://github.com/melloxyz/sessionlens/releases"
+                icon={ExternalLink}
+              >
+                Releases
+              </ActionLink>
             </div>
           </CardContent>
         </Card>
@@ -432,7 +398,7 @@ export function ChangelogPage() {
             <div className="grid gap-2">
               <ActionLink
                 href="https://github.com/melloxyz/sessionlens/releases"
-                icon={MessageSquare}
+                icon={ExternalLink}
               >
                 {t('changelog.featured.details')}
               </ActionLink>
@@ -477,7 +443,11 @@ export function ChangelogPage() {
                 <button
                   key={filter.key}
                   type="button"
-                  onClick={() => setCategory(filter.key)}
+                  onClick={() => {
+                    setCategory(filter.key);
+                    setShowAll(false);
+                    setExpandedKey(null);
+                  }}
                   className={cn(
                     'h-8 shrink-0 rounded-full border px-4 text-xs font-medium transition-colors',
                     category === filter.key
@@ -509,6 +479,10 @@ export function ChangelogPage() {
                       key={release.key}
                       release={release}
                       dateFormatter={dateFormatter}
+                      isExpanded={expandedKey === release.key}
+                      onToggle={() =>
+                        setExpandedKey(expandedKey === release.key ? null : release.key)
+                      }
                     />
                   ))}
                 </div>
@@ -516,10 +490,12 @@ export function ChangelogPage() {
             ))}
           </div>
 
-          <Button variant="outline" className="w-full">
-            <ArrowDownToLine className="h-4 w-4" />
-            {t('changelog.loadOlder')}
-          </Button>
+          {!showAll && filteredReleases.length > INITIAL_VISIBLE && (
+            <Button variant="outline" className="w-full" onClick={() => setShowAll(true)}>
+              <ArrowDownToLine className="h-4 w-4" />
+              {t('changelog.loadOlder')} ({filteredReleases.length - INITIAL_VISIBLE})
+            </Button>
+          )}
         </main>
 
         <aside className="space-y-4 xl:sticky xl:top-24 xl:self-start">
@@ -663,9 +639,13 @@ function SummaryCard({
 function TimelineItem({
   release,
   dateFormatter,
+  isExpanded,
+  onToggle,
 }: {
   release: ReleaseEntry;
   dateFormatter: Intl.DateTimeFormat;
+  isExpanded: boolean;
+  onToggle: () => void;
 }) {
   const { t } = useI18n();
   const releaseDate = new Date(`${release.date}T00:00:00`);
@@ -710,32 +690,42 @@ function TimelineItem({
                 {t(`${release.key}.1`)}
               </p>
             </div>
-            <Button variant="quiet" size="sm" className="shrink-0">
+            <Button
+              variant="quiet"
+              size="sm"
+              className="shrink-0"
+              onClick={onToggle}
+              aria-expanded={isExpanded}
+            >
               {t('changelog.details')}
-              <ChevronDown className="h-4 w-4" />
+              {isExpanded ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}
             </Button>
           </div>
 
-          <div className="grid gap-2 sm:grid-cols-2">
-            {[2, 3].map((item) => (
-              <div key={item} className="flex gap-2 text-sm leading-6 text-muted-foreground">
-                <CheckCircle2 className="mt-1 h-4 w-4 shrink-0 text-success" />
-                <span>{t(`${release.key}.${item}`)}</span>
+          {isExpanded && (
+            <>
+              <div className="grid gap-2 sm:grid-cols-2">
+                {[2, 3].map((item) => (
+                  <div key={item} className="flex gap-2 text-sm leading-6 text-muted-foreground">
+                    <CheckCircle2 className="mt-1 h-4 w-4 shrink-0 text-success" />
+                    <span>{t(`${release.key}.${item}`)}</span>
+                  </div>
+                ))}
               </div>
-            ))}
-          </div>
 
-          <div className="flex flex-wrap items-center gap-x-6 gap-y-2 border-t border-border pt-3 text-xs text-muted-foreground">
-            <span className="inline-flex items-center gap-2">
-              <GitPullRequest className="h-4 w-4" />
-              {release.commits} {t('changelog.commits')}
-            </span>
-            <span className="inline-flex items-center gap-2">
-              <Users className="h-4 w-4" />
-              {release.contributors} {t('changelog.contributors.count')}
-            </span>
-            <span>{formatDate(release.date, dateFormatter)}</span>
-          </div>
+              <div className="flex flex-wrap items-center gap-x-6 gap-y-2 border-t border-border pt-3 text-xs text-muted-foreground">
+                <span className="inline-flex items-center gap-2">
+                  <GitPullRequest className="h-4 w-4" />
+                  {release.commits} {t('changelog.commits')}
+                </span>
+                <span className="inline-flex items-center gap-2">
+                  <Users className="h-4 w-4" />
+                  {release.contributors} {t('changelog.contributors.count')}
+                </span>
+                <span>{formatDate(release.date, dateFormatter)}</span>
+              </div>
+            </>
+          )}
         </CardContent>
       </Card>
     </article>
