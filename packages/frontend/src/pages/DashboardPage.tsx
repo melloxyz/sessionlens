@@ -71,6 +71,8 @@ interface Overview {
   mostUsedCli: string | null;
   totalDurationMs: number;
   totalMessages: number;
+  confirmedSpend: number;
+  estimatedSpend: number;
 }
 
 interface SessionRow {
@@ -322,6 +324,13 @@ export function DashboardPage() {
             icon={CircleDollarSign}
             tone={exceededBudgets.length > 0 ? 'warning' : 'success'}
             loading={overviewLoading}
+            sub={
+              overview && overview.confirmedSpend > 0 && overview.estimatedSpend > 0
+                ? `${formatCurrency(overview.confirmedSpend)} ${t('common.actual')} · ${formatCurrency(overview.estimatedSpend)} ${t('common.estimated')}`
+                : overview && overview.estimatedSpend > 0 && overview.confirmedSpend === 0
+                  ? t('common.estimated')
+                  : undefined
+            }
           />
           <DashboardKpiCard
             label={t('dashboard.totalSessions')}
@@ -700,7 +709,11 @@ export function DashboardPage() {
                     <InspectorStat
                       label={t('common.cost')}
                       value={formatCurrency(selectedSession?.total_cost_usd)}
-                      meta={selectedSession?.cost_source ?? t('common.unknown')}
+                      meta={
+                        selectedSession
+                          ? t(`common.${selectedSession.cost_source}`)
+                          : t('common.unknown')
+                      }
                     />
                     <InspectorStat
                       label={t('common.tokens')}
@@ -803,6 +816,7 @@ function DashboardKpiCard({
   icon: Icon,
   tone,
   loading,
+  sub,
 }: {
   label: string;
   value: string;
@@ -810,6 +824,7 @@ function DashboardKpiCard({
   icon: LucideIcon;
   tone: 'success' | 'warning' | 'info';
   loading?: boolean;
+  sub?: string;
 }) {
   return (
     <Card variant="figure" className="overflow-hidden">
@@ -829,6 +844,7 @@ function DashboardKpiCard({
           <div className="mt-3 truncate font-mono text-3xl font-semibold leading-none text-foreground tabular-nums">
             {loading ? '...' : value}
           </div>
+          {sub && <div className="mt-1.5 truncate text-[11px] text-subtle-foreground">{sub}</div>}
         </div>
       </CardContent>
     </Card>

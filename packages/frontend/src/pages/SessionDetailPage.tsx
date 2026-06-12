@@ -174,7 +174,7 @@ export function SessionDetailPage() {
     {
       label: t('common.cost'),
       state: normalizeQuality(session.data_quality?.cost),
-      detail: session.cost_source,
+      detail: t(`common.${session.cost_source}`),
     },
     {
       label: t('common.tools'),
@@ -280,7 +280,7 @@ export function SessionDetailPage() {
               session.cost_source === 'estimated' ? t('session.costEstimated') : t('common.cost')
             }
             value={formatCurrency(session.total_cost_usd)}
-            meta={session.cost_source}
+            meta={t(`common.${session.cost_source}`)}
             tone="success"
           />
           <MetricBlock
@@ -547,7 +547,7 @@ export function SessionDetailPage() {
             <DetailRow label={t('common.model')} value={session.model ?? t('common.unknown')} />
             <DetailRow
               label={t('session.costSource')}
-              value={session.cost_source ?? t('common.unknown')}
+              value={t(`common.${session.cost_source ?? 'unknown'}`)}
             />
             <DetailRow label={t('common.started')} value={formatDateTime(session.started_at)} />
             <DetailRow

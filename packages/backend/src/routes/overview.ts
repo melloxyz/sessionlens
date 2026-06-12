@@ -41,7 +41,9 @@ export function registerOverviewRoutes(app: FastifyInstance): void {
           COUNT(*) AS session_count,
           COALESCE(AVG(total_cost_usd), 0) AS avg_cost,
           COALESCE(SUM(COALESCE(duration_ms, 0)), 0) AS total_duration_ms,
-          COALESCE(SUM(COALESCE(message_count, 0)), 0) AS total_messages
+          COALESCE(SUM(COALESCE(message_count, 0)), 0) AS total_messages,
+          COALESCE(SUM(CASE WHEN cost_source = 'actual' THEN COALESCE(total_cost_usd, 0) ELSE 0 END), 0) AS confirmed_spend,
+          COALESCE(SUM(CASE WHEN cost_source = 'estimated' THEN COALESCE(total_cost_usd, 0) ELSE 0 END), 0) AS estimated_spend
         FROM sessions
         WHERE ${visibleSessionSql()}${rangeClause}
       `,
@@ -70,6 +72,8 @@ export function registerOverviewRoutes(app: FastifyInstance): void {
           mostUsedCli: null,
           totalDurationMs: 0,
           totalMessages: 0,
+          confirmedSpend: 0,
+          estimatedSpend: 0,
         };
       }
 
@@ -85,6 +89,8 @@ export function registerOverviewRoutes(app: FastifyInstance): void {
         mostUsedCli: mostUsedCli ?? null,
         totalDurationMs: Number(r[6]) || 0,
         totalMessages: Number(r[7]) || 0,
+        confirmedSpend: Number(r[8]) || 0,
+        estimatedSpend: Number(r[9]) || 0,
       };
     } catch (error) {
       req.log.error(error, 'Failed to load overview');
