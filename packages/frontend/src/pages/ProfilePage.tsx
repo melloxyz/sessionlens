@@ -298,9 +298,7 @@ function buildGithubStyleHeatmap(
 
   if (mode === 'weekly') {
     for (let w = 0; w < NUM_WEEKS; w++) {
-      const weekTotal = rawCells
-        .slice(w * 7, w * 7 + 7)
-        .reduce((sum, c) => sum + c.tokens, 0);
+      const weekTotal = rawCells.slice(w * 7, w * 7 + 7).reduce((sum, c) => sum + c.tokens, 0);
       for (let d = 0; d < 7; d++) {
         if (!rawCells[w * 7 + d].isPadding) {
           rawCells[w * 7 + d].tokens = weekTotal;
@@ -333,9 +331,7 @@ function buildGithubStyleHeatmap(
   const monthLabels: { label: string; weekIndex: number }[] = [];
   for (let m = 0; m < 12; m++) {
     const firstOfMonth = new Date(year, m, 1);
-    const daysSinceStart = Math.floor(
-      (firstOfMonth.getTime() - start.getTime()) / 86400000,
-    );
+    const daysSinceStart = Math.floor((firstOfMonth.getTime() - start.getTime()) / 86400000);
     const weekIndex = Math.floor(daysSinceStart / 7);
     monthLabels.push({ label: MONTH_LABELS[m], weekIndex });
   }
@@ -601,9 +597,7 @@ function generateProfileCardSvg(
     ];
     sections.push(
       achievements
-        .map((label, i) =>
-          renderSvgPill(PAD + i * (pillW + pillGap), y, label, pillW),
-        )
+        .map((label, i) => renderSvgPill(PAD + i * (pillW + pillGap), y, label, pillW))
         .join(''),
     );
     y += 42;
@@ -1192,24 +1186,27 @@ function ShareModal({
         <div className="space-y-4 p-4">
           {/* Format selector (10.1.3 - customização) */}
           <div className="grid grid-cols-3 gap-2">
-            {(Object.entries(variantConfig) as [ShareImageVariant, { label: string; desc: string }][]).map(
-              ([v, { label, desc }]) => (
-                <button
-                  key={v}
-                  type="button"
-                  onClick={() => setVariant(v)}
-                  className={cn(
-                    'cursor-pointer rounded-lg border px-2 py-2 text-center transition-colors',
-                    variant === v
-                      ? 'border-accent/50 bg-accent-soft text-foreground'
-                      : 'border-border bg-surface-muted text-muted-foreground hover:border-border-strong hover:text-foreground',
-                  )}
-                >
-                  <div className="text-xs font-medium">{label}</div>
-                  <div className="text-[10px] opacity-60">{desc}</div>
-                </button>
-              ),
-            )}
+            {(
+              Object.entries(variantConfig) as [
+                ShareImageVariant,
+                { label: string; desc: string },
+              ][]
+            ).map(([v, { label, desc }]) => (
+              <button
+                key={v}
+                type="button"
+                onClick={() => setVariant(v)}
+                className={cn(
+                  'cursor-pointer rounded-lg border px-2 py-2 text-center transition-colors',
+                  variant === v
+                    ? 'border-accent/50 bg-accent-soft text-foreground'
+                    : 'border-border bg-surface-muted text-muted-foreground hover:border-border-strong hover:text-foreground',
+                )}
+              >
+                <div className="text-xs font-medium">{label}</div>
+                <div className="text-[10px] opacity-60">{desc}</div>
+              </button>
+            ))}
           </div>
 
           {/* Live preview (10.1.3) */}
@@ -1257,7 +1254,11 @@ function ShareModal({
                     : 'border-border bg-surface-muted text-foreground hover:bg-surface-hover',
                 )}
               >
-                {copied ? <CheckCircle2 className="h-3.5 w-3.5" /> : <Copy className="h-3.5 w-3.5" />}
+                {copied ? (
+                  <CheckCircle2 className="h-3.5 w-3.5" />
+                ) : (
+                  <Copy className="h-3.5 w-3.5" />
+                )}
                 {copied ? 'Copiado!' : 'Copiar texto'}
               </button>
             </div>

@@ -43,22 +43,22 @@ _Track costs, analyze sessions, and compare efficiency across your AI CLIs — f
 
 ## Features
 
-| Feature | Description |
-| --- | --- |
-| **Multi-CLI** | 9 supported CLIs: Codex, Claude Code, OpenCode, Gemini CLI, Kimi, Aider, Qwen, Antigravity, and CommandCode |
-| **Cost tracking** | Real CLI cost, token-based estimation, and OpenRouter sync for up-to-date pricing. Confirmed vs. estimated spend shown separately |
-| **Smart sessions** | Tokens (input/output/cache/reasoning), tool calls, duration, project context, per-model usage breakdown |
-| **Analytics** | Dashboard with contextual filters, spend trends, breakdowns by model/provider/project, and dedicated insight/anomaly pages |
-| **Data reliability** | Per-field quality, adapter drift counters, captured tools, touched files, and per-CLI coverage in Settings and Session Detail |
-| **Budgets** | Global, per-project, CLI, provider, or model limits with local alert history |
+| Feature                | Description                                                                                                                                                     |
+| ---------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **Multi-CLI**          | 9 supported CLIs: Codex, Claude Code, OpenCode, Gemini CLI, Kimi, Aider, Qwen, Antigravity, and CommandCode                                                     |
+| **Cost tracking**      | Real CLI cost, token-based estimation, and OpenRouter sync for up-to-date pricing. Confirmed vs. estimated spend shown separately                               |
+| **Smart sessions**     | Tokens (input/output/cache/reasoning), tool calls, duration, project context, per-model usage breakdown                                                         |
+| **Analytics**          | Dashboard with contextual filters, spend trends, breakdowns by model/provider/project, and dedicated insight/anomaly pages                                      |
+| **Data reliability**   | Per-field quality, adapter drift counters, captured tools, touched files, and per-CLI coverage in Settings and Session Detail                                   |
+| **Budgets**            | Global, per-project, CLI, provider, or model limits with local alert history                                                                                    |
 | **Privacy & security** | Opt-in redaction of sensitive tool inputs; CORS restricted to localhost; no error details exposed to clients; git calls use `execFileSync` (no shell injection) |
-| **Local-first** | SQLite via sql.js WASM — zero data sent externally, zero telemetry, zero accounts |
-| **Auto-ingestion** | Filesystem watcher with debounce; incremental checkpoints skip unchanged files automatically |
-| **Premium UI** | Sessionlens design system — DataPanel, DataTable, FigurePanel, CompactStat, ControlField, skeleton states, and tooltips |
-| **Themes** | Dark and light mode with refined contrast, accessible chart palette, and localStorage persistence |
-| **i18n** | English and Português (PT-BR) with localized dates, durations, currencies, and insight labels |
-| **System Tray** | Windows tray icon with auto-start, quick ingestion, and live session count |
-| **Project controls** | Hide/restore projects without deleting data; open folder; follow git timeline and related sessions |
+| **Local-first**        | SQLite via sql.js WASM — zero data sent externally, zero telemetry, zero accounts                                                                               |
+| **Auto-ingestion**     | Filesystem watcher with debounce; incremental checkpoints skip unchanged files automatically                                                                    |
+| **Premium UI**         | Sessionlens design system — DataPanel, DataTable, FigurePanel, CompactStat, ControlField, skeleton states, and tooltips                                         |
+| **Themes**             | Dark and light mode with refined contrast, accessible chart palette, and localStorage persistence                                                               |
+| **i18n**               | English and Português (PT-BR) with localized dates, durations, currencies, and insight labels                                                                   |
+| **System Tray**        | Windows tray icon with auto-start, quick ingestion, and live session count                                                                                      |
+| **Project controls**   | Hide/restore projects without deleting data; open folder; follow git timeline and related sessions                                                              |
 
 ---
 
@@ -96,34 +96,34 @@ Frontend: **http://localhost:5173** — Backend API: **http://127.0.0.1:3030**
 
 ### Commands
 
-| Command | Description |
-| --- | --- |
-| `pnpm dev` | Full stack (backend + frontend) |
-| `pnpm build` | Production build |
-| `pnpm typecheck` | Typecheck across all packages |
-| `pnpm lint` | Lint across all packages |
-| `pnpm -r test` | Run test suite |
-| `pnpm changelog` | Regenerate `CHANGELOG.md` from git history via git-cliff |
+| Command                                                | Description                                               |
+| ------------------------------------------------------ | --------------------------------------------------------- |
+| `pnpm dev`                                             | Full stack (backend + frontend)                           |
+| `pnpm build`                                           | Production build                                          |
+| `pnpm typecheck`                                       | Typecheck across all packages                             |
+| `pnpm lint`                                            | Lint across all packages                                  |
+| `pnpm -r test`                                         | Run test suite                                            |
+| `pnpm changelog`                                       | Regenerate `CHANGELOG.md` from git history via git-cliff  |
 | `pnpm --filter @sessionlens/backend diagnose:adapters` | Local adapter diagnostic (capabilities, sources, quality) |
-| `pnpm --filter @sessionlens/backend backfill:quality` | Idempotent backfill of tools, files, and data quality |
+| `pnpm --filter @sessionlens/backend backfill:quality`  | Idempotent backfill of tools, files, and data quality     |
 
 ---
 
 ## Tech Stack
 
-| Layer | Technology | Version |
-| --- | --- | --- |
-| **Runtime** | Node.js | >= 20 |
-| **Package manager** | pnpm | >= 9 |
-| **Language** | TypeScript | 5.9 |
-| **Backend** | Fastify | 5.x |
-| **Database** | SQLite via sql.js | WASM |
-| **Frontend** | React + Vite | 18 / 6.x |
-| **Styling** | Tailwind CSS | v4 |
-| **Charts** | Recharts | 2.x |
-| **Icons** | Lucide React | latest |
-| **Pricing** | OpenRouter API | sync |
-| **Tray** | trayicon | Windows |
+| Layer               | Technology        | Version  |
+| ------------------- | ----------------- | -------- |
+| **Runtime**         | Node.js           | >= 20    |
+| **Package manager** | pnpm              | >= 9     |
+| **Language**        | TypeScript        | 5.9      |
+| **Backend**         | Fastify           | 5.x      |
+| **Database**        | SQLite via sql.js | WASM     |
+| **Frontend**        | React + Vite      | 18 / 6.x |
+| **Styling**         | Tailwind CSS      | v4       |
+| **Charts**          | Recharts          | 2.x      |
+| **Icons**           | Lucide React      | latest   |
+| **Pricing**         | OpenRouter API    | sync     |
+| **Tray**            | trayicon          | Windows  |
 
 ---
 
@@ -169,17 +169,17 @@ sessionlens/
 
 ## Supported Integrations
 
-| CLI | Status | Data location | Confidence |
-| --- | --- | --- | --- |
-| **Codex CLI** | ✅ Supported | `~/.codex/state_5.sqlite` + rollout JSONL | HIGH |
-| **Claude Code** | ✅ Supported | `~/.claude/projects/**/*.jsonl` | MEDIUM |
-| **OpenCode** | ✅ Supported | `~/.local/share/opencode/opencode.db` | HIGH |
-| **Gemini CLI** | ✅ Supported | `~/.gemini/tmp/**/chats/*.jsonl` | HIGH |
-| **CommandCode** | ✅ Supported | `~/.commandcode/projects/**/*.jsonl` + `.meta.json` | HIGH |
-| **Kimi CLI** | ⚠️ Experimental | `~/.kimi/sessions/**/context.jsonl` or `KIMI_SHARE_DIR` | PARTIAL |
-| **Aider** | ⚠️ Experimental | `.aider.chat.history.md` + `.aider.llm.history` | PARTIAL |
-| **Qwen CLI** | ⚠️ Experimental | `~/.qwen/sessions/**/*.json` | PARTIAL |
-| **Antigravity** | ⚠️ Experimental | `~/.gemini/antigravity/` | PARTIAL |
+| CLI             | Status          | Data location                                           | Confidence |
+| --------------- | --------------- | ------------------------------------------------------- | ---------- |
+| **Codex CLI**   | ✅ Supported    | `~/.codex/state_5.sqlite` + rollout JSONL               | HIGH       |
+| **Claude Code** | ✅ Supported    | `~/.claude/projects/**/*.jsonl`                         | MEDIUM     |
+| **OpenCode**    | ✅ Supported    | `~/.local/share/opencode/opencode.db`                   | HIGH       |
+| **Gemini CLI**  | ✅ Supported    | `~/.gemini/tmp/**/chats/*.jsonl`                        | HIGH       |
+| **CommandCode** | ✅ Supported    | `~/.commandcode/projects/**/*.jsonl` + `.meta.json`     | HIGH       |
+| **Kimi CLI**    | ⚠️ Experimental | `~/.kimi/sessions/**/context.jsonl` or `KIMI_SHARE_DIR` | PARTIAL    |
+| **Aider**       | ⚠️ Experimental | `.aider.chat.history.md` + `.aider.llm.history`         | PARTIAL    |
+| **Qwen CLI**    | ⚠️ Experimental | `~/.qwen/sessions/**/*.json`                            | PARTIAL    |
+| **Antigravity** | ⚠️ Experimental | `~/.gemini/antigravity/`                                | PARTIAL    |
 
 > Each adapter is isolated — a schema change in one CLI does not affect the others. Confidence reflects the quality and completeness of data exposed by each source. Where CLIs don't expose cost, tokens, or tools, Sessionlens preserves what's available and flags the gap.
 
@@ -191,11 +191,11 @@ sessionlens/
 
 Copy `.env.example` to `.env`:
 
-| Variable | Description | Default |
-| --- | --- | --- |
-| `SESSIONLENS_PORT` | Backend port | `3030` |
+| Variable                   | Description                          | Default                 |
+| -------------------------- | ------------------------------------ | ----------------------- |
+| `SESSIONLENS_PORT`         | Backend port                         | `3030`                  |
 | `SESSIONLENS_FRONTEND_URL` | Frontend URL (used by CORS and tray) | `http://127.0.0.1:5173` |
-| `DATABASE_PATH` | SQLite file path | `./data/sessionlens.db` |
+| `DATABASE_PATH`            | SQLite file path                     | `./data/sessionlens.db` |
 
 ### Auto-ingestion
 
@@ -211,19 +211,19 @@ Sessionlens watches CLI data directories and updates automatically on new files.
 
 ## Roadmap
 
-| Phase | Status | Description |
-| --- | --- | --- |
-| **Phase 1** | ✅ Done | Bootstrap & Core — multi-CLI ingestion, SQLite, cost tracking |
-| **Phase 2** | ✅ Done | Analytics & Budgets — insights, anomalies, spend trends, budget limits |
-| **Phase 3** | ✅ Done | CLI Expansion — Gemini, Kimi, Aider, Qwen, Antigravity, CommandCode |
-| **Phase 4** | ✅ Done | Design System & Premium UI — Sessionlens visual language, component library |
-| **Phase 5** | ✅ Done | Runtime & Tray — auto-ingestion, filesystem watcher, Windows tray, CI/CD |
-| **Phase 6** | ✅ Done | Data Reliability — per-field quality, adapter diagnostics, idempotent backfill |
-| **Phase 7** | ✅ Done | Cost Integrity & Performance — honest cost classification, incremental ingestion, caching |
-| **Phase 8** | ✅ Done | Security & Code Quality — data redaction, CORS hardening, dead code removal, audit cleanup |
-| **Phase 9** | 📋 Planned | Export & Sharing — local CSV/JSON export, Discord webhooks, sharing templates |
-| **Phase 10** | 📋 Planned | Extensibility — plugin SDK, IDE integration |
-| **Phase 11** | 🔮 Future | Cloud Optional — opt-in sync, team analytics |
+| Phase        | Status     | Description                                                                                |
+| ------------ | ---------- | ------------------------------------------------------------------------------------------ |
+| **Phase 1**  | ✅ Done    | Bootstrap & Core — multi-CLI ingestion, SQLite, cost tracking                              |
+| **Phase 2**  | ✅ Done    | Analytics & Budgets — insights, anomalies, spend trends, budget limits                     |
+| **Phase 3**  | ✅ Done    | CLI Expansion — Gemini, Kimi, Aider, Qwen, Antigravity, CommandCode                        |
+| **Phase 4**  | ✅ Done    | Design System & Premium UI — Sessionlens visual language, component library                |
+| **Phase 5**  | ✅ Done    | Runtime & Tray — auto-ingestion, filesystem watcher, Windows tray, CI/CD                   |
+| **Phase 6**  | ✅ Done    | Data Reliability — per-field quality, adapter diagnostics, idempotent backfill             |
+| **Phase 7**  | ✅ Done    | Cost Integrity & Performance — honest cost classification, incremental ingestion, caching  |
+| **Phase 8**  | ✅ Done    | Security & Code Quality — data redaction, CORS hardening, dead code removal, audit cleanup |
+| **Phase 9**  | 📋 Planned | Export & Sharing — local CSV/JSON export, Discord webhooks, sharing templates              |
+| **Phase 10** | 📋 Planned | Extensibility — plugin SDK, IDE integration                                                |
+| **Phase 11** | 🔮 Future  | Cloud Optional — opt-in sync, team analytics                                               |
 
 ---
 

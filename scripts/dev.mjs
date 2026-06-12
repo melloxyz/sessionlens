@@ -12,7 +12,10 @@ function start(name, command) {
 }
 
 function prefix(name, chunk) {
-  return String(chunk).split(/(?<=\n)/).map((line) => line ? `[${name}] ${line}` : line).join('');
+  return String(chunk)
+    .split(/(?<=\n)/)
+    .map((line) => (line ? `[${name}] ${line}` : line))
+    .join('');
 }
 
 const processes = [

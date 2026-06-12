@@ -38,8 +38,8 @@
   --color-text-tertiary: var(--subtle-foreground);
   --color-accent-hover: var(--accent-hover);
   --font-sans: Inter, 'OpenAI Sans', 'SF Pro Text', ui-sans-serif, system-ui, sans-serif;
-  --font-mono: 'SF Mono', 'Cascadia Code', 'JetBrains Mono', 'IBM Plex Mono', ui-monospace,
-    monospace;
+  --font-mono:
+    'SF Mono', 'Cascadia Code', 'JetBrains Mono', 'IBM Plex Mono', ui-monospace, monospace;
 }
 
 :root,
