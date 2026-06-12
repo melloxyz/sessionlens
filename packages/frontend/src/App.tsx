@@ -46,9 +46,6 @@ const ProfilePage = lazy(() =>
 const BudgetsPage = lazy(() =>
   import('./pages/BudgetsPage.js').then((module) => ({ default: module.BudgetsPage })),
 );
-const ChangelogPage = lazy(() =>
-  import('./pages/ChangelogPage.js').then((module) => ({ default: module.ChangelogPage })),
-);
 
 export function App() {
   return (
@@ -70,7 +67,6 @@ export function App() {
                   <Route path="/settings" element={<SettingsPage />} />
                   <Route path="/profile" element={<ProfilePage />} />
                   <Route path="/budgets" element={<BudgetsPage />} />
-                  <Route path="/changelog" element={<ChangelogPage />} />
                 </Route>
               </Routes>
             </Suspense>

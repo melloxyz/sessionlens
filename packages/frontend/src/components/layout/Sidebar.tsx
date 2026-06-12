@@ -3,7 +3,6 @@ import {
   BarChart3,
   CircleDot,
   Command,
-  History,
   FolderOpen,
   LayoutDashboard,
   MessageSquare,
@@ -168,7 +167,7 @@ export function Sidebar() {
           </div>
           {t('sidebar.localFirst.description')}
         </div>
-        <div className="grid grid-cols-5 gap-1 rounded-full border border-border bg-surface p-1 shadow-[var(--shadow-card)]">
+        <div className="grid grid-cols-4 gap-1 rounded-full border border-border bg-surface p-1 shadow-[var(--shadow-card)]">
           <NavLink
             to="/settings"
             className={({ isActive }) =>
@@ -201,13 +200,6 @@ export function Sidebar() {
           >
             {theme === 'dark' ? <Sun className="h-4 w-4" /> : <Moon className="h-4 w-4" />}
           </button>
-          <NavLink
-            to="/changelog"
-            className="grid h-8 place-items-center rounded-full border border-transparent text-muted-foreground transition-colors hover:border-border hover:bg-surface-hover hover:text-foreground"
-            aria-label={t('topbar.changelog.title')}
-          >
-            <History className="h-4 w-4" />
-          </NavLink>
           <a
             href="https://github.com/melloxyz/sessionlens"
             target="_blank"

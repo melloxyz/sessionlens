@@ -39,11 +39,6 @@ const PAGE_KEYS: Record<
     subtitle: 'topbar.profile.subtitle',
     section: '09',
   },
-  '/changelog': {
-    title: 'topbar.changelog.title',
-    subtitle: 'topbar.changelog.subtitle',
-    section: '08',
-  },
 };
 
 function getPageKeys(pathname: string) {
