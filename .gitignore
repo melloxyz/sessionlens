@@ -12,3 +12,4 @@ AGENTS.md
 .commandcode/
 .playwright*
 .agents/
+.claude/
