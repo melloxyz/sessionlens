@@ -103,6 +103,9 @@ async function main() {
             capabilities,
             dataQualitySummary,
             completenessScore: capabilityScore(capabilities),
+            sessionsZeroTokens: sourceStats.sessionsZeroTokens,
+            sessionsNoCost: sourceStats.sessionsNoCost,
+            sessionsNoModel: sourceStats.sessionsNoModel,
           };
         }),
       );
@@ -230,6 +233,9 @@ function getAdapterSourceStats(cli: string): {
   sessionsIndexed: number;
   lastIngestedAt: string | null;
   lastError: string | null;
+  sessionsZeroTokens: number;
+  sessionsNoCost: number;
+  sessionsNoModel: number;
 } {
   const db = getDatabase();
   const sourceResult = db.exec(
@@ -241,7 +247,10 @@ function getAdapterSourceStats(cli: string): {
     [cli],
   );
   const aggregateResult = db.exec(
-    `SELECT COUNT(*) AS paths_found, COALESCE(SUM(session_count), 0) AS sessions_indexed
+    `SELECT COUNT(*) AS paths_found, COALESCE(SUM(session_count), 0) AS sessions_indexed,
+            COALESCE(SUM(sessions_zero_tokens), 0) AS zero_tokens,
+            COALESCE(SUM(sessions_no_cost), 0) AS no_cost,
+            COALESCE(SUM(sessions_no_model), 0) AS no_model
      FROM adapter_sources WHERE cli = ? AND detected = 1`,
     [cli],
   );
@@ -256,6 +265,9 @@ function getAdapterSourceStats(cli: string): {
     sessionsIndexed: Number(aggregateResult[0]?.values?.[0]?.[1] ?? 0) || fallbackSessionCount,
     lastIngestedAt: (sourceResult[0]?.values?.[0]?.[1] as string | undefined) ?? null,
     lastError: (sourceResult[0]?.values?.[0]?.[2] as string | undefined) ?? null,
+    sessionsZeroTokens: Number(aggregateResult[0]?.values?.[0]?.[2] ?? 0),
+    sessionsNoCost: Number(aggregateResult[0]?.values?.[0]?.[3] ?? 0),
+    sessionsNoModel: Number(aggregateResult[0]?.values?.[0]?.[4] ?? 0),
   };
 }
 

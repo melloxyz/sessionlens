@@ -10,4 +10,7 @@ export interface IntegrationStatusItem {
   completenessScore?: number;
   capabilities?: Record<string, string>;
   dataQualitySummary?: Record<string, string>;
+  sessionsZeroTokens?: number;
+  sessionsNoCost?: number;
+  sessionsNoModel?: number;
 }

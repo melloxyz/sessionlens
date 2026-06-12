@@ -142,18 +142,38 @@ async function runIngestionInternal(forceReprocess = false): Promise<IngestionSt
               ? null
               : registry.getCheckpoint(adapter.cli, sessionPath);
             const rawSessions = await adapter.parse(sessionPath, checkpoint);
-            recordAdapterSource(adapter.cli, sessionPath, {
-              detected: true,
-              sessionCount: rawSessions.length,
-              lastError: null,
-            });
+
+            let pathZeroTokens = 0;
+            let pathNoCost = 0;
+            let pathNoModel = 0;
 
             for (const raw of rawSessions) {
               const normalized = adapter.normalize(raw);
               const result = upsertSession(normalized, redact);
               if (result === 'new') newSessions++;
               else if (result === 'updated') updatedSessions++;
+
+              const totalTokens = normalized.usageEvents.reduce(
+                (sum, e) => sum + (e.inputTokens ?? 0) + (e.outputTokens ?? 0),
+                0,
+              );
+              if (totalTokens === 0) pathZeroTokens++;
+              if (normalized.totalCostUsd == null) pathNoCost++;
+              if (!normalized.model) pathNoModel++;
             }
+
+            recordAdapterSource(adapter.cli, sessionPath, {
+              detected: true,
+              sessionCount: rawSessions.length,
+              lastError: null,
+              ...(rawSessions.length > 0
+                ? {
+                    sessionsZeroTokens: pathZeroTokens,
+                    sessionsNoCost: pathNoCost,
+                    sessionsNoModel: pathNoModel,
+                  }
+                : {}),
+            });
 
             const newCheckpoint = await adapter.computeCheckpoint(sessionPath);
             if (newCheckpoint) {
@@ -488,6 +508,9 @@ function recordAdapterSource(
     fileCount?: number;
     sessionCount?: number;
     lastError?: string | null;
+    sessionsZeroTokens?: number;
+    sessionsNoCost?: number;
+    sessionsNoModel?: number;
   },
 ): void {
   const db = getDatabase();
@@ -522,6 +545,19 @@ function recordAdapterSource(
       options.sessionCount ?? 0,
     ],
   );
+
+  if (options.sessionsZeroTokens !== undefined) {
+    db.run(
+      `UPDATE adapter_sources SET sessions_zero_tokens = ?, sessions_no_cost = ?, sessions_no_model = ? WHERE cli = ? AND source_path = ?`,
+      [
+        options.sessionsZeroTokens,
+        options.sessionsNoCost ?? 0,
+        options.sessionsNoModel ?? 0,
+        cli,
+        sessionPath,
+      ],
+    );
+  }
 }
 
 function inferSourceType(sessionPath: string): string {

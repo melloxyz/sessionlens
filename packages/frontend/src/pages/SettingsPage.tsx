@@ -1091,6 +1091,8 @@ function SummaryRow({
 function IntegrationHealthRow({ item }: { item: IntegrationStatusItem }) {
   const { t } = useI18n();
   const available = item.status === 'available';
+  const driftCount =
+    (item.sessionsZeroTokens ?? 0) + (item.sessionsNoCost ?? 0) + (item.sessionsNoModel ?? 0);
 
   return (
     <div className="flex items-center justify-between gap-3">
@@ -1106,6 +1108,15 @@ function IntegrationHealthRow({ item }: { item: IntegrationStatusItem }) {
         </div>
       </div>
       <div className="flex shrink-0 items-center gap-2">
+        {driftCount > 0 ? (
+          <Badge
+            variant="warning"
+            title={`${item.sessionsZeroTokens ?? 0} zero-token · ${item.sessionsNoCost ?? 0} no-cost · ${item.sessionsNoModel ?? 0} no-model`}
+          >
+            <AlertTriangle className="h-3 w-3" />
+            {driftCount} {t('settings.driftDetected')}
+          </Badge>
+        ) : null}
         {typeof item.completenessScore === 'number' ? (
           <Badge variant="neutral">{item.completenessScore}%</Badge>
         ) : null}

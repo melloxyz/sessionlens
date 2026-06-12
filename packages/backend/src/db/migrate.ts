@@ -38,6 +38,7 @@ export function runMigrations(): void {
     '0006_budget_alerts',
     '0007_commandcode_cli',
     '0008_adapter_data_quality',
+    '0009_adapter_drift_counters',
   ];
 
   for (const name of migrations) {
@@ -146,6 +147,21 @@ function ensureMigrationSatisfied(name: string): boolean {
       db.run(`CREATE INDEX idx_adapter_sources_cli ON adapter_sources(cli)`);
     }
 
+    return true;
+  }
+
+  if (name === '0009_adapter_drift_counters') {
+    if (!columnExists('adapter_sources', 'sessions_zero_tokens')) {
+      db.run(
+        `ALTER TABLE adapter_sources ADD COLUMN sessions_zero_tokens INTEGER NOT NULL DEFAULT 0`,
+      );
+    }
+    if (!columnExists('adapter_sources', 'sessions_no_cost')) {
+      db.run(`ALTER TABLE adapter_sources ADD COLUMN sessions_no_cost INTEGER NOT NULL DEFAULT 0`);
+    }
+    if (!columnExists('adapter_sources', 'sessions_no_model')) {
+      db.run(`ALTER TABLE adapter_sources ADD COLUMN sessions_no_model INTEGER NOT NULL DEFAULT 0`);
+    }
     return true;
   }
 
