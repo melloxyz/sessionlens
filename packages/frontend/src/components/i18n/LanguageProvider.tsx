@@ -853,6 +853,9 @@ const dictionaries = {
     'insightDetail.rec.cacheBasin.reviewPattern': 'Review worst-offender sessions',
     'insightDetail.rec.cacheBasin.reviewPatternDesc':
       'Identify the sessions with the highest cache miss rates and check what makes their prompts different from your typical sessions.',
+    'insightDetail.loadingEvidence': 'Loading the latest local evidence...',
+    'insightDetail.figure.insight': 'INSIGHT',
+    'insightDetail.figure.finding': 'FINDING',
     'budget.title': 'Budgets',
     'budget.description':
       'Protect spend with local limits by project, CLI, provider, model, or across the whole workspace.',
@@ -1786,6 +1789,9 @@ const dictionaries = {
     'insightDetail.rec.cacheBasin.reviewPattern': 'Revise as piores sessões',
     'insightDetail.rec.cacheBasin.reviewPatternDesc':
       'Identifique as sessões com as maiores taxas de cache miss e verifique o que torna seus prompts diferentes das sessões típicas.',
+    'insightDetail.loadingEvidence': 'Carregando as últimas evidências locais...',
+    'insightDetail.figure.insight': 'INSIGHT',
+    'insightDetail.figure.finding': 'ACHADO',
     'budget.title': 'Orçamentos',
     'budget.description':
       'Proteja o gasto com limites locais por projeto, CLI, provider, modelo ou no workspace inteiro.',

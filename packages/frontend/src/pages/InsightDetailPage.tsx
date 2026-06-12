@@ -84,7 +84,7 @@ interface InsightDetailData {
 export function InsightDetailPage() {
   const { id } = useParams<{ id: string }>();
   const location = useLocation();
-  const { t } = useI18n();
+  const { t, locale } = useI18n();
   const { queryString } = useDateRange();
   const previewState = location.state as {
     insightPreview?: Pick<
@@ -117,6 +117,8 @@ export function InsightDetailPage() {
 
   const insightTypeLabel =
     detail?.type === 'anomaly' ? t('analytics.anomaly') : t('analytics.insight');
+
+  const localizedDetail = detail ? localizeDetailItem(detail, locale) : null;
 
   const backLink = queryString ? `/analytics${queryPrefix}` : '/analytics';
   const projectLink = detail?.context.projectPath
@@ -153,7 +155,7 @@ export function InsightDetailPage() {
 
       {validating && detail && (
         <div className="rounded-md border border-border bg-surface-muted px-4 py-3 text-sm text-subtle-foreground">
-          Loading the latest local evidence...
+          {t('insightDetail.loadingEvidence')}
         </div>
       )}
 
@@ -172,9 +174,13 @@ export function InsightDetailPage() {
       {detail && (
         <>
           <FigurePanel
-            figure={detail.type === 'anomaly' ? 'FINDING' : 'INSIGHT'}
-            title={detail.title}
-            description={detail.description}
+            figure={
+              detail.type === 'anomaly'
+                ? t('insightDetail.figure.finding')
+                : t('insightDetail.figure.insight')
+            }
+            title={localizedDetail?.title ?? detail.title}
+            description={localizedDetail?.description ?? detail.description}
             meta={
               <>
                 <Badge
@@ -194,7 +200,7 @@ export function InsightDetailPage() {
             contentClassName="grid gap-3 md:grid-cols-[minmax(0,1fr)_260px]"
           >
             <div className="rounded-md border border-border bg-surface-muted p-4 text-sm leading-6 text-muted-foreground">
-              {detail.description}
+              {localizedDetail?.description ?? detail.description}
             </div>
             <MetricBlock
               variant="compact"
@@ -872,6 +878,90 @@ function localizeRecommendations(
       action: rec.action ? (actionMap[actionKey] ?? rec.action) : rec.action,
     };
   });
+}
+
+function localizeDetailItem(
+  detail: InsightDetailData,
+  locale: string,
+): { title: string; description: string } {
+  if (locale !== 'pt-BR') return { title: detail.title, description: detail.description };
+
+  if (detail.id === 'spend-growth')
+    return {
+      title: 'Uso crescendo mais rápido que na semana passada',
+      description: detail.description
+        .replace('The last 7 days spent', 'Os últimos 7 dias gastaram')
+        .replace('more than the previous 7 days.', 'a mais que os 7 dias anteriores.'),
+    };
+  if (detail.id.startsWith('project-'))
+    return {
+      title: 'Um projeto domina os gastos',
+      description: detail.description
+        .replace('is the highest-cost project and takes', 'é o projeto de maior custo e representa')
+        .replace('of total spend.', 'do gasto total.'),
+    };
+  if (detail.id.startsWith('model-'))
+    return {
+      title: 'Modelo caro usado em sessões leves',
+      description: detail.description
+        .replace('averages', 'tem média de')
+        .replace(
+          'messages per session while staying well above the overall average cost.',
+          'mensagens por sessão enquanto fica bem acima do custo médio geral.',
+        ),
+    };
+  if (detail.id.startsWith('session-'))
+    return {
+      title: 'Sessão longa e cara detectada',
+      description: detail.description
+        .replace('Session', 'A sessão')
+        .replace(
+          'is among the priciest entries and may deserve a closer look.',
+          'está entre as entradas mais caras e pode merecer uma análise.',
+        ),
+    };
+  if (detail.id.startsWith('cache-') && detail.id !== 'cache-basin')
+    return {
+      title: 'Alto desperdício de contexto em uma sessão',
+      description: detail.description.replace(
+        'is missing cache hits for most of its input tokens.',
+        'não teve cache hit na maior parte dos tokens de entrada.',
+      ),
+    };
+  if (detail.id.startsWith('spike-'))
+    return {
+      title: 'Pico diário de gasto',
+      description: detail.description
+        .replace('The latest day spent', 'O último dia gastou')
+        .replace('more than the 7-day baseline.', 'a mais que a baseline de 7 dias.'),
+    };
+  if (detail.id.startsWith('tokens-'))
+    return {
+      title: 'Outlier de uso de tokens',
+      description: detail.description
+        .replace('Session', 'A sessão')
+        .replace(
+          'used far more tokens than the typical session.',
+          'usou muito mais tokens que uma sessão típica.',
+        ),
+    };
+  if (detail.id.startsWith('cost-'))
+    return {
+      title: 'Outlier de sessão de alto custo',
+      description: detail.description
+        .replace('Session', 'A sessão')
+        .replace(
+          'is much more expensive than the average session.',
+          'é muito mais cara que a sessão média.',
+        ),
+    };
+  if (detail.id === 'cache-basin')
+    return {
+      title: 'Taxa geral alta de cache miss',
+      description: 'Nas sessões analisadas, os cache misses continuam elevados.',
+    };
+
+  return { title: detail.title, description: detail.description };
 }
 
 function SummaryCard({
