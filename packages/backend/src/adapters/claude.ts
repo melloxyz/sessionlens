@@ -13,6 +13,7 @@ import type {
   RawToolEvent,
 } from './types.js';
 import type { CliProvider, SourceConfidence } from '@sessionlens/shared';
+import { readString } from './shared.js';
 
 const CLAUDE_HOME = join(homedir(), '.claude');
 const PROJECTS_DIR = join(CLAUDE_HOME, 'projects');
@@ -428,8 +429,4 @@ function inferFileEvents(
     confidence,
     metadata: input,
   }));
-}
-
-function readString(value: unknown): string | null {
-  return typeof value === 'string' && value.length > 0 ? value : null;
 }

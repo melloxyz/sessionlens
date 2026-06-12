@@ -203,8 +203,6 @@ function shouldIgnore(path: string): boolean {
   const dbPath = resolve(getDbPath()).toLowerCase();
   return (
     normalized === dbPath ||
-    normalized.endsWith('sessionless.db') ||
-    normalized.endsWith('sessionless.db-journal') ||
     normalized.endsWith('sessionlens.db') ||
     normalized.endsWith('sessionlens.db-journal')
   );

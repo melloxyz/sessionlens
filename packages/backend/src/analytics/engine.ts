@@ -1,4 +1,5 @@
 import { getDatabase } from '../db/connection.js';
+import { mapRows } from '../db/utils.js';
 import { visibleSessionSql } from '../db/session-filters.js';
 
 export interface AnalyticsInsight {
@@ -207,8 +208,6 @@ export function buildAnalyticsReport(filters: AnalyticsFilters = {}): AnalyticsR
   const totalTokens = aggregatedSessions.reduce((sum, item) => sum + item.totalTokens, 0);
   const avgCost = average(sessions.map((session) => session.total_cost_usd ?? 0));
   const avgMessages = average(sessions.map((session) => session.message_count));
-  const _avgDuration = average(sessions.map((session) => session.duration_ms ?? 0));
-  const _avgTokens = average(aggregatedSessions.map((item) => item.totalTokens));
   const avgCacheMiss = average(
     aggregatedSessions
       .filter((item) => item.cacheMissRate != null)
@@ -696,22 +695,6 @@ function standardDeviation(values: number[]): number {
   const mean = average(values);
   const variance = average(values.map((value) => (value - mean) ** 2));
   return Math.sqrt(variance);
-}
-
-function mapRows<T>(results: ReturnType<ReturnType<typeof getDatabase>['exec']>): T[] {
-  const rows: T[] = [];
-  if (results.length === 0 || !results[0].values || !results[0].columns) return rows;
-
-  const columns = results[0].columns;
-  for (const row of results[0].values) {
-    const obj: Record<string, unknown> = {};
-    for (let i = 0; i < columns.length; i++) {
-      obj[columns[i]] = row[i];
-    }
-    rows.push(obj as T);
-  }
-
-  return rows;
 }
 
 function toUtcDay(value: string): Date {

@@ -14,6 +14,7 @@ import type {
   RawUsageEvent,
 } from './types.js';
 import type { CliProvider, SourceConfidence } from '@sessionlens/shared';
+import { readString } from './shared.js';
 
 const CODEX_HOME = join(homedir(), '.codex');
 const STATE_DB = join(CODEX_HOME, 'state_5.sqlite');
@@ -380,10 +381,6 @@ function inferFileOperation(toolName: string): RawFileEvent['operation'] {
   if (normalized.includes('edit') || normalized.includes('patch')) return 'edit';
   if (normalized.includes('shell') || normalized.includes('command')) return 'shell_possible';
   return 'unknown';
-}
-
-function readString(value: unknown): string | null {
-  return typeof value === 'string' && value.length > 0 ? value : null;
 }
 
 function loadAllThreads(db: import('sql.js').Database): Map<string, ThreadRow> {

@@ -251,40 +251,6 @@ function persistModelUsage(sessionPk: number, rows: RawModelUsage[]): void {
   }
 }
 
-function _aggregateModelUsage(raw: RawSession): RawModelUsage[] {
-  const provider = raw.provider || 'unknown';
-  const model = raw.model || 'unknown';
-  const usage = raw.usageEvents.reduce(
-    (sum, event) => ({
-      input: sum.input + (event.inputTokens ?? 0),
-      output: sum.output + (event.outputTokens ?? 0),
-      reasoning: sum.reasoning + (event.reasoningTokens ?? 0),
-      cacheRead: sum.cacheRead + (event.cacheReadTokens ?? 0),
-      cacheWrite: sum.cacheWrite + (event.cacheWriteTokens ?? 0),
-      toolCalls: sum.toolCalls + (event.toolCallsCount ?? 0),
-    }),
-    { input: 0, output: 0, reasoning: 0, cacheRead: 0, cacheWrite: 0, toolCalls: 0 },
-  );
-
-  const cost = raw.totalCostUsd ?? 0;
-  if (usage.input === 0 && usage.output === 0 && usage.toolCalls === 0 && cost === 0) return [];
-
-  return [
-    {
-      provider,
-      model,
-      messageCount: raw.messages.length,
-      inputTokens: usage.input,
-      outputTokens: usage.output,
-      reasoningTokens: usage.reasoning,
-      cacheReadTokens: usage.cacheRead,
-      cacheWriteTokens: usage.cacheWrite,
-      toolCallsCount: usage.toolCalls,
-      totalCostUsd: cost,
-    },
-  ];
-}
-
 function upsertSession(raw: RawSession, redact: boolean): 'new' | 'updated' | 'skipped' {
   const db = getDatabase();
 

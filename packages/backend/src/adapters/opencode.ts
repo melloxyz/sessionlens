@@ -13,6 +13,7 @@ import type {
   RawUsageEvent,
 } from './types.js';
 import type { CliProvider, SourceConfidence } from '@sessionlens/shared';
+import { readString, readObject, updateModelUsage, dedupeFileEvents } from './shared.js';
 
 const OPENCODE_DB = join(homedir(), '.local', 'share', 'opencode', 'opencode.db');
 const OPENCODE_CAPABILITIES: AdapterCapabilities = {
@@ -626,62 +627,8 @@ function buildSummaryFileEvents(session: SessionRow): RawFileEvent[] {
   }));
 }
 
-function dedupeFileEvents(rows: RawFileEvent[]): RawFileEvent[] {
-  const seen = new Set<string>();
-  const deduped: RawFileEvent[] = [];
-  for (const row of rows) {
-    const key = [
-      row.path ?? '',
-      row.operation,
-      row.toolName ?? '',
-      row.timestamp,
-      row.confidence,
-    ].join('|');
-    if (seen.has(key)) continue;
-    seen.add(key);
-    deduped.push(row);
-  }
-  return deduped;
-}
-
-function updateModelUsage(map: Map<string, RawModelUsage>, row: RawModelUsage): void {
-  const key = `${row.provider}/${row.model}`;
-  const current = map.get(key) ?? {
-    provider: row.provider,
-    model: row.model,
-    messageCount: 0,
-    inputTokens: 0,
-    outputTokens: 0,
-    reasoningTokens: 0,
-    cacheReadTokens: 0,
-    cacheWriteTokens: 0,
-    toolCallsCount: 0,
-    totalCostUsd: 0,
-  };
-
-  current.messageCount += row.messageCount;
-  current.inputTokens += row.inputTokens;
-  current.outputTokens += row.outputTokens;
-  current.reasoningTokens += row.reasoningTokens;
-  current.cacheReadTokens += row.cacheReadTokens;
-  current.cacheWriteTokens += row.cacheWriteTokens;
-  current.toolCallsCount += row.toolCallsCount;
-  current.totalCostUsd += row.totalCostUsd;
-  map.set(key, current);
-}
-
-function readString(value: unknown): string | null {
-  return typeof value === 'string' && value.length > 0 ? value : null;
-}
-
 function readNumber(value: unknown): number | null {
   return typeof value === 'number' && Number.isFinite(value) ? value : null;
-}
-
-function readObject(value: unknown): Record<string, unknown> | null {
-  return value && typeof value === 'object' && !Array.isArray(value)
-    ? (value as Record<string, unknown>)
-    : null;
 }
 
 /** For testing only — injects an in-memory sql.js Database so parse() bypasses the real opencode.db. */

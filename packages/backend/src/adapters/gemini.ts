@@ -12,6 +12,7 @@ import type {
   RawToolEvent,
 } from './types.js';
 import type { CliProvider, SourceConfidence } from '@sessionlens/shared';
+import { readObject, updateModelUsage, dedupeFileEvents } from './shared.js';
 
 const GEMINI_HOME = join(homedir(), '.gemini');
 const GEMINI_TMP = join(GEMINI_HOME, 'tmp');
@@ -447,49 +448,6 @@ function inferFileOperation(toolName: string): RawFileEvent['operation'] {
   if (normalized.includes('edit')) return 'edit';
   if (normalized.includes('shell') || normalized.includes('command')) return 'shell_possible';
   return 'unknown';
-}
-
-function dedupeFileEvents(rows: RawFileEvent[]): RawFileEvent[] {
-  const seen = new Set<string>();
-  const deduped: RawFileEvent[] = [];
-  for (const row of rows) {
-    const key = [row.path ?? '', row.operation, row.toolName ?? '', row.timestamp].join('|');
-    if (seen.has(key)) continue;
-    seen.add(key);
-    deduped.push(row);
-  }
-  return deduped;
-}
-
-function readObject(value: unknown): Record<string, unknown> | null {
-  return value && typeof value === 'object' && !Array.isArray(value)
-    ? (value as Record<string, unknown>)
-    : null;
-}
-
-function updateModelUsage(map: Map<string, RawModelUsage>, row: RawModelUsage): void {
-  const key = `${row.provider}/${row.model}`;
-  const current = map.get(key) ?? {
-    provider: row.provider,
-    model: row.model,
-    messageCount: 0,
-    inputTokens: 0,
-    outputTokens: 0,
-    reasoningTokens: 0,
-    cacheReadTokens: 0,
-    cacheWriteTokens: 0,
-    toolCallsCount: 0,
-    totalCostUsd: 0,
-  };
-  current.messageCount += row.messageCount;
-  current.inputTokens += row.inputTokens;
-  current.outputTokens += row.outputTokens;
-  current.reasoningTokens += row.reasoningTokens;
-  current.cacheReadTokens += row.cacheReadTokens;
-  current.cacheWriteTokens += row.cacheWriteTokens;
-  current.toolCallsCount += row.toolCallsCount;
-  current.totalCostUsd += row.totalCostUsd;
-  map.set(key, current);
 }
 
 function estimateGeminiCost(
