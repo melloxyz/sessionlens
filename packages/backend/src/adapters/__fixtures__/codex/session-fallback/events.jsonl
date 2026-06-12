@@ -1,0 +1,4 @@
+{"type":"event_msg","timestamp":"2024-01-01T11:00:00.000Z","payload":{"type":"user_message","text":"Write a Python script"}}
+{"type":"event_msg","timestamp":"2024-01-01T11:00:01.000Z","payload":{"type":"agent_message","text":"Here is the script you requested"}}
+{"type":"response_item","timestamp":"2024-01-01T11:00:02.000Z","payload":{"type":"function_call","name":"write_file","arguments":"{\"path\":\"/tmp/script.py\"}"}}
+NOT VALID JSON LINE - this should be skipped gracefully by the parser

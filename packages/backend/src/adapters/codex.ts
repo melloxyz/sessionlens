@@ -418,6 +418,12 @@ function loadAllThreads(db: import('sql.js').Database): Map<string, ThreadRow> {
   return map;
 }
 
+/** For testing only — injects a pre-built thread cache so parse() bypasses the real SQLite DB. */
+export type { ThreadRow };
+export function _setTestThreadCache(cache: Map<string, ThreadRow> | null): void {
+  _threadCache = cache;
+}
+
 async function getThreadData(sessionPath: string): Promise<ThreadRow | null> {
   const sql = await getSqlJs();
   const ownDb = _cachedDb === null;

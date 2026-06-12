@@ -683,3 +683,8 @@ function readObject(value: unknown): Record<string, unknown> | null {
     ? (value as Record<string, unknown>)
     : null;
 }
+
+/** For testing only — injects an in-memory sql.js Database so parse() bypasses the real opencode.db. */
+export function _setTestDb(database: import('sql.js').Database | null): void {
+  _cachedDb = database;
+}
