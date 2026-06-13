@@ -21,13 +21,16 @@ import {
   Globe2,
   Hash,
   Instagram,
+  Languages,
   Linkedin,
   LockKeyhole,
   MessageCircle,
   PieChart,
+  Plus,
   Save,
   Share2,
   Sparkles,
+  Trash2,
   Trophy,
   Upload,
   UserRound,
@@ -53,6 +56,12 @@ import { cn } from '../lib/utils.js';
 type HeatmapMode = 'daily' | 'weekly' | 'cumulative';
 type ShareImageVariant = 'compact' | 'standard' | 'complete';
 
+interface CustomNetwork {
+  id: string;
+  label: string;
+  value: string;
+}
+
 interface LocalProfile {
   name: string;
   handle: string;
@@ -63,8 +72,7 @@ interface LocalProfile {
     instagram: string;
     github: string;
     website: string;
-    customLabel: string;
-    customValue: string;
+    customNetworks: CustomNetwork[];
   };
 }
 
@@ -136,8 +144,7 @@ const DEFAULT_PROFILE: LocalProfile = {
     instagram: '@joaovdmello',
     github: 'github.com/melloxyz',
     website: 'melloxyz.dev',
-    customLabel: '#',
-    customValue: '@joaovdmello',
+    customNetworks: [],
   },
 };
 
@@ -170,11 +177,24 @@ function readLocalProfile(): LocalProfile {
   try {
     const raw = window.localStorage.getItem(PROFILE_STORAGE_KEY);
     if (!raw) return DEFAULT_PROFILE;
-    const parsed = JSON.parse(raw) as Partial<LocalProfile>;
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const parsed = JSON.parse(raw) as any;
+    const nets = parsed.networks ?? {};
+
+    // Migrate legacy single-custom-network fields to customNetworks array
+    let customNetworks: CustomNetwork[] = [];
+    if (Array.isArray(nets.customNetworks)) {
+      customNetworks = nets.customNetworks;
+    } else if (nets.customLabel || nets.customValue) {
+      customNetworks = [
+        { id: 'legacy', label: nets.customLabel ?? '#', value: nets.customValue ?? '' },
+      ];
+    }
+
     return {
       ...DEFAULT_PROFILE,
       ...parsed,
-      networks: { ...DEFAULT_PROFILE.networks, ...parsed.networks },
+      networks: { ...DEFAULT_PROFILE.networks, ...nets, customNetworks },
     };
   } catch {
     return DEFAULT_PROFILE;
@@ -477,6 +497,7 @@ function generateProfileCardSvg(
     availableIntegrations: IntegrationStatusItem[];
     networkItems: { key: string; label: string; value: string }[];
   },
+  lang: 'pt' | 'en' = 'pt',
 ): string {
   const isCompact = variant === 'compact';
   const isComplete = variant === 'complete';
@@ -485,12 +506,51 @@ function generateProfileCardSvg(
   const innerW = W - PAD * 2;
   const cx = W / 2;
 
+  const t =
+    lang === 'en'
+      ? {
+          totalTokens: 'Total tokens',
+          dailyPeak: 'Daily peak',
+          totalTime: 'Total time',
+          currentStreak: 'Current streak',
+          bestStreak: 'Best streak',
+          days: 'days',
+          activity: `Token activity in ${new Date().getFullYear()}`,
+          favoriteCli: 'Favorite CLI',
+          topModel: 'Top model',
+          topProject: 'Most active project',
+          networks: 'Profile networks',
+          achievements: 'Local achievements',
+          sources: 'sources connected',
+          sessions: 'sessions indexed',
+          footer: 'sessionlens · shareable local profile',
+          localData: `local data · ${new Date().getFullYear()}`,
+        }
+      : {
+          totalTokens: 'Total de tokens',
+          dailyPeak: 'Pico diário',
+          totalTime: 'Tempo total',
+          currentStreak: 'Sequência atual',
+          bestStreak: 'Melhor sequência',
+          days: 'dias',
+          activity: `Atividade de tokens em ${new Date().getFullYear()}`,
+          favoriteCli: 'CLI favorita',
+          topModel: 'Modelo mais usado',
+          topProject: 'Projeto mais ativo',
+          networks: 'Redes no perfil',
+          achievements: 'Conquistas locais',
+          sources: 'fontes conectadas',
+          sessions: 'sessões indexadas',
+          footer: 'sessionlens · perfil local compartilhável',
+          localData: `dados locais · ${new Date().getFullYear()}`,
+        };
+
   const allMetrics: [string, string][] = [
-    ['Total de tokens', formatTokens(data.totalTokens)],
-    ['Pico diário', formatTokens(data.dailyPeakTokens)],
-    ['Tempo total', formatDuration(data.totalDurationMs)],
-    ['Sequência atual', `${data.streaks.current} dias`],
-    ['Melhor sequência', `${data.streaks.longest} dias`],
+    [t.totalTokens, formatTokens(data.totalTokens)],
+    [t.dailyPeak, formatTokens(data.dailyPeakTokens)],
+    [t.totalTime, formatDuration(data.totalDurationMs)],
+    [t.currentStreak, `${data.streaks.current} ${t.days}`],
+    [t.bestStreak, `${data.streaks.longest} ${t.days}`],
   ];
 
   const sections: string[] = [];
@@ -502,7 +562,7 @@ function generateProfileCardSvg(
   const hasAvatar = Boolean(profile.avatarUrl);
   sections.push(
     `<text x="${PAD}" y="50" font-family="Arial, sans-serif" font-size="16" font-weight="700" letter-spacing="2" fill="${SVG.muted}">SESSIONLENS</text>`,
-    `<text x="${W - PAD}" y="50" text-anchor="end" font-family="Arial, sans-serif" font-size="14" fill="${SVG.subtle}">dados locais · ${new Date().getFullYear()}</text>`,
+    `<text x="${W - PAD}" y="50" text-anchor="end" font-family="Arial, sans-serif" font-size="14" fill="${SVG.subtle}">${escapeXml(t.localData)}</text>`,
     `<defs><clipPath id="${clipId}"><circle cx="${cx}" cy="${avatarCY}" r="${avatarR}"/></clipPath></defs>`,
     `<circle cx="${cx}" cy="${avatarCY}" r="${avatarR}" fill="${SVG.avatarFill}" stroke="${SVG.ring}" stroke-width="3"/>`,
     hasAvatar
@@ -534,7 +594,7 @@ function generateProfileCardSvg(
   // ── Heatmap ──
   y += isCompact ? 60 : 52;
   sections.push(
-    `<text x="${PAD}" y="${y}" font-family="Arial, sans-serif" font-size="18" font-weight="700" fill="${SVG.text}">Atividade de tokens em ${new Date().getFullYear()}</text>`,
+    `<text x="${PAD}" y="${y}" font-family="Arial, sans-serif" font-size="18" font-weight="700" fill="${SVG.text}">${escapeXml(t.activity)}</text>`,
   );
   y += 16;
   const heat = renderSvgGithubHeatmap(data.heatmap, PAD, y, innerW);
@@ -545,9 +605,9 @@ function generateProfileCardSvg(
   if (!isCompact) {
     y += 50;
     const hi: [string, string][] = [
-      ['CLI favorita', data.favoriteCliLabel],
-      ['Modelo mais usado', data.topModel],
-      ['Projeto mais ativo', basename(data.topProject)],
+      [t.favoriteCli, data.favoriteCliLabel],
+      [t.topModel, data.topModel],
+      [t.topProject, basename(data.topProject)],
     ];
     const hiGap = 16;
     const hiW = (innerW - 2 * hiGap) / 3;
@@ -565,7 +625,7 @@ function generateProfileCardSvg(
   if (isComplete) {
     y += 50;
     sections.push(
-      `<text x="${PAD}" y="${y}" font-family="Arial, sans-serif" font-size="18" font-weight="700" fill="${SVG.text}">Redes no perfil</text>`,
+      `<text x="${PAD}" y="${y}" font-family="Arial, sans-serif" font-size="18" font-weight="700" fill="${SVG.text}">${escapeXml(t.networks)}</text>`,
     );
     y += 18;
     const pillGap = 16;
@@ -587,13 +647,13 @@ function generateProfileCardSvg(
 
     y += 36;
     sections.push(
-      `<text x="${PAD}" y="${y}" font-family="Arial, sans-serif" font-size="18" font-weight="700" fill="${SVG.text}">Conquistas locais</text>`,
+      `<text x="${PAD}" y="${y}" font-family="Arial, sans-serif" font-size="18" font-weight="700" fill="${SVG.text}">${escapeXml(t.achievements)}</text>`,
     );
     y += 18;
     const achievements = [
-      `${data.availableIntegrations.length} fontes conectadas`,
+      `${data.availableIntegrations.length} ${t.sources}`,
       '100% local-first',
-      `${data.sessionCount} sessões indexadas`,
+      `${data.sessionCount} ${t.sessions}`,
     ];
     sections.push(
       achievements
@@ -608,7 +668,7 @@ function generateProfileCardSvg(
   const height = y + 20;
   sections.push(
     `<line x1="${PAD}" y1="${y - 22}" x2="${W - PAD}" y2="${y - 22}" stroke="${SVG.cardStroke}"/>`,
-    `<text x="${cx}" y="${y}" text-anchor="middle" font-family="Arial, sans-serif" font-size="15" fill="${SVG.muted}">sessionlens · perfil local compartilhável</text>`,
+    `<text x="${cx}" y="${y}" text-anchor="middle" font-family="Arial, sans-serif" font-size="15" fill="${SVG.muted}">${escapeXml(t.footer)}</text>`,
   );
 
   return `<svg xmlns="http://www.w3.org/2000/svg" width="${W}" height="${height}" viewBox="0 0 ${W} ${height}">
@@ -706,7 +766,7 @@ export function ProfilePage() {
   }
 
   const networkItems = useMemo(() => {
-    const items: {
+    const fixed: {
       key: string;
       label: string;
       value: string;
@@ -720,13 +780,7 @@ export function ProfilePage() {
         icon: Linkedin,
         tone: 'text-info',
       },
-      {
-        key: 'x',
-        label: 'X',
-        value: profile.networks.x,
-        icon: XLogo,
-        tone: 'text-foreground',
-      },
+      { key: 'x', label: 'X', value: profile.networks.x, icon: XLogo, tone: 'text-foreground' },
       {
         key: 'instagram',
         label: 'Instagram',
@@ -748,15 +802,17 @@ export function ProfilePage() {
         icon: Globe2,
         tone: 'text-muted-foreground',
       },
-      {
-        key: 'custom',
-        label: profile.networks.customLabel || 'Rede',
-        value: profile.networks.customValue,
+    ];
+    const custom = (profile.networks.customNetworks ?? [])
+      .filter((n) => n.value.trim())
+      .map((n) => ({
+        key: `custom-${n.id}`,
+        label: n.label || 'Rede',
+        value: n.value,
         icon: Hash,
         tone: 'text-muted-foreground',
-      },
-    ];
-    return items.filter((item) => item.value.trim().length > 0);
+      }));
+    return [...fixed.filter((item) => item.value.trim()), ...custom];
   }, [profile.networks]);
 
   const cliDistribution = cliBreakdown.length
@@ -1104,6 +1160,14 @@ function ShareModal({
 }) {
   const [variant, setVariant] = useState<ShareImageVariant>('standard');
   const [copied, setCopied] = useState(false);
+  const [linkedInState, setLinkedInState] = useState<'idle' | 'copied'>('idle');
+  const [shareLang, setShareLang] = useState<'pt' | 'en'>(() => {
+    try {
+      return (localStorage.getItem('sessionlens-locale') as 'pt' | 'en' | null) ?? 'pt';
+    } catch {
+      return 'pt';
+    }
+  });
 
   const variantConfig: Record<ShareImageVariant, { label: string; desc: string }> = {
     compact: { label: 'Quadrado', desc: '1080 · social' },
@@ -1112,42 +1176,84 @@ function ShareModal({
   };
 
   const svgContent = useMemo(
-    () => generateProfileCardSvg(variant, profile, data),
-    [variant, profile, data],
+    () => generateProfileCardSvg(variant, profile, data, shareLang),
+    [variant, profile, data, shareLang],
   );
 
-  const shareText = useMemo(
-    () =>
-      [
-        `Meu perfil no Sessionlens:`,
-        `• ${formatTokens(data.totalTokens)} tokens processados`,
-        `• ${data.sessionCount} sessões de IA`,
-        `• Sequência: ${data.streaks.current} dias ativos`,
-        `• CLI favorita: ${data.favoriteCliLabel}`,
+  const shareText = useMemo(() => {
+    if (shareLang === 'en') {
+      return [
+        `My Sessionlens profile:`,
+        `• ${formatTokens(data.totalTokens)} tokens processed`,
+        `• ${data.sessionCount} AI sessions`,
+        `• Streak: ${data.streaks.current} active days`,
+        `• Favorite CLI: ${data.favoriteCliLabel}`,
         `\n#Sessionlens #AI #DevTools`,
-      ].join('\n'),
-    [data],
-  );
+      ].join('\n');
+    }
+    return [
+      `Meu perfil no Sessionlens:`,
+      `• ${formatTokens(data.totalTokens)} tokens processados`,
+      `• ${data.sessionCount} sessões de IA`,
+      `• Sequência: ${data.streaks.current} dias ativos`,
+      `• CLI favorita: ${data.favoriteCliLabel}`,
+      `\n#Sessionlens #AI #DevTools`,
+    ].join('\n');
+  }, [data, shareLang]);
 
   function handleDownload() {
     downloadSvg(`sessionlens-perfil-${variant}.svg`, svgContent);
   }
 
-  function handleShareX() {
-    handleDownload();
-    const url = `https://x.com/intent/tweet?text=${encodeURIComponent(shareText)}`;
-    window.open(url, '_blank', 'noopener,noreferrer');
+  // Try Web Share API with SVG file; returns true if handled natively.
+  async function tryNativeShare(): Promise<boolean> {
+    if (typeof navigator.share !== 'function') return false;
+    const file = new File([svgContent], `sessionlens-perfil-${variant}.svg`, {
+      type: 'image/svg+xml',
+    });
+    const shareData: ShareData = { text: shareText };
+    if (navigator.canShare?.({ files: [file] })) shareData.files = [file];
+    try {
+      await navigator.share(shareData);
+      return true;
+    } catch (err) {
+      if ((err as Error).name === 'AbortError') return true; // user cancelled = handled
+      return false;
+    }
   }
 
-  function handleShareLinkedIn() {
-    handleDownload();
-    void navigator.clipboard.writeText(shareText).catch(() => {});
-    window.open('https://www.linkedin.com/feed/', '_blank', 'noopener,noreferrer');
+  async function handleShareX() {
+    const handled = await tryNativeShare();
+    if (!handled) {
+      handleDownload();
+      window.open(
+        `https://x.com/intent/tweet?text=${encodeURIComponent(shareText)}`,
+        '_blank',
+        'noopener,noreferrer',
+      );
+    }
   }
 
-  function handleShareWhatsApp() {
-    const url = `https://wa.me/?text=${encodeURIComponent(shareText)}`;
-    window.open(url, '_blank', 'noopener,noreferrer');
+  async function handleShareLinkedIn() {
+    const handled = await tryNativeShare();
+    if (!handled) {
+      handleDownload();
+      await navigator.clipboard.writeText(shareText).catch(() => {});
+      setLinkedInState('copied');
+      setTimeout(() => setLinkedInState('idle'), 4000);
+      window.open('https://www.linkedin.com/feed/', '_blank', 'noopener,noreferrer');
+    }
+  }
+
+  async function handleShareWhatsApp() {
+    const handled = await tryNativeShare();
+    if (!handled) {
+      window.open(
+        `https://wa.me/?text=${encodeURIComponent(shareText)}`,
+        '_blank',
+        'noopener,noreferrer',
+      );
+    }
   }
 
   async function handleCopyText() {
@@ -1184,7 +1290,7 @@ function ShareModal({
         </div>
 
         <div className="space-y-4 p-4">
-          {/* Format selector (10.1.3 - customização) */}
+          {/* Format selector */}
           <div className="grid grid-cols-3 gap-2">
             {(
               Object.entries(variantConfig) as [
@@ -1209,7 +1315,30 @@ function ShareModal({
             ))}
           </div>
 
-          {/* Live preview (10.1.3) */}
+          {/* Language selector */}
+          <div className="flex items-center gap-2">
+            <Languages className="h-3.5 w-3.5 shrink-0 text-muted-foreground" />
+            <span className="text-[11px] text-muted-foreground">Idioma do post:</span>
+            <div className="ml-auto flex rounded-md border border-border bg-surface p-0.5">
+              {(['pt', 'en'] as const).map((lang) => (
+                <button
+                  key={lang}
+                  type="button"
+                  onClick={() => setShareLang(lang)}
+                  className={cn(
+                    'cursor-pointer rounded px-2.5 py-0.5 text-[11px] font-medium transition-colors',
+                    shareLang === lang
+                      ? 'bg-accent-soft text-accent'
+                      : 'text-muted-foreground hover:text-foreground',
+                  )}
+                >
+                  {lang === 'pt' ? 'PT-BR' : 'EN'}
+                </button>
+              ))}
+            </div>
+          </div>
+
+          {/* Live preview */}
           <div className="overflow-hidden rounded-lg border border-border bg-[#0d0c0b] p-2">
             <img
               src={previewSrc}
@@ -1219,25 +1348,35 @@ function ShareModal({
             />
           </div>
 
-          {/* Download (10.1.1) */}
+          {/* Download */}
           <Button className="w-full" onClick={handleDownload}>
             <Download className="h-4 w-4" />
             Baixar card SVG
           </Button>
 
-          {/* Social (10.1.2 - múltiplas redes) */}
+          {/* Social */}
           <div>
             <p className="mb-2 text-[10px] font-medium uppercase tracking-wider text-muted-foreground">
               Compartilhar nas redes
             </p>
             <div className="grid grid-cols-2 gap-2">
               <ShareButton icon={XLogo} label="X" onClick={handleShareX} />
-              <ShareButton
-                icon={Linkedin}
-                label="LinkedIn"
-                iconClass="text-info"
+
+              {/* LinkedIn — mostra feedback após copiar texto */}
+              <button
+                type="button"
                 onClick={handleShareLinkedIn}
-              />
+                className={cn(
+                  'flex cursor-pointer items-center justify-center gap-2 rounded-lg border px-3 py-2.5 text-xs transition-colors',
+                  linkedInState === 'copied'
+                    ? 'border-info/40 bg-info/10 text-info'
+                    : 'border-border bg-surface-muted text-foreground hover:bg-surface-hover',
+                )}
+              >
+                <Linkedin className="h-3.5 w-3.5 text-info" />
+                {linkedInState === 'copied' ? 'Texto copiado! Cole no LinkedIn' : 'LinkedIn'}
+              </button>
+
               <ShareButton
                 icon={MessageCircle}
                 label="WhatsApp"
@@ -1263,7 +1402,9 @@ function ShareModal({
               </button>
             </div>
             <p className="mt-2 text-[10px] text-muted-foreground">
-              Em X e LinkedIn, o card SVG é baixado para você anexar ao post.
+              {typeof navigator !== 'undefined' && typeof navigator.share === 'function'
+                ? 'O card SVG é anexado automaticamente ao compartilhar.'
+                : 'O SVG é baixado automaticamente — anexe ao criar o post.'}
             </p>
           </div>
         </div>
@@ -1411,6 +1552,50 @@ function BreakdownCard({
   );
 }
 
+const FIXED_NETWORKS: {
+  key: keyof Omit<LocalProfile['networks'], 'customNetworks'>;
+  label: string;
+  placeholder: string;
+  icon: ComponentType<{ className?: string }>;
+  iconClass: string;
+}[] = [
+  {
+    key: 'linkedin',
+    label: 'LinkedIn',
+    placeholder: 'linkedin.com/in/seuperfil',
+    icon: Linkedin,
+    iconClass: 'text-info',
+  },
+  {
+    key: 'x',
+    label: 'X / Twitter',
+    placeholder: '@seuhandle',
+    icon: XLogo,
+    iconClass: 'text-foreground',
+  },
+  {
+    key: 'instagram',
+    label: 'Instagram',
+    placeholder: '@seuhandle',
+    icon: Instagram,
+    iconClass: 'text-fuchsia-400',
+  },
+  {
+    key: 'github',
+    label: 'GitHub',
+    placeholder: 'github.com/seuperfil',
+    icon: Github,
+    iconClass: 'text-foreground',
+  },
+  {
+    key: 'website',
+    label: 'Site pessoal',
+    placeholder: 'meusite.dev',
+    icon: Globe2,
+    iconClass: 'text-muted-foreground',
+  },
+];
+
 function ProfileEditor({
   profile,
   onClose,
@@ -1422,10 +1607,45 @@ function ProfileEditor({
 }) {
   const [draft, setDraft] = useState<LocalProfile>(profile);
 
-  function updateNetwork(key: keyof LocalProfile['networks'], value: string) {
+  function updateNetwork(
+    key: keyof Omit<LocalProfile['networks'], 'customNetworks'>,
+    value: string,
+  ) {
     setDraft((current) => ({
       ...current,
       networks: { ...current.networks, [key]: value },
+    }));
+  }
+
+  function addCustomNetwork() {
+    setDraft((current) => ({
+      ...current,
+      networks: {
+        ...current.networks,
+        customNetworks: [
+          ...current.networks.customNetworks,
+          { id: `custom-${Date.now()}`, label: '', value: '' },
+        ],
+      },
+    }));
+  }
+
+  function updateCustomNetwork(idx: number, field: 'label' | 'value', value: string) {
+    setDraft((current) => {
+      const updated = current.networks.customNetworks.map((n, i) =>
+        i === idx ? { ...n, [field]: value } : n,
+      );
+      return { ...current, networks: { ...current.networks, customNetworks: updated } };
+    });
+  }
+
+  function removeCustomNetwork(idx: number) {
+    setDraft((current) => ({
+      ...current,
+      networks: {
+        ...current.networks,
+        customNetworks: current.networks.customNetworks.filter((_, i) => i !== idx),
+      },
     }));
   }
 
@@ -1511,47 +1731,79 @@ function ProfileEditor({
             )}
           </div>
 
+          {/* Fixed networks — each with icon prefix */}
           <div className="md:col-span-2">
             <div className="mb-2 text-xs font-medium text-foreground">Redes opcionais</div>
             <div className="grid gap-2.5 md:grid-cols-2">
-              <Input
-                value={draft.networks.linkedin}
-                placeholder="LinkedIn"
-                onChange={(event) => updateNetwork('linkedin', event.target.value)}
-              />
-              <Input
-                value={draft.networks.x}
-                placeholder="X / Twitter"
-                onChange={(event) => updateNetwork('x', event.target.value)}
-              />
-              <Input
-                value={draft.networks.instagram}
-                placeholder="Instagram"
-                onChange={(event) => updateNetwork('instagram', event.target.value)}
-              />
-              <Input
-                value={draft.networks.github}
-                placeholder="GitHub"
-                onChange={(event) => updateNetwork('github', event.target.value)}
-              />
-              <Input
-                value={draft.networks.website}
-                placeholder="Site pessoal"
-                onChange={(event) => updateNetwork('website', event.target.value)}
-              />
-              <div className="grid grid-cols-[88px_1fr] gap-2">
-                <Input
-                  value={draft.networks.customLabel}
-                  placeholder="Label"
-                  onChange={(event) => updateNetwork('customLabel', event.target.value)}
-                />
-                <Input
-                  value={draft.networks.customValue}
-                  placeholder="Rede personalizada"
-                  onChange={(event) => updateNetwork('customValue', event.target.value)}
-                />
-              </div>
+              {FIXED_NETWORKS.map(({ key, label, placeholder, icon: Icon, iconClass }) => (
+                <div key={key} className="relative">
+                  <div className="pointer-events-none absolute inset-y-0 left-3 flex items-center">
+                    <Icon className={cn('h-3.5 w-3.5', iconClass)} />
+                  </div>
+                  <Input
+                    className="pl-9"
+                    value={draft.networks[key] as string}
+                    placeholder={placeholder}
+                    aria-label={label}
+                    onChange={(event) => updateNetwork(key, event.target.value)}
+                  />
+                </div>
+              ))}
             </div>
+          </div>
+
+          {/* Custom networks — dynamic list */}
+          <div className="md:col-span-2">
+            <div className="mb-2 flex items-center justify-between">
+              <div className="text-xs font-medium text-foreground">Redes personalizadas</div>
+              <button
+                type="button"
+                onClick={addCustomNetwork}
+                className="flex cursor-pointer items-center gap-1 rounded-md border border-border bg-surface-muted px-2 py-1 text-[11px] text-muted-foreground transition-colors hover:border-border-strong hover:text-foreground"
+              >
+                <Plus className="h-3 w-3" />
+                Adicionar rede
+              </button>
+            </div>
+            {draft.networks.customNetworks.length === 0 ? (
+              <p className="text-[11px] text-muted-foreground">
+                Nenhuma rede personalizada. Clique em "Adicionar rede" para incluir.
+              </p>
+            ) : (
+              <div className="space-y-2">
+                {draft.networks.customNetworks.map((n, idx) => (
+                  <div key={n.id} className="flex items-center gap-2">
+                    <div className="relative w-28 shrink-0">
+                      <div className="pointer-events-none absolute inset-y-0 left-3 flex items-center">
+                        <Hash className="h-3.5 w-3.5 text-muted-foreground" />
+                      </div>
+                      <Input
+                        className="pl-9"
+                        value={n.label}
+                        placeholder="Nome"
+                        aria-label="Nome da rede"
+                        onChange={(event) => updateCustomNetwork(idx, 'label', event.target.value)}
+                      />
+                    </div>
+                    <Input
+                      className="flex-1"
+                      value={n.value}
+                      placeholder="@handle ou URL"
+                      aria-label="Valor da rede"
+                      onChange={(event) => updateCustomNetwork(idx, 'value', event.target.value)}
+                    />
+                    <button
+                      type="button"
+                      onClick={() => removeCustomNetwork(idx)}
+                      aria-label="Remover rede"
+                      className="grid shrink-0 cursor-pointer place-items-center rounded-md border border-border bg-surface-muted p-1.5 text-muted-foreground transition-colors hover:border-destructive/50 hover:bg-destructive/10 hover:text-destructive"
+                    >
+                      <Trash2 className="h-3.5 w-3.5" />
+                    </button>
+                  </div>
+                ))}
+              </div>
+            )}
           </div>
         </div>
 
