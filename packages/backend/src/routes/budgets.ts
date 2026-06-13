@@ -8,6 +8,7 @@ import {
   listAlerts,
   acknowledgeAlert,
   acknowledgeAllAlerts,
+  clearAllAlerts,
   checkBudgets,
 } from '../analytics/budgets.js';
 
@@ -95,6 +96,11 @@ export function registerBudgetRoutes(app: FastifyInstance) {
 
   app.post('/api/alerts/acknowledge-all', async () => {
     acknowledgeAllAlerts();
+    return { success: true };
+  });
+
+  app.delete('/api/alerts', async () => {
+    clearAllAlerts();
     return { success: true };
   });
 }

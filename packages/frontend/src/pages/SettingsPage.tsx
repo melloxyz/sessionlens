@@ -129,6 +129,7 @@ export function SettingsPage() {
   } = useApi<TrayStatus>('/api/tray/status');
   const [trayUpdating, setTrayUpdating] = useState(false);
   const [trayMutationError, setTrayMutationError] = useState<string | null>(null);
+  const [clearingAlerts, setClearingAlerts] = useState(false);
   const {
     data: privacySettings,
     loading: privacyLoading,
@@ -202,6 +203,16 @@ export function SettingsPage() {
       setTrayMutationError(err instanceof Error ? err.message : String(err));
     } finally {
       setTrayUpdating(false);
+    }
+  }
+
+  async function handleClearAlerts() {
+    setClearingAlerts(true);
+    try {
+      await fetch('/api/alerts', { method: 'DELETE' });
+      await refetchAlerts();
+    } finally {
+      setClearingAlerts(false);
     }
   }
 
@@ -698,11 +709,24 @@ export function SettingsPage() {
             title={t('budget.alerts.title')}
             icon={Bell}
             action={
-              unacknowledgedAlerts.length > 0 ? (
-                <Badge variant="danger">{unacknowledgedAlerts.length}</Badge>
-              ) : (
-                <Badge variant="success">0</Badge>
-              )
+              <div className="flex items-center gap-2">
+                {alertsData && alertsData.alerts.length > 0 && (
+                  <button
+                    type="button"
+                    onClick={handleClearAlerts}
+                    disabled={clearingAlerts}
+                    title={t('budget.alerts.clearAll')}
+                    className="rounded p-1 text-subtle-foreground transition-colors hover:text-danger disabled:opacity-50"
+                  >
+                    <Trash2 className="h-3.5 w-3.5" />
+                  </button>
+                )}
+                {unacknowledgedAlerts.length > 0 ? (
+                  <Badge variant="danger">{unacknowledgedAlerts.length}</Badge>
+                ) : (
+                  <Badge variant="success">0</Badge>
+                )}
+              </div>
             }
           >
             {alertsLoading && !alertsData ? (

@@ -274,6 +274,13 @@ export function acknowledgeAllAlerts(): boolean {
   return true;
 }
 
+export function clearAllAlerts(): boolean {
+  const db = getDatabase();
+  db.run('DELETE FROM alert_history');
+  saveDatabase();
+  return true;
+}
+
 export function getUnacknowledgedCount(): number {
   const db = getDatabase();
   const result = db.exec('SELECT COUNT(*) FROM alert_history WHERE acknowledged = 0');
