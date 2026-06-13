@@ -13,12 +13,15 @@ import {
   LockKeyhole,
   Moon,
   Play,
+  Plus,
   RadioTower,
   ShieldAlert,
   ShieldCheck,
   SlidersHorizontal,
   Sparkles,
   Sun,
+  Trash2,
+  Webhook,
 } from 'lucide-react';
 import { BrandMark, getBrandMeta } from '../components/brand/BrandMark.js';
 import { useI18n } from '../components/i18n/LanguageProvider.js';
@@ -28,6 +31,7 @@ import { Badge } from '../components/ui/Badge.js';
 import { Button } from '../components/ui/Button.js';
 import { Card, CardContent } from '../components/ui/Card.js';
 import { ErrorState } from '../components/ui/ErrorState.js';
+import { Input } from '../components/ui/Input.js';
 import { Select } from '../components/ui/Select.js';
 import { Skeleton } from '../components/ui/Skeleton.js';
 import type { IntegrationStatusItem } from '../components/layout/IntegrationStatus.js';
@@ -640,6 +644,8 @@ export function SettingsPage() {
               </>
             )}
           </SettingsSection>
+
+          <NotificationsSection />
         </main>
 
         <aside className="space-y-4 xl:sticky xl:top-24 xl:self-start">
@@ -1134,6 +1140,353 @@ function IntegrationHealthRow({ item }: { item: IntegrationStatusItem }) {
     </div>
   );
 }
+
+// ─── Notifications Section ───────────────────────────────────────────────────
+
+type DestType = 'discord' | 'slack' | 'custom';
+type EventType = 'ingestion_complete' | 'budget_warning' | 'budget_approaching' | 'budget_exceeded';
+
+interface NotificationDestination {
+  id: number;
+  name: string;
+  type: DestType;
+  webhook_url: string;
+  enabled: boolean;
+  created_at: string;
+  rules: Record<EventType, boolean>;
+}
+
+const DEST_TYPE_LABELS: Record<DestType, string> = {
+  discord: 'Discord',
+  slack: 'Slack',
+  custom: 'Custom',
+};
+
+const EVENT_KEYS: EventType[] = [
+  'ingestion_complete',
+  'budget_warning',
+  'budget_approaching',
+  'budget_exceeded',
+];
+
+function destTypeBadgeVariant(type: DestType): 'info' | 'success' | 'neutral' {
+  if (type === 'discord') return 'info';
+  if (type === 'slack') return 'success';
+  return 'neutral';
+}
+
+function NotificationsSection() {
+  const { t } = useI18n();
+  const {
+    data: destinations,
+    loading,
+    refetch,
+  } = useApi<NotificationDestination[]>('/api/notifications/destinations', { initialData: [] });
+
+  const [showForm, setShowForm] = useState(false);
+  const [formName, setFormName] = useState('');
+  const [formType, setFormType] = useState<DestType>('discord');
+  const [formUrl, setFormUrl] = useState('');
+  const [saving, setSaving] = useState(false);
+  const [testingId, setTestingId] = useState<number | null>(null);
+  const [testResult, setTestResult] = useState<Record<number, 'ok' | 'fail'>>({});
+  const [togglingId, setTogglingId] = useState<number | null>(null);
+
+  const destList = destinations ?? [];
+
+  async function handleSave() {
+    if (!formName.trim() || !formUrl.trim()) return;
+    setSaving(true);
+    try {
+      await fetch('/api/notifications/destinations', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          name: formName.trim(),
+          type: formType,
+          webhook_url: formUrl.trim(),
+        }),
+      });
+      setShowForm(false);
+      setFormName('');
+      setFormUrl('');
+      setFormType('discord');
+      refetch();
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  async function handleTest(id: number) {
+    setTestingId(id);
+    setTestResult((prev) => ({ ...prev, [id]: undefined as unknown as 'ok' | 'fail' }));
+    try {
+      const res = await fetch(`/api/notifications/destinations/${id}/test`, { method: 'POST' });
+      setTestResult((prev) => ({ ...prev, [id]: res.ok ? 'ok' : 'fail' }));
+    } catch {
+      setTestResult((prev) => ({ ...prev, [id]: 'fail' }));
+    } finally {
+      setTestingId(null);
+    }
+  }
+
+  async function handleDelete(id: number) {
+    await fetch(`/api/notifications/destinations/${id}`, { method: 'DELETE' });
+    refetch();
+  }
+
+  async function handleToggleEnabled(dest: NotificationDestination) {
+    setTogglingId(dest.id);
+    try {
+      await fetch(`/api/notifications/destinations/${dest.id}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ enabled: !dest.enabled }),
+      });
+      refetch();
+    } finally {
+      setTogglingId(null);
+    }
+  }
+
+  async function handleToggleEvent(
+    dest: NotificationDestination,
+    event: EventType,
+    enabled: boolean,
+  ) {
+    await fetch(`/api/notifications/destinations/${dest.id}`, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ events: { [event]: enabled } }),
+    });
+    refetch();
+  }
+
+  return (
+    <SettingsSection
+      marker="F."
+      title={t('settings.section.notifications')}
+      description={t('settings.section.notifications.description')}
+      action={
+        !showForm ? (
+          <Button size="sm" onClick={() => setShowForm(true)}>
+            <Plus className="h-4 w-4" />
+            {t('settings.notifications.addDestination')}
+          </Button>
+        ) : undefined
+      }
+    >
+      {showForm && (
+        <Card variant="inset">
+          <CardContent className="space-y-3 p-4">
+            <div className="grid gap-3 sm:grid-cols-2">
+              <div className="space-y-1.5">
+                <label className="text-xs font-medium text-muted-foreground">
+                  {t('settings.notifications.name')}
+                </label>
+                <Input
+                  value={formName}
+                  onChange={(e) => setFormName(e.target.value)}
+                  placeholder="ex: #alerts"
+                />
+              </div>
+              <div className="space-y-1.5">
+                <label className="text-xs font-medium text-muted-foreground">
+                  {t('settings.notifications.type')}
+                </label>
+                <Select
+                  value={formType}
+                  onChange={(e) => setFormType(e.target.value as DestType)}
+                  options={[
+                    { label: 'Discord', value: 'discord' },
+                    { label: 'Slack', value: 'slack' },
+                    { label: 'Custom JSON', value: 'custom' },
+                  ]}
+                />
+              </div>
+            </div>
+            <div className="space-y-1.5">
+              <label className="text-xs font-medium text-muted-foreground">
+                {t('settings.notifications.webhookUrl')}
+              </label>
+              <Input
+                value={formUrl}
+                onChange={(e) => setFormUrl(e.target.value)}
+                placeholder="https://discord.com/api/webhooks/..."
+                type="url"
+              />
+            </div>
+            <div className="flex justify-end gap-2 pt-1">
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => {
+                  setShowForm(false);
+                  setFormName('');
+                  setFormUrl('');
+                  setFormType('discord');
+                }}
+              >
+                {t('settings.notifications.cancel')}
+              </Button>
+              <Button
+                size="sm"
+                onClick={handleSave}
+                disabled={saving || !formName.trim() || !formUrl.trim()}
+              >
+                {t('settings.notifications.save')}
+              </Button>
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
+      {loading && destList.length === 0 ? (
+        <div className="space-y-2">
+          {Array.from({ length: 2 }).map((_, i) => (
+            <Skeleton key={i} className="h-24 w-full rounded-md" />
+          ))}
+        </div>
+      ) : destList.length === 0 && !showForm ? (
+        <div className="flex flex-col items-center gap-3 rounded-md border border-dashed border-border p-8 text-center">
+          <Webhook className="h-8 w-8 text-subtle-foreground" />
+          <div>
+            <div className="text-sm font-medium text-foreground">
+              {t('settings.notifications.noDestinations')}
+            </div>
+            <p className="mt-1 text-xs leading-5 text-muted-foreground">
+              {t('settings.notifications.noDestinations.hint')}
+            </p>
+          </div>
+        </div>
+      ) : (
+        <div className="space-y-3">
+          {destList.map((dest) => (
+            <NotificationDestCard
+              key={dest.id}
+              dest={dest}
+              testResult={testResult[dest.id]}
+              testing={testingId === dest.id}
+              toggling={togglingId === dest.id}
+              onTest={() => handleTest(dest.id)}
+              onDelete={() => handleDelete(dest.id)}
+              onToggleEnabled={() => handleToggleEnabled(dest)}
+              onToggleEvent={(event, enabled) => handleToggleEvent(dest, event, enabled)}
+            />
+          ))}
+        </div>
+      )}
+    </SettingsSection>
+  );
+}
+
+function NotificationDestCard({
+  dest,
+  testResult,
+  testing,
+  toggling,
+  onTest,
+  onDelete,
+  onToggleEnabled,
+  onToggleEvent,
+}: {
+  dest: NotificationDestination;
+  testResult: 'ok' | 'fail' | undefined;
+  testing: boolean;
+  toggling: boolean;
+  onTest: () => void;
+  onDelete: () => void;
+  onToggleEnabled: () => void;
+  onToggleEvent: (event: EventType, enabled: boolean) => void;
+}) {
+  const { t } = useI18n();
+
+  return (
+    <Card variant="inset">
+      <CardContent className="p-4">
+        <div className="flex items-start justify-between gap-3">
+          <div className="flex min-w-0 items-center gap-2">
+            <Webhook className="h-4 w-4 shrink-0 text-muted-foreground" />
+            <span className="truncate text-sm font-semibold text-foreground">{dest.name}</span>
+            <Badge variant={destTypeBadgeVariant(dest.type)}>{DEST_TYPE_LABELS[dest.type]}</Badge>
+            <Badge variant={dest.enabled ? 'success' : 'neutral'}>
+              {dest.enabled
+                ? t('settings.notifications.enabled')
+                : t('settings.notifications.disabled')}
+            </Badge>
+          </div>
+          <div className="flex shrink-0 items-center gap-1">
+            {testResult === 'ok' ? (
+              <span className="text-xs text-success">
+                {t('settings.notifications.testSuccess')}
+              </span>
+            ) : testResult === 'fail' ? (
+              <span className="text-xs text-danger">{t('settings.notifications.testFailed')}</span>
+            ) : null}
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={onTest}
+              disabled={testing}
+              className="h-7 px-2 text-xs"
+            >
+              {testing ? '…' : t('settings.notifications.test')}
+            </Button>
+            <button
+              type="button"
+              onClick={onToggleEnabled}
+              disabled={toggling}
+              className="rounded p-1 text-subtle-foreground transition-colors hover:text-foreground"
+              aria-label={dest.enabled ? 'Pausar' : 'Ativar'}
+            >
+              {dest.enabled ? (
+                <Bell className="h-4 w-4" />
+              ) : (
+                <Bell className="h-4 w-4 opacity-40" />
+              )}
+            </button>
+            <button
+              type="button"
+              onClick={onDelete}
+              className="rounded p-1 text-subtle-foreground transition-colors hover:text-danger"
+              aria-label="Remover"
+            >
+              <Trash2 className="h-4 w-4" />
+            </button>
+          </div>
+        </div>
+
+        <div className="mt-3">
+          <div className="mb-2 text-[10px] font-semibold uppercase text-subtle-foreground">
+            {t('settings.notifications.events')}
+          </div>
+          <div className="flex flex-wrap gap-2">
+            {EVENT_KEYS.map((event) => {
+              const active = dest.rules[event];
+              return (
+                <button
+                  key={event}
+                  type="button"
+                  onClick={() => onToggleEvent(event, !active)}
+                  className={cn(
+                    'rounded-full border px-2.5 py-1 text-[11px] font-medium transition-colors',
+                    active
+                      ? 'border-accent/30 bg-accent-soft text-accent'
+                      : 'border-border bg-surface-muted text-subtle-foreground hover:border-border-strong hover:text-muted-foreground',
+                  )}
+                >
+                  {t(`settings.notifications.event.${event}` as Parameters<typeof t>[0])}
+                </button>
+              );
+            })}
+          </div>
+        </div>
+      </CardContent>
+    </Card>
+  );
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
 
 function AlertItem({ alert, onAcknowledge }: { alert: AlertRow; onAcknowledge: () => void }) {
   return (

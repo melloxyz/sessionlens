@@ -39,6 +39,7 @@ export function runMigrations(): void {
     '0007_commandcode_cli',
     '0008_adapter_data_quality',
     '0009_adapter_drift_counters',
+    '0010_notification_webhooks',
   ];
 
   for (const name of migrations) {

@@ -210,11 +210,52 @@ async function runIngestionInternal(forceReprocess = false): Promise<IngestionSt
   saveDatabase();
 
   const { checkBudgets } = await import('../analytics/budgets.js');
+  let budgetAlerts: {
+    type: string;
+    title: string;
+    message: string;
+    current_spend: number;
+    limit_usd: number;
+  }[] = [];
   try {
-    checkBudgets();
+    budgetAlerts = checkBudgets();
   } catch {
     // budget check failure should not break ingestion
   }
+
+  // Fire-and-forget webhook notifications
+  import('../notifications/dispatcher.js')
+    .then(({ dispatchNotification }) => {
+      const budgetEventMap: Record<
+        string,
+        'budget_warning' | 'budget_approaching' | 'budget_exceeded'
+      > = {
+        warning: 'budget_warning',
+        approaching: 'budget_approaching',
+        exceeded: 'budget_exceeded',
+      };
+      for (const alert of budgetAlerts) {
+        const evtType = budgetEventMap[alert.type];
+        if (evtType) {
+          void dispatchNotification({
+            type: evtType,
+            title: alert.title,
+            message: alert.message,
+            currentSpend: alert.current_spend,
+            limitUsd: alert.limit_usd,
+            percentage: alert.limit_usd > 0 ? (alert.current_spend / alert.limit_usd) * 100 : 0,
+          }).catch(() => {});
+        }
+      }
+      void dispatchNotification({
+        type: 'ingestion_complete',
+        newSessions: status.newSessions,
+        updatedSessions: status.updatedSessions,
+        totalSessions: status.totalSessions,
+        errors,
+      }).catch(() => {});
+    })
+    .catch(() => {});
 
   return status;
 }

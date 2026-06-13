@@ -27,6 +27,7 @@ import { trayManager, isTrayEnabled } from './tray/index.js';
 import { registerTrayRoutes } from './routes/tray.js';
 import { registerBudgetRoutes } from './routes/budgets.js';
 import { registerPrivacyRoutes } from './routes/privacy.js';
+import { registerNotificationRoutes } from './routes/notifications.js';
 
 const PORT = Number(process.env.SESSIONLENS_PORT) || 3030;
 const NO_TRAY = process.argv.includes('--no-tray');
@@ -57,6 +58,7 @@ async function main() {
     registerTrayRoutes(app);
     registerBudgetRoutes(app);
     registerPrivacyRoutes(app);
+    registerNotificationRoutes(app);
 
     app.get('/api/ingest/status', async () => {
       const status = getLastStatus();
