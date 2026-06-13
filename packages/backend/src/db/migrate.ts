@@ -40,6 +40,7 @@ export function runMigrations(): void {
     '0008_adapter_data_quality',
     '0009_adapter_drift_counters',
     '0010_notification_webhooks',
+    '0011_notification_cooldown',
   ];
 
   for (const name of migrations) {
@@ -148,6 +149,18 @@ function ensureMigrationSatisfied(name: string): boolean {
       db.run(`CREATE INDEX idx_adapter_sources_cli ON adapter_sources(cli)`);
     }
 
+    return true;
+  }
+
+  if (name === '0011_notification_cooldown') {
+    if (!columnExists('notification_destinations', 'min_interval_minutes')) {
+      db.run(
+        `ALTER TABLE notification_destinations ADD COLUMN min_interval_minutes INTEGER NOT NULL DEFAULT 0`,
+      );
+    }
+    if (!columnExists('notification_destinations', 'last_notified_at')) {
+      db.run(`ALTER TABLE notification_destinations ADD COLUMN last_notified_at TEXT`);
+    }
     return true;
   }
 

@@ -16,6 +16,14 @@ interface Destination {
   name: string;
   type: DestType;
   webhook_url: string;
+  min_interval_minutes: number;
+  last_notified_at: string | null;
+}
+
+function isCoolingDown(dest: Destination): boolean {
+  if (dest.min_interval_minutes <= 0 || !dest.last_notified_at) return false;
+  const elapsedMs = Date.now() - new Date(dest.last_notified_at).getTime();
+  return elapsedMs < dest.min_interval_minutes * 60 * 1000;
 }
 
 async function sendToDestination(dest: Destination, event: NotificationEvent): Promise<void> {
@@ -48,7 +56,7 @@ export async function dispatchNotification(event: NotificationEvent): Promise<vo
   const db = getDatabase();
 
   const result = db.exec(
-    `SELECT d.id, d.name, d.type, d.webhook_url
+    `SELECT d.id, d.name, d.type, d.webhook_url, d.min_interval_minutes, d.last_notified_at
      FROM notification_destinations d
      JOIN notification_rules r ON r.destination_id = d.id
      WHERE d.enabled = 1 AND r.enabled = 1 AND r.event_type = ?`,
@@ -62,9 +70,24 @@ export async function dispatchNotification(event: NotificationEvent): Promise<vo
     name: String(row[1]),
     type: row[2] as DestType,
     webhook_url: String(row[3]),
+    min_interval_minutes: Number(row[4] ?? 0),
+    last_notified_at: row[5] ? String(row[5]) : null,
   }));
 
-  await Promise.allSettled(destinations.map((dest) => sendToDestination(dest, event)));
+  const eligible = destinations.filter((d) => !isCoolingDown(d));
+  if (!eligible.length) return;
+
+  const results = await Promise.allSettled(eligible.map((dest) => sendToDestination(dest, event)));
+
+  const now = new Date().toISOString();
+  results.forEach((r, i) => {
+    if (r.status === 'fulfilled') {
+      db.run(`UPDATE notification_destinations SET last_notified_at = ? WHERE id = ?`, [
+        now,
+        eligible[i].id,
+      ]);
+    }
+  });
 }
 
 export async function testDestination(
@@ -79,5 +102,8 @@ export async function testDestination(
     totalSessions: 42,
     errors: [],
   };
-  await sendToDestination({ id: 0, name, type, webhook_url: webhookUrl }, testEvent);
+  await sendToDestination(
+    { id: 0, name, type, webhook_url: webhookUrl, min_interval_minutes: 0, last_notified_at: null },
+    testEvent,
+  );
 }

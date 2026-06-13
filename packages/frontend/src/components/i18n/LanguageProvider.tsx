@@ -529,6 +529,8 @@ const dictionaries = {
     'settings.notifications.save': 'Save',
     'settings.notifications.enabled': 'Active',
     'settings.notifications.disabled': 'Paused',
+    'settings.notifications.cooldown': 'Min. interval between alerts',
+    'settings.notifications.cooldown.none': 'No limit',
     'insightDetail.title': 'Insight Detail',
     'insightDetail.notFound.title': 'Insight not found',
     'insightDetail.notFound.description':
@@ -1257,6 +1259,8 @@ const dictionaries = {
     'settings.notifications.save': 'Salvar',
     'settings.notifications.enabled': 'Ativo',
     'settings.notifications.disabled': 'Pausado',
+    'settings.notifications.cooldown': 'Intervalo mínimo entre alertas',
+    'settings.notifications.cooldown.none': 'Sem limite',
     'changelog.hero.title': 'Acompanhe o que muda no Sessionlens',
     'changelog.hero.description':
       'Um log compacto do produto com melhorias, recursos entregues e o roadmap local-first que estamos construindo.',

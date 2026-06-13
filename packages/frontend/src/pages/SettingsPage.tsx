@@ -1183,7 +1183,18 @@ interface NotificationDestination {
   webhook_url: string;
   enabled: boolean;
   created_at: string;
+  min_interval_minutes: number;
+  last_notified_at: string | null;
   rules: Record<EventType, boolean>;
+}
+
+const COOLDOWN_OPTIONS = [0, 15, 30, 60, 360, 1440] as const;
+
+function formatCooldownLabel(minutes: number, noneLabel = 'No limit'): string {
+  if (minutes === 0) return noneLabel;
+  if (minutes < 60) return `${minutes} min`;
+  const hours = minutes / 60;
+  return hours === 1 ? '1h' : `${hours}h`;
 }
 
 const DEST_TYPE_LABELS: Record<DestType, string> = {
@@ -1470,6 +1481,7 @@ function NotificationDestCard({
   const [editMode, setEditMode] = useState(false);
   const [editName, setEditName] = useState(dest.name);
   const [editUrl, setEditUrl] = useState(dest.webhook_url);
+  const [editCooldown, setEditCooldown] = useState(dest.min_interval_minutes);
   const [editSaving, setEditSaving] = useState(false);
 
   async function handleSaveEdit() {
@@ -1479,7 +1491,11 @@ function NotificationDestCard({
       await fetch(`/api/notifications/destinations/${dest.id}`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ name: editName.trim(), webhook_url: editUrl.trim() }),
+        body: JSON.stringify({
+          name: editName.trim(),
+          webhook_url: editUrl.trim(),
+          min_interval_minutes: editCooldown,
+        }),
       });
       setEditMode(false);
       onSaved();
@@ -1491,6 +1507,7 @@ function NotificationDestCard({
   function cancelEdit() {
     setEditName(dest.name);
     setEditUrl(dest.webhook_url);
+    setEditCooldown(dest.min_interval_minutes);
     setEditMode(false);
   }
 
@@ -1512,6 +1529,9 @@ function NotificationDestCard({
             <div className="flex flex-wrap items-center gap-1.5">
               <span className="text-sm font-semibold text-foreground">{dest.name}</span>
               <Badge variant={destTypeBadgeVariant(dest.type)}>{DEST_TYPE_LABELS[dest.type]}</Badge>
+              {dest.min_interval_minutes > 0 && (
+                <Badge variant="neutral">{formatCooldownLabel(dest.min_interval_minutes)}</Badge>
+              )}
               {!dest.enabled && (
                 <Badge variant="neutral">{t('settings.notifications.disabled')}</Badge>
               )}
@@ -1597,6 +1617,19 @@ function NotificationDestCard({
                   type="url"
                 />
               </div>
+            </div>
+            <div className="w-full space-y-1.5 sm:w-56">
+              <label className="text-xs font-medium text-muted-foreground">
+                {t('settings.notifications.cooldown')}
+              </label>
+              <Select
+                value={String(editCooldown)}
+                onChange={(e) => setEditCooldown(Number(e.target.value))}
+                options={COOLDOWN_OPTIONS.map((minutes) => ({
+                  label: formatCooldownLabel(minutes, t('settings.notifications.cooldown.none')),
+                  value: String(minutes),
+                }))}
+              />
             </div>
             <div className="flex justify-end gap-2">
               <Button variant="outline" size="sm" onClick={cancelEdit}>

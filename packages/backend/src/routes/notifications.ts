@@ -20,6 +20,8 @@ interface DestinationRow {
   webhook_url: string;
   enabled: boolean;
   created_at: string;
+  min_interval_minutes: number;
+  last_notified_at: string | null;
   rules: Record<EventType, boolean>;
 }
 
@@ -27,6 +29,7 @@ function listDestinations(): DestinationRow[] {
   const db = getDatabase();
   const result = db.exec(`
     SELECT d.id, d.name, d.type, d.webhook_url, d.enabled, d.created_at,
+           d.min_interval_minutes, d.last_notified_at,
            GROUP_CONCAT(r.event_type || ':' || r.enabled) AS rules_concat
     FROM notification_destinations d
     LEFT JOIN notification_rules r ON r.destination_id = d.id
@@ -37,7 +40,7 @@ function listDestinations(): DestinationRow[] {
   if (!result.length) return [];
 
   return result[0].values.map((row) => {
-    const rulesStr = row[6] ? String(row[6]) : '';
+    const rulesStr = row[8] ? String(row[8]) : '';
     const rules = Object.fromEntries(VALID_EVENT_TYPES.map((e) => [e, false])) as Record<
       EventType,
       boolean
@@ -56,6 +59,8 @@ function listDestinations(): DestinationRow[] {
       webhook_url: String(row[3]),
       enabled: Boolean(Number(row[4])),
       created_at: String(row[5]),
+      min_interval_minutes: Number(row[6] ?? 0),
+      last_notified_at: row[7] ? String(row[7]) : null,
       rules,
     };
   });
@@ -81,6 +86,7 @@ export function registerNotificationRoutes(app: FastifyInstance) {
       type?: string;
       webhook_url?: string;
       events?: string[];
+      min_interval_minutes?: number;
     };
 
     if (!body?.name || !body?.type || !body?.webhook_url) {
@@ -97,12 +103,12 @@ export function registerNotificationRoutes(app: FastifyInstance) {
       });
     }
 
+    const minInterval = Number(body.min_interval_minutes ?? 0);
     const db = getDatabase();
-    db.run(`INSERT INTO notification_destinations (name, type, webhook_url) VALUES (?, ?, ?)`, [
-      body.name,
-      body.type,
-      body.webhook_url,
-    ]);
+    db.run(
+      `INSERT INTO notification_destinations (name, type, webhook_url, min_interval_minutes) VALUES (?, ?, ?, ?)`,
+      [body.name, body.type, body.webhook_url, minInterval],
+    );
     const idResult = db.exec('SELECT last_insert_rowid()');
     const id = Number(idResult[0].values[0][0]);
 
@@ -118,6 +124,7 @@ export function registerNotificationRoutes(app: FastifyInstance) {
       webhook_url?: string;
       enabled?: boolean;
       events?: Record<string, boolean>;
+      min_interval_minutes?: number;
     };
 
     const db = getDatabase();
@@ -141,6 +148,10 @@ export function registerNotificationRoutes(app: FastifyInstance) {
     if (body.enabled !== undefined) {
       updates.push('enabled = ?');
       values.push(body.enabled ? 1 : 0);
+    }
+    if (body.min_interval_minutes !== undefined) {
+      updates.push('min_interval_minutes = ?');
+      values.push(Number(body.min_interval_minutes));
     }
     if (updates.length > 0) {
       values.push(Number(id));
