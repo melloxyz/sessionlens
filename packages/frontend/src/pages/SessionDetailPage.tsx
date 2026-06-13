@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, type ReactNode } from 'react';
 import { Link, useParams } from 'react-router-dom';
 import { ArrowLeft, Bot, FileCode2, MessageSquare, Terminal, Wrench } from 'lucide-react';
 import { BrandBadge, BrandMark } from '../components/brand/BrandMark.js';
@@ -12,6 +12,7 @@ import { ErrorState } from '../components/ui/ErrorState.js';
 import { FigurePanel } from '../components/ui/FigurePanel.js';
 import { DetailPageSkeleton } from '../components/ui/LoadingState.js';
 import { MetricBlock } from '../components/ui/MetricBlock.js';
+import { Sensitive } from '../components/ui/Sensitive.js';
 import { useI18n } from '../components/i18n/LanguageProvider.js';
 import { useApi } from '../hooks/useApi.js';
 import {
@@ -279,7 +280,7 @@ export function SessionDetailPage() {
             label={
               session.cost_source === 'estimated' ? t('session.costEstimated') : t('common.cost')
             }
-            value={formatCurrency(session.total_cost_usd)}
+            value={<Sensitive>{formatCurrency(session.total_cost_usd)}</Sensitive>}
             meta={t(`common.${session.cost_source}`)}
             tone="success"
           />
@@ -376,7 +377,9 @@ export function SessionDetailPage() {
                         {item.message_count} {t('common.messages').toLowerCase()}
                       </div>
                     </div>
-                    <Badge variant="neutral">{formatCurrency(item.total_cost_usd)}</Badge>
+                    <Badge variant="neutral">
+                      <Sensitive>{formatCurrency(item.total_cost_usd)}</Sensitive>
+                    </Badge>
                   </div>
                   <div className="mt-3 grid grid-cols-2 gap-2 text-xs text-subtle-foreground">
                     <DetailMetric

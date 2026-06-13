@@ -33,6 +33,7 @@ import { Skeleton } from '../components/ui/Skeleton.js';
 import type { IntegrationStatusItem } from '../components/layout/IntegrationStatus.js';
 import { useApi, invalidateAllCaches } from '../hooks/useApi.js';
 import { formatCurrency, formatDateTime } from '../lib/format.js';
+import { Sensitive } from '../components/ui/Sensitive.js';
 import { cn } from '../lib/utils.js';
 
 interface Overview {
@@ -660,7 +661,13 @@ export function SettingsPage() {
                 />
                 <MetricCard
                   label={t('settings.totalSpend')}
-                  value={overviewLoading && !overview ? '—' : formatCurrency(overview?.totalSpend)}
+                  value={
+                    overviewLoading && !overview ? (
+                      '—'
+                    ) : (
+                      <Sensitive>{formatCurrency(overview?.totalSpend)}</Sensitive>
+                    )
+                  }
                   meta={t('common.cost')}
                 />
                 <MetricCard
@@ -1055,7 +1062,7 @@ function SidePanel({
   );
 }
 
-function MetricCard({ label, value, meta }: { label: string; value: string; meta: string }) {
+function MetricCard({ label, value, meta }: { label: string; value: ReactNode; meta: string }) {
   return (
     <div className="rounded-md border border-border bg-surface-muted p-4">
       <div className="text-xs text-muted-foreground">{label}</div>

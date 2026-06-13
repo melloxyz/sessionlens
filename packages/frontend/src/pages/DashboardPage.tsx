@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useState, type ReactNode } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import {
   ArrowUpRight,
@@ -47,6 +47,7 @@ import {
   TableSkeletonRows,
 } from '../components/ui/LoadingState.js';
 import { chartTooltipProps } from '../components/ui/ChartTooltip.js';
+import { Sensitive } from '../components/ui/Sensitive.js';
 import { useDateRange } from '../components/filters/DateRangeProvider.js';
 import { useI18n } from '../components/i18n/LanguageProvider.js';
 import { useApi } from '../hooks/useApi.js';
@@ -319,17 +320,22 @@ export function DashboardPage() {
         <section className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
           <DashboardKpiCard
             label={t('dashboard.totalSpend')}
-            value={formatCurrency(overview?.totalSpend)}
+            value={<Sensitive>{formatCurrency(overview?.totalSpend)}</Sensitive>}
             meta={rangeLabel}
             icon={CircleDollarSign}
             tone={exceededBudgets.length > 0 ? 'warning' : 'success'}
             loading={overviewLoading}
             sub={
-              overview && overview.confirmedSpend > 0 && overview.estimatedSpend > 0
-                ? `${formatCurrency(overview.confirmedSpend)} ${t('common.actual')} · ${formatCurrency(overview.estimatedSpend)} ${t('common.estimated')}`
-                : overview && overview.estimatedSpend > 0 && overview.confirmedSpend === 0
-                  ? t('common.estimated')
-                  : undefined
+              overview && overview.confirmedSpend > 0 && overview.estimatedSpend > 0 ? (
+                <>
+                  <Sensitive>{formatCurrency(overview.confirmedSpend)}</Sensitive>{' '}
+                  {t('common.actual')} ·{' '}
+                  <Sensitive>{formatCurrency(overview.estimatedSpend)}</Sensitive>{' '}
+                  {t('common.estimated')}
+                </>
+              ) : overview && overview.estimatedSpend > 0 && overview.confirmedSpend === 0 ? (
+                t('common.estimated')
+              ) : undefined
             }
           />
           <DashboardKpiCard
@@ -350,7 +356,7 @@ export function DashboardPage() {
           />
           <DashboardKpiCard
             label={t('dashboard.avgCostSession')}
-            value={formatCurrency(overview?.averageSessionCost)}
+            value={<Sensitive>{formatCurrency(overview?.averageSessionCost)}</Sensitive>}
             meta={overview?.mostUsedCli ?? t('common.unknown')}
             icon={Gauge}
             tone="warning"
@@ -408,41 +414,43 @@ export function DashboardPage() {
             {spendLoading && !spendData ? (
               <ChartSkeleton />
             ) : (
-              <ResponsiveContainer width="100%" height={330}>
-                <AreaChart data={spendPoints}>
-                  <defs>
-                    <linearGradient id="spendGradient" x1="0" y1="0" x2="0" y2="1">
-                      <stop offset="5%" stopColor="var(--accent)" stopOpacity={0.35} />
-                      <stop offset="95%" stopColor="var(--accent)" stopOpacity={0.02} />
-                    </linearGradient>
-                  </defs>
-                  <CartesianGrid stroke="var(--border)" vertical={false} />
-                  <XAxis
-                    dataKey="date"
-                    tick={{ fontSize: 11, fill: 'var(--subtle-foreground)' }}
-                    tickLine={false}
-                    axisLine={false}
-                  />
-                  <YAxis
-                    tick={{ fontSize: 11, fill: 'var(--subtle-foreground)' }}
-                    tickLine={false}
-                    axisLine={false}
-                    tickFormatter={(value: number) => `$${value.toFixed(0)}`}
-                  />
-                  <Tooltip
-                    {...chartTooltipProps}
-                    formatter={(value: number) => [formatCurrency(value), t('common.cost')]}
-                  />
-                  <Area
-                    type="monotone"
-                    dataKey="spend"
-                    stroke="var(--accent)"
-                    fill="url(#spendGradient)"
-                    strokeWidth={2.4}
-                    dot={{ r: 3, fill: 'var(--accent)' }}
-                  />
-                </AreaChart>
-              </ResponsiveContainer>
+              <div className="sensitive">
+                <ResponsiveContainer width="100%" height={330}>
+                  <AreaChart data={spendPoints}>
+                    <defs>
+                      <linearGradient id="spendGradient" x1="0" y1="0" x2="0" y2="1">
+                        <stop offset="5%" stopColor="var(--accent)" stopOpacity={0.35} />
+                        <stop offset="95%" stopColor="var(--accent)" stopOpacity={0.02} />
+                      </linearGradient>
+                    </defs>
+                    <CartesianGrid stroke="var(--border)" vertical={false} />
+                    <XAxis
+                      dataKey="date"
+                      tick={{ fontSize: 11, fill: 'var(--subtle-foreground)' }}
+                      tickLine={false}
+                      axisLine={false}
+                    />
+                    <YAxis
+                      tick={{ fontSize: 11, fill: 'var(--subtle-foreground)' }}
+                      tickLine={false}
+                      axisLine={false}
+                      tickFormatter={(value: number) => `$${value.toFixed(0)}`}
+                    />
+                    <Tooltip
+                      {...chartTooltipProps}
+                      formatter={(value: number) => [formatCurrency(value), t('common.cost')]}
+                    />
+                    <Area
+                      type="monotone"
+                      dataKey="spend"
+                      stroke="var(--accent)"
+                      fill="url(#spendGradient)"
+                      strokeWidth={2.4}
+                      dot={{ r: 3, fill: 'var(--accent)' }}
+                    />
+                  </AreaChart>
+                </ResponsiveContainer>
+              </div>
             )}
           </FigurePanel>
 
@@ -522,7 +530,7 @@ export function DashboardPage() {
             figure="FIG. 03"
             title={t('dashboard.spendByCli')}
             data={cliData}
-            center={formatCurrency(overview?.totalSpend)}
+            center={<Sensitive>{formatCurrency(overview?.totalSpend)}</Sensitive>}
             centerLabel={t('common.total')}
             emptyTitle={t('dashboard.noSpend.title')}
             emptyDescription={t('dashboard.noSpend.description')}
@@ -625,7 +633,9 @@ export function DashboardPage() {
                           </div>
                         </DataTableCell>
                         <DataTableCell className="text-right font-mono tabular-nums font-medium text-foreground">
-                          <div>{formatCurrency(session.total_cost_usd)}</div>
+                          <div>
+                            <Sensitive>{formatCurrency(session.total_cost_usd)}</Sensitive>
+                          </div>
                           {session.cost_source === 'estimated' && (
                             <Badge variant="estimated" className="mt-1">
                               {t('common.estimated')}
@@ -708,7 +718,9 @@ export function DashboardPage() {
                   <div className="grid grid-cols-2 overflow-hidden rounded-md border border-border">
                     <InspectorStat
                       label={t('common.cost')}
-                      value={formatCurrency(selectedSession?.total_cost_usd)}
+                      value={
+                        <Sensitive>{formatCurrency(selectedSession?.total_cost_usd)}</Sensitive>
+                      }
                       meta={
                         selectedSession
                           ? t(`common.${selectedSession.cost_source}`)
@@ -819,12 +831,12 @@ function DashboardKpiCard({
   sub,
 }: {
   label: string;
-  value: string;
+  value: ReactNode;
   meta: string;
   icon: LucideIcon;
   tone: 'success' | 'warning' | 'info';
   loading?: boolean;
-  sub?: string;
+  sub?: ReactNode;
 }) {
   return (
     <Card variant="figure" className="overflow-hidden">
@@ -925,7 +937,7 @@ function InspectorStat({
   className,
 }: {
   label: string;
-  value: string;
+  value: ReactNode;
   meta: string;
   className?: string;
 }) {
@@ -954,7 +966,7 @@ function DonutCard({
   figure: string;
   title: string;
   data: { label: string; value: number; percentage: number }[];
-  center: string;
+  center: ReactNode;
   centerLabel: string;
   emptyTitle: string;
   emptyDescription: string;
@@ -1024,7 +1036,7 @@ function DonutCard({
                 </div>
                 <div className="flex shrink-0 items-center gap-3 tabular-nums">
                   <span className="hidden text-subtle-foreground 2xl:inline">
-                    {formatCurrency(item.value)}
+                    <Sensitive>{formatCurrency(item.value)}</Sensitive>
                   </span>
                   <span className="min-w-12 text-right font-mono font-semibold text-foreground">
                     {item.percentage}%

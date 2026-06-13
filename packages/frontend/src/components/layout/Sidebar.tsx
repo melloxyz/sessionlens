@@ -3,6 +3,8 @@ import {
   BarChart3,
   CircleDot,
   Command,
+  Eye,
+  EyeOff,
   FolderOpen,
   LayoutDashboard,
   MessageSquare,
@@ -17,6 +19,7 @@ import {
 } from 'lucide-react';
 import { useI18n } from '../i18n/LanguageProvider.js';
 import { useTheme } from '../theme/ThemeProvider.js';
+import { usePrivacy } from '../privacy/PrivacyProvider.js';
 import { useApi } from '../../hooks/useApi.js';
 import { cn } from '../../lib/utils.js';
 import type { IntegrationStatusItem } from './IntegrationStatus.js';
@@ -54,6 +57,7 @@ const MOBILE_NAV_ITEMS = [
 export function Sidebar() {
   const { t } = useI18n();
   const { theme, toggleTheme } = useTheme();
+  const { isPrivate, togglePrivacy } = usePrivacy();
   const { data } = useApi<{ integrations: IntegrationStatusItem[] }>('/api/integrations/status', {
     initialData: { integrations: [] },
   });
@@ -167,7 +171,7 @@ export function Sidebar() {
           </div>
           {t('sidebar.localFirst.description')}
         </div>
-        <div className="grid grid-cols-4 gap-1 rounded-full border border-border bg-surface p-1 shadow-[var(--shadow-card)]">
+        <div className="grid grid-cols-5 gap-1 rounded-full border border-border bg-surface p-1 shadow-[var(--shadow-card)]">
           <NavLink
             to="/settings"
             className={({ isActive }) =>
@@ -192,6 +196,19 @@ export function Sidebar() {
           >
             <UserRound className="h-4 w-4" />
           </NavLink>
+          <button
+            type="button"
+            onClick={togglePrivacy}
+            className={cn(
+              'grid h-8 place-items-center rounded-full border border-transparent transition-colors hover:border-border hover:bg-surface-hover hover:text-foreground',
+              isPrivate
+                ? 'border-warning/20 bg-warning-soft text-warning'
+                : 'text-muted-foreground',
+            )}
+            aria-label={isPrivate ? 'Mostrar dados financeiros' : 'Ocultar dados financeiros'}
+          >
+            {isPrivate ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+          </button>
           <button
             type="button"
             onClick={toggleTheme}

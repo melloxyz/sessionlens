@@ -133,6 +133,24 @@ select {
   -webkit-tap-highlight-color: transparent;
 }
 
+.sensitive {
+  transition:
+    filter 0.25s ease,
+    opacity 0.25s ease;
+}
+
+[data-private='true'] .sensitive {
+  filter: blur(5px);
+  opacity: 0.6;
+  user-select: none;
+  pointer-events: none;
+}
+
+[data-private='true'] div.sensitive {
+  filter: blur(8px);
+  opacity: 1;
+}
+
 button,
 [role='button'],
 a[href] {

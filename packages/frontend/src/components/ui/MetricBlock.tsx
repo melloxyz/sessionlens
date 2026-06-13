@@ -10,7 +10,7 @@ type MetricBlockVariant = 'hero' | 'card' | 'compact' | 'inline';
 
 interface MetricBlockProps {
   label: string;
-  value: string;
+  value: ReactNode;
   meta?: ReactNode;
   tone?: MetricBlockTone;
   icon?: LucideIcon;

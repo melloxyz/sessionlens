@@ -25,6 +25,7 @@ import { Select } from '../components/ui/Select.js';
 import { useI18n } from '../components/i18n/LanguageProvider.js';
 import { useApi } from '../hooks/useApi.js';
 import { basename, compactPath, formatCurrency } from '../lib/format.js';
+import { Sensitive } from '../components/ui/Sensitive.js';
 import type { LucideIcon } from 'lucide-react';
 
 interface Project {
@@ -183,7 +184,7 @@ export function ProjectsPage() {
         />
         <ProjectKpiCard
           label={t('projects.summary.spend')}
-          value={formatCurrency(globalSummary.spend)}
+          value={<Sensitive>{formatCurrency(globalSummary.spend)}</Sensitive>}
           meta={t('dashboard.allSources')}
           icon={CircleDollarSign}
           tone="success"
@@ -386,7 +387,7 @@ function ProjectKpiCard({
   tone,
 }: {
   label: string;
-  value: string;
+  value: ReactNode;
   meta: string;
   icon: LucideIcon;
   tone: 'success' | 'warning' | 'info' | 'neutral';
@@ -487,7 +488,7 @@ function FeaturedProjectCard({
             {t('common.cost')}
           </div>
           <div className="mt-2 font-mono text-2xl font-semibold text-foreground">
-            {showCosts ? formatCurrency(project.total_cost) : '----'}
+            {showCosts ? <Sensitive>{formatCurrency(project.total_cost)}</Sensitive> : '----'}
           </div>
           <div className="mt-4">
             <ProjectCostTrace project={project} percent={percent} />
@@ -554,7 +555,9 @@ function ProjectCard({
             <div className="grid grid-cols-3 border-b border-border lg:border-b-0 lg:border-r">
               <ListProjectMetric
                 label={t('common.cost')}
-                value={showCosts ? formatCurrency(project.total_cost) : '----'}
+                value={
+                  showCosts ? <Sensitive>{formatCurrency(project.total_cost)}</Sensitive> : '----'
+                }
               />
               <ListProjectMetric
                 label={t('common.sessions')}
@@ -629,7 +632,7 @@ function ProjectCard({
         <div className="grid grid-cols-3 gap-3">
           <InlineProjectMetric
             label={t('common.cost')}
-            value={showCosts ? formatCurrency(project.total_cost) : '----'}
+            value={showCosts ? <Sensitive>{formatCurrency(project.total_cost)}</Sensitive> : '----'}
           />
           <InlineProjectMetric
             label={t('common.sessions')}
@@ -757,7 +760,7 @@ function ProjectStatusBadge({ project }: { project: Project }) {
   );
 }
 
-function InlineProjectMetric({ label, value }: { label: string; value: string }) {
+function InlineProjectMetric({ label, value }: { label: string; value: ReactNode }) {
   return (
     <div className="min-w-0 border-r border-border last:border-r-0">
       <div className="truncate text-[10px] font-semibold uppercase text-subtle-foreground">
@@ -768,7 +771,7 @@ function InlineProjectMetric({ label, value }: { label: string; value: string })
   );
 }
 
-function ListProjectMetric({ label, value }: { label: string; value: string }) {
+function ListProjectMetric({ label, value }: { label: string; value: ReactNode }) {
   return (
     <div className="flex min-w-0 flex-col justify-center border-r border-border p-4 last:border-r-0">
       <div className="truncate text-[10px] font-semibold uppercase text-subtle-foreground">

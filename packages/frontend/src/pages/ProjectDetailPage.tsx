@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react';
+import { useMemo, useState, type ReactNode } from 'react';
 import { useParams, Link, useNavigate } from 'react-router-dom';
 import {
   ArrowLeft,
@@ -46,6 +46,7 @@ import { EmptyState } from '../components/ui/EmptyState.js';
 import { ErrorState } from '../components/ui/ErrorState.js';
 import { DetailPageSkeleton } from '../components/ui/LoadingState.js';
 import { MetricBlock } from '../components/ui/MetricBlock.js';
+import { Sensitive } from '../components/ui/Sensitive.js';
 import { chartTooltipProps } from '../components/ui/ChartTooltip.js';
 import { useI18n } from '../components/i18n/LanguageProvider.js';
 
@@ -211,7 +212,7 @@ export function ProjectDetailPage() {
               <MetricBlock
                 variant="compact"
                 label={t('project.totalCost')}
-                value={formatCurrency(p.total_cost as number)}
+                value={<Sensitive>{formatCurrency(p.total_cost as number)}</Sensitive>}
               />
               <MetricBlock
                 variant="compact"
@@ -231,40 +232,42 @@ export function ProjectDetailPage() {
 
       <div className="grid grid-cols-1 gap-4 xl:grid-cols-[1.2fr_0.8fr]">
         <FigurePanel figure="FIG. 01" title={t('project.spendOverTime')}>
-          <ResponsiveContainer width="100%" height={280}>
-            <AreaChart data={spendData}>
-              <defs>
-                <linearGradient id="projectSpendGradient" x1="0" y1="0" x2="0" y2="1">
-                  <stop offset="5%" stopColor="var(--accent)" stopOpacity={0.35} />
-                  <stop offset="95%" stopColor="var(--accent)" stopOpacity={0.02} />
-                </linearGradient>
-              </defs>
-              <CartesianGrid stroke="var(--border)" vertical={false} />
-              <XAxis
-                dataKey="day"
-                tick={{ fontSize: 11, fill: 'var(--subtle-foreground)' }}
-                tickLine={false}
-                axisLine={false}
-              />
-              <YAxis
-                tick={{ fontSize: 11, fill: 'var(--subtle-foreground)' }}
-                tickLine={false}
-                axisLine={false}
-                tickFormatter={(v: number) => `$${v.toFixed(0)}`}
-              />
-              <Tooltip
-                {...chartTooltipProps}
-                formatter={(v: number) => [formatCurrency(v), t('common.cost')]}
-              />
-              <Area
-                type="monotone"
-                dataKey="spend"
-                stroke="var(--accent)"
-                fill="url(#projectSpendGradient)"
-                strokeWidth={2.4}
-              />
-            </AreaChart>
-          </ResponsiveContainer>
+          <div className="sensitive">
+            <ResponsiveContainer width="100%" height={280}>
+              <AreaChart data={spendData}>
+                <defs>
+                  <linearGradient id="projectSpendGradient" x1="0" y1="0" x2="0" y2="1">
+                    <stop offset="5%" stopColor="var(--accent)" stopOpacity={0.35} />
+                    <stop offset="95%" stopColor="var(--accent)" stopOpacity={0.02} />
+                  </linearGradient>
+                </defs>
+                <CartesianGrid stroke="var(--border)" vertical={false} />
+                <XAxis
+                  dataKey="day"
+                  tick={{ fontSize: 11, fill: 'var(--subtle-foreground)' }}
+                  tickLine={false}
+                  axisLine={false}
+                />
+                <YAxis
+                  tick={{ fontSize: 11, fill: 'var(--subtle-foreground)' }}
+                  tickLine={false}
+                  axisLine={false}
+                  tickFormatter={(v: number) => `$${v.toFixed(0)}`}
+                />
+                <Tooltip
+                  {...chartTooltipProps}
+                  formatter={(v: number) => [formatCurrency(v), t('common.cost')]}
+                />
+                <Area
+                  type="monotone"
+                  dataKey="spend"
+                  stroke="var(--accent)"
+                  fill="url(#projectSpendGradient)"
+                  strokeWidth={2.4}
+                />
+              </AreaChart>
+            </ResponsiveContainer>
+          </div>
         </FigurePanel>
 
         <DistributionCard
@@ -339,30 +342,34 @@ function DistributionCard({
       title={title}
       contentClassName="grid gap-4 md:grid-cols-[180px_minmax(0,1fr)] xl:grid-cols-1"
     >
-      <ResponsiveContainer width="100%" height={180}>
-        <PieChart>
-          <Pie
-            data={data}
-            dataKey="value"
-            nameKey="name"
-            cx="50%"
-            cy="50%"
-            outerRadius={78}
-            innerRadius={48}
-          >
-            {data.map((_, i) => (
-              <Cell key={i} fill={chartColor(i)} />
-            ))}
-          </Pie>
-          <Tooltip {...chartTooltipProps} formatter={(v: number) => [formatCurrency(v), '']} />
-        </PieChart>
-      </ResponsiveContainer>
+      <div className="sensitive">
+        <ResponsiveContainer width="100%" height={180}>
+          <PieChart>
+            <Pie
+              data={data}
+              dataKey="value"
+              nameKey="name"
+              cx="50%"
+              cy="50%"
+              outerRadius={78}
+              innerRadius={48}
+            >
+              {data.map((_, i) => (
+                <Cell key={i} fill={chartColor(i)} />
+              ))}
+            </Pie>
+            <Tooltip {...chartTooltipProps} formatter={(v: number) => [formatCurrency(v), '']} />
+          </PieChart>
+        </ResponsiveContainer>
+      </div>
       <div className="space-y-2 text-xs">
         {data.slice(0, 8).map((d, i) => (
           <div key={d.name} className="flex items-center gap-2">
             <div className="h-2.5 w-2.5 rounded-sm" style={{ background: chartColor(i) }} />
             <span className="min-w-0 flex-1 truncate text-muted-foreground">{d.name}</span>
-            <span className="font-mono font-medium text-foreground">{formatCurrency(d.value)}</span>
+            <span className="font-mono font-medium text-foreground">
+              <Sensitive>{formatCurrency(d.value)}</Sensitive>
+            </span>
           </div>
         ))}
       </div>
@@ -520,7 +527,9 @@ function SessionRow({ session }: { session: Record<string, unknown> }) {
         {String(session.model ?? '—')}
       </DataTableCell>
       <DataTableCell className="text-right font-mono tabular-nums text-foreground">
-        <div>{formatCurrency(Number(session.total_cost_usd))}</div>
+        <div>
+          <Sensitive>{formatCurrency(Number(session.total_cost_usd))}</Sensitive>
+        </div>
         {session.cost_source === 'estimated' && (
           <div className="mt-1 text-[10px] uppercase text-warning">{t('common.estimated')}</div>
         )}

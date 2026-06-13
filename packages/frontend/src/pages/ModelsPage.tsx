@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react';
+import { useMemo, useState, type ReactNode } from 'react';
 import { RefreshCw, Search, Sparkles } from 'lucide-react';
 import { BrandBadge, BrandMark } from '../components/brand/BrandMark.js';
 import { Badge } from '../components/ui/Badge.js';
@@ -20,6 +20,7 @@ import { FigurePanel } from '../components/ui/FigurePanel.js';
 import { Input } from '../components/ui/Input.js';
 import { TableSkeletonRows } from '../components/ui/LoadingState.js';
 import { MetricBlock } from '../components/ui/MetricBlock.js';
+import { Sensitive } from '../components/ui/Sensitive.js';
 import { QueryBar } from '../components/ui/QueryBar.js';
 import { Select } from '../components/ui/Select.js';
 import { SectionHeader } from '../components/ui/SectionHeader.js';
@@ -256,15 +257,17 @@ export function ModelsPage() {
                       </div>
                     </DataTableCell>
                     <DataTableCell className="text-right font-mono tabular-nums text-muted-foreground">
-                      {formatCurrency(model.input_cost_per_million)}
+                      <Sensitive>{formatCurrency(model.input_cost_per_million)}</Sensitive>
                     </DataTableCell>
                     <DataTableCell className="text-right font-mono tabular-nums font-medium text-foreground">
-                      {formatCurrency(model.output_cost_per_million)}
+                      <Sensitive>{formatCurrency(model.output_cost_per_million)}</Sensitive>
                     </DataTableCell>
                     <DataTableCell className="text-right font-mono tabular-nums text-muted-foreground">
-                      {model.cached_input_cost == null
-                        ? '—'
-                        : formatCurrency(model.cached_input_cost)}
+                      {model.cached_input_cost == null ? (
+                        '—'
+                      ) : (
+                        <Sensitive>{formatCurrency(model.cached_input_cost)}</Sensitive>
+                      )}
                     </DataTableCell>
                     <DataTableCell className="text-right font-mono text-xs text-muted-foreground">
                       {model.usage_session_count > 0 ? (
@@ -272,7 +275,9 @@ export function ModelsPage() {
                           <div className="font-medium text-foreground">
                             {model.usage_session_count} {t('common.sessions').toLowerCase()}
                           </div>
-                          <div>{formatCurrency(model.usage_total_cost)}</div>
+                          <div>
+                            <Sensitive>{formatCurrency(model.usage_total_cost)}</Sensitive>
+                          </div>
                         </>
                       ) : (
                         '—'
@@ -320,15 +325,21 @@ function UsedModelCard({
         </div>
         <div className="grid grid-cols-1 gap-2 rounded-lg border border-border bg-surface-muted p-2 text-center text-xs sm:grid-cols-3">
           <Metric label={labels.sessions} value={String(model.usage_session_count)} />
-          <Metric label={labels.spend} value={formatCurrency(model.usage_total_cost)} />
-          <Metric label={labels.input} value={formatCurrency(model.input_cost_per_million)} />
+          <Metric
+            label={labels.spend}
+            value={<Sensitive>{formatCurrency(model.usage_total_cost)}</Sensitive>}
+          />
+          <Metric
+            label={labels.input}
+            value={<Sensitive>{formatCurrency(model.input_cost_per_million)}</Sensitive>}
+          />
         </div>
       </CardContent>
     </Card>
   );
 }
 
-function Metric({ label, value }: { label: string; value: string }) {
+function Metric({ label, value }: { label: string; value: ReactNode }) {
   return (
     <div>
       <div className="text-[9px] uppercase text-subtle-foreground">{label}</div>

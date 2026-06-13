@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, type ReactNode } from 'react';
 import { Link, useSearchParams } from 'react-router-dom';
 import { ArrowUpDown, Search } from 'lucide-react';
 import { BrandBadge, BrandMark } from '../components/brand/BrandMark.js';
@@ -21,6 +21,7 @@ import { FigurePanel } from '../components/ui/FigurePanel.js';
 import { Input } from '../components/ui/Input.js';
 import { TableSkeletonRows } from '../components/ui/LoadingState.js';
 import { MetricBlock } from '../components/ui/MetricBlock.js';
+import { Sensitive } from '../components/ui/Sensitive.js';
 import { QueryBar } from '../components/ui/QueryBar.js';
 import { Select } from '../components/ui/Select.js';
 import { useDateRange } from '../components/filters/DateRangeProvider.js';
@@ -128,7 +129,7 @@ export function SessionsPage() {
         <MetricBlock
           variant="compact"
           label={t('common.cost')}
-          value={formatCurrency(currentSpend)}
+          value={<Sensitive>{formatCurrency(currentSpend)}</Sensitive>}
           tone="info"
           meta={t('sessions.currentPage')}
         />
@@ -267,7 +268,9 @@ export function SessionsPage() {
                       </div>
                     </DataTableCell>
                     <DataTableCell className="text-right font-mono font-medium tabular-nums text-foreground">
-                      <div>{formatCurrency(session.total_cost_usd)}</div>
+                      <div>
+                        <Sensitive>{formatCurrency(session.total_cost_usd)}</Sensitive>
+                      </div>
                       {session.cost_source === 'estimated' && (
                         <div className="mt-1 text-[10px] uppercase text-warning">
                           {t('common.estimated')}
@@ -340,7 +343,7 @@ export function SessionsPage() {
                       <div className="grid grid-cols-3 gap-2 text-xs">
                         <MobileMetric
                           label={t('common.cost')}
-                          value={formatCurrency(session.total_cost_usd)}
+                          value={<Sensitive>{formatCurrency(session.total_cost_usd)}</Sensitive>}
                         />
                         <MobileMetric
                           label={t('common.duration')}
@@ -421,7 +424,7 @@ function HeaderCell({
   );
 }
 
-function MobileMetric({ label, value }: { label: string; value: string }) {
+function MobileMetric({ label, value }: { label: string; value: ReactNode }) {
   return (
     <div className="min-w-0 rounded-md border border-border bg-surface-muted p-2">
       <div className="text-[10px] uppercase text-subtle-foreground">{label}</div>

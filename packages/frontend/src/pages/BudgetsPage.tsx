@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react';
+import { useMemo, useState, type ReactNode } from 'react';
 import { Link } from 'react-router-dom';
 import {
   AlertTriangle,
@@ -30,6 +30,7 @@ import { ErrorState } from '../components/ui/ErrorState.js';
 import { FigurePanel } from '../components/ui/FigurePanel.js';
 import { Input } from '../components/ui/Input.js';
 import { MetricBlock } from '../components/ui/MetricBlock.js';
+import { Sensitive } from '../components/ui/Sensitive.js';
 import { Select } from '../components/ui/Select.js';
 import { useApi } from '../hooks/useApi.js';
 import { compactPath, formatCurrency, formatDateTime } from '../lib/format.js';
@@ -264,7 +265,7 @@ export function BudgetsPage() {
             <MetricBlock
               variant="compact"
               label={t('budget.summary.monitoredSpend')}
-              value={formatCurrency(summary.monitoredSpend)}
+              value={<Sensitive>{formatCurrency(summary.monitoredSpend)}</Sensitive>}
               tone="success"
             />
           </div>
@@ -409,7 +410,7 @@ export function BudgetsPage() {
                             {renderScopeValue(budget.scope_type, budget.scope_value)}
                           </DataTableCell>
                           <DataTableCell className="text-sm font-semibold text-foreground">
-                            {formatCurrency(budget.limit_usd)}
+                            <Sensitive>{formatCurrency(budget.limit_usd)}</Sensitive>
                           </DataTableCell>
                           <DataTableCell className="text-sm text-muted-foreground">
                             {t(`budget.period.${budget.period}`)}
@@ -475,8 +476,8 @@ export function BudgetsPage() {
                           <DataTableCell>
                             <div className="flex flex-col gap-2">
                               <span className="text-sm font-semibold text-foreground">
-                                {formatCurrency(item.current_spend)} /{' '}
-                                {formatCurrency(item.limit_usd)}
+                                <Sensitive>{formatCurrency(item.current_spend)}</Sensitive> /{' '}
+                                <Sensitive>{formatCurrency(item.limit_usd)}</Sensitive>
                               </span>
                               <div className="h-1.5 w-full overflow-hidden rounded-full bg-surface-muted">
                                 <div

@@ -1,3 +1,4 @@
+import { type ReactNode } from 'react';
 import { Link, useLocation, useParams } from 'react-router-dom';
 import {
   ArrowLeft,
@@ -28,6 +29,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '../components/ui/Card.
 import { ErrorState } from '../components/ui/ErrorState.js';
 import { FigurePanel } from '../components/ui/FigurePanel.js';
 import { MetricBlock } from '../components/ui/MetricBlock.js';
+import { Sensitive } from '../components/ui/Sensitive.js';
 import { SectionHeader } from '../components/ui/SectionHeader.js';
 import { Skeleton } from '../components/ui/Skeleton.js';
 import { chartTooltipProps } from '../components/ui/ChartTooltip.js';
@@ -229,41 +231,43 @@ export function InsightDetailPage() {
                 title={t('insightDetail.trend')}
                 description={t('insightDetail.trendDescription')}
               >
-                <ResponsiveContainer width="100%" height={220}>
-                  <AreaChart data={detail.context.trend}>
-                    <defs>
-                      <linearGradient id="contextGrad" x1="0" y1="0" x2="0" y2="1">
-                        <stop offset="5%" stopColor="var(--accent)" stopOpacity={0.35} />
-                        <stop offset="95%" stopColor="var(--accent)" stopOpacity={0.02} />
-                      </linearGradient>
-                    </defs>
-                    <CartesianGrid stroke="var(--border)" vertical={false} />
-                    <XAxis
-                      dataKey="date"
-                      tick={{ fontSize: 11, fill: 'var(--subtle-foreground)' }}
-                      tickLine={false}
-                      axisLine={false}
-                    />
-                    <YAxis
-                      tick={{ fontSize: 11, fill: 'var(--subtle-foreground)' }}
-                      tickLine={false}
-                      axisLine={false}
-                      tickFormatter={(v: number) => `$${v.toFixed(0)}`}
-                    />
-                    <Tooltip
-                      {...chartTooltipProps}
-                      formatter={(value: number) => [formatCurrency(value), t('common.cost')]}
-                    />
-                    <Area
-                      type="monotone"
-                      dataKey="spend"
-                      stroke="var(--accent)"
-                      fill="url(#contextGrad)"
-                      strokeWidth={2}
-                      dot={{ r: 2, fill: 'var(--accent)' }}
-                    />
-                  </AreaChart>
-                </ResponsiveContainer>
+                <div className="sensitive">
+                  <ResponsiveContainer width="100%" height={220}>
+                    <AreaChart data={detail.context.trend}>
+                      <defs>
+                        <linearGradient id="contextGrad" x1="0" y1="0" x2="0" y2="1">
+                          <stop offset="5%" stopColor="var(--accent)" stopOpacity={0.35} />
+                          <stop offset="95%" stopColor="var(--accent)" stopOpacity={0.02} />
+                        </linearGradient>
+                      </defs>
+                      <CartesianGrid stroke="var(--border)" vertical={false} />
+                      <XAxis
+                        dataKey="date"
+                        tick={{ fontSize: 11, fill: 'var(--subtle-foreground)' }}
+                        tickLine={false}
+                        axisLine={false}
+                      />
+                      <YAxis
+                        tick={{ fontSize: 11, fill: 'var(--subtle-foreground)' }}
+                        tickLine={false}
+                        axisLine={false}
+                        tickFormatter={(v: number) => `$${v.toFixed(0)}`}
+                      />
+                      <Tooltip
+                        {...chartTooltipProps}
+                        formatter={(value: number) => [formatCurrency(value), t('common.cost')]}
+                      />
+                      <Area
+                        type="monotone"
+                        dataKey="spend"
+                        stroke="var(--accent)"
+                        fill="url(#contextGrad)"
+                        strokeWidth={2}
+                        dot={{ r: 2, fill: 'var(--accent)' }}
+                      />
+                    </AreaChart>
+                  </ResponsiveContainer>
+                </div>
               </FigurePanel>
             )}
 
@@ -273,7 +277,7 @@ export function InsightDetailPage() {
                 <SummaryCard
                   icon={TrendingUp}
                   label={t('insightDetail.growth7d')}
-                  value={formatCurrency(detail.context.current7DaySpend)}
+                  value={<Sensitive>{formatCurrency(detail.context.current7DaySpend)}</Sensitive>}
                   sub={
                     detail.context.growthPercent != null
                       ? `${detail.context.growthPercent >= 0 ? '+' : ''}${detail.context.growthPercent.toFixed(0)}% ${t('insightDetail.growthPercent')}`
@@ -284,7 +288,7 @@ export function InsightDetailPage() {
                 <SummaryCard
                   icon={Gauge}
                   label={t('insightDetail.baseline')}
-                  value={formatCurrency(detail.context.baselineDailySpend)}
+                  value={<Sensitive>{formatCurrency(detail.context.baselineDailySpend)}</Sensitive>}
                   sub={`${t('common.daily')} 7d`}
                   tone="info"
                 />
@@ -293,9 +297,14 @@ export function InsightDetailPage() {
                   label={t('insightDetail.sessions')}
                   value={String(detail.context.totalSessions ?? '—')}
                   sub={
-                    detail.context.overallAvgCost != null
-                      ? `${formatCurrency(detail.context.overallAvgCost)} ${t('common.cost').toLowerCase()}`
-                      : ''
+                    detail.context.overallAvgCost != null ? (
+                      <>
+                        <Sensitive>{formatCurrency(detail.context.overallAvgCost)}</Sensitive>{' '}
+                        {t('common.cost').toLowerCase()}
+                      </>
+                    ) : (
+                      ''
+                    )
                   }
                   tone="info"
                 />
@@ -313,7 +322,7 @@ export function InsightDetailPage() {
                   <SummaryCard
                     icon={TrendingUp}
                     label={t('common.cost')}
-                    value={formatCurrency(detail.context.projectSpend)}
+                    value={<Sensitive>{formatCurrency(detail.context.projectSpend)}</Sensitive>}
                     sub={`${detail.context.projectSessions} ${t('common.sessions').toLowerCase()}`}
                     tone="warning"
                   />
@@ -358,7 +367,7 @@ export function InsightDetailPage() {
                           </span>
                         </div>
                         <span className="font-mono font-medium text-foreground">
-                          {formatCurrency(m.cost)}
+                          <Sensitive>{formatCurrency(m.cost)}</Sensitive>
                         </span>
                       </div>
                     ))}
@@ -378,14 +387,14 @@ export function InsightDetailPage() {
                   <SummaryCard
                     icon={TrendingUp}
                     label={t('insightDetail.modelCost')}
-                    value={formatCurrency(detail.context.modelSpend)}
+                    value={<Sensitive>{formatCurrency(detail.context.modelSpend)}</Sensitive>}
                     sub={`${detail.context.modelProvider}/${detail.context.modelName}`}
                     tone="warning"
                   />
                   <SummaryCard
                     icon={Gauge}
                     label={t('insightDetail.average')}
-                    value={formatCurrency(detail.context.modelAvgCost)}
+                    value={<Sensitive>{formatCurrency(detail.context.modelAvgCost)}</Sensitive>}
                     sub={t('common.per') + ' ' + t('common.session').toLowerCase()}
                     tone="info"
                   />
@@ -402,7 +411,7 @@ export function InsightDetailPage() {
                     {t('insightDetail.average')} {t('common.cost').toLowerCase()}/
                     {t('common.session').toLowerCase()}:{' '}
                     <span className="font-medium text-foreground">
-                      {formatCurrency(detail.context.overallAvgCost)}
+                      <Sensitive>{formatCurrency(detail.context.overallAvgCost)}</Sensitive>
                     </span>
                   </div>
                 )}
@@ -420,7 +429,7 @@ export function InsightDetailPage() {
                   <SummaryCard
                     icon={TrendingUp}
                     label={t('common.cost')}
-                    value={formatCurrency(detail.context.outlierCost)}
+                    value={<Sensitive>{formatCurrency(detail.context.outlierCost)}</Sensitive>}
                     sub={
                       detail.context.overallAvgCost != null
                         ? `${(((detail.context.outlierCost ?? 0) / Math.max(detail.context.overallAvgCost, 0.01) - 1) * 100).toFixed(0)}% ${t('insightDetail.vsBaseline')}`
@@ -431,7 +440,7 @@ export function InsightDetailPage() {
                   <SummaryCard
                     icon={Gauge}
                     label={t('insightDetail.average') + ' ' + t('common.cost').toLowerCase()}
-                    value={formatCurrency(detail.context.overallAvgCost)}
+                    value={<Sensitive>{formatCurrency(detail.context.overallAvgCost)}</Sensitive>}
                     sub={`${detail.context.totalSessions} ${t('insightDetail.sessions')}`}
                     tone="info"
                   />
@@ -542,14 +551,16 @@ export function InsightDetailPage() {
                   <SummaryCard
                     icon={TrendingUp}
                     label={t('common.cost')}
-                    value={formatCurrency(detail.context.spikeSpend)}
+                    value={<Sensitive>{formatCurrency(detail.context.spikeSpend)}</Sensitive>}
                     sub={detail.context.spikeDate ?? ''}
                     tone="danger"
                   />
                   <SummaryCard
                     icon={Gauge}
                     label={t('insightDetail.baseline')}
-                    value={formatCurrency(detail.context.baselineDailySpend)}
+                    value={
+                      <Sensitive>{formatCurrency(detail.context.baselineDailySpend)}</Sensitive>
+                    }
                     sub={`${t('common.daily')} 7d`}
                     tone="info"
                   />
@@ -615,14 +626,19 @@ export function InsightDetailPage() {
                   <SummaryCard
                     icon={TrendingUp}
                     label={t('common.cost')}
-                    value={formatCurrency(detail.context.outlierCost)}
+                    value={<Sensitive>{formatCurrency(detail.context.outlierCost)}</Sensitive>}
                     tone="danger"
                   />
                   <SummaryCard
                     icon={Gauge}
                     label={t('insightDetail.average')}
-                    value={formatCurrency(detail.context.avgCost)}
-                    sub={`±${formatCurrency(detail.context.stdCost)} ${t('insightDetail.stddev')}`}
+                    value={<Sensitive>{formatCurrency(detail.context.avgCost)}</Sensitive>}
+                    sub={
+                      <>
+                        ±<Sensitive>{formatCurrency(detail.context.stdCost)}</Sensitive>{' '}
+                        {t('insightDetail.stddev')}
+                      </>
+                    }
                     tone="info"
                   />
                   {detail.sessionId && (
@@ -973,8 +989,8 @@ function SummaryCard({
 }: {
   icon?: LucideIcon;
   label: string;
-  value: string;
-  sub?: string;
+  value: ReactNode;
+  sub?: ReactNode;
   tone?: 'success' | 'warning' | 'danger' | 'info';
 }) {
   return (

@@ -42,6 +42,7 @@ import { ErrorState } from '../components/ui/ErrorState.js';
 import { FigurePanel } from '../components/ui/FigurePanel.js';
 import { ChartSkeleton, DonutSkeleton } from '../components/ui/LoadingState.js';
 import { chartTooltipProps } from '../components/ui/ChartTooltip.js';
+import { Sensitive } from '../components/ui/Sensitive.js';
 import { Select } from '../components/ui/Select.js';
 import { useI18n } from '../components/i18n/LanguageProvider.js';
 
@@ -459,7 +460,7 @@ export function AnalyticsPage() {
         <AnalyticsKpiCard
           icon={CircleDollarSign}
           label={t('dashboard.totalSpend')}
-          value={formatCurrency(report?.summary.totalSpend)}
+          value={<Sensitive>{formatCurrency(report?.summary.totalSpend)}</Sensitive>}
           meta={
             report?.summary.growthPercent != null
               ? `${report.summary.growthPercent >= 0 ? '+' : ''}${report.summary.growthPercent.toFixed(1)}% ${t('analytics.vsPriorWeek')}`
@@ -471,7 +472,7 @@ export function AnalyticsPage() {
         <AnalyticsKpiCard
           icon={TrendingUp}
           label={t('analytics.baselineDay')}
-          value={formatCurrency(report?.summary.baselineDailySpend)}
+          value={<Sensitive>{formatCurrency(report?.summary.baselineDailySpend)}</Sensitive>}
           meta={t('analytics.movingBaseline')}
           tone="info"
           loading={reportLoading && !report}
@@ -549,69 +550,71 @@ export function AnalyticsPage() {
           {spendLoading && !spendData && !report ? (
             <ChartSkeleton className="h-[390px]" />
           ) : (
-            <ResponsiveContainer width="100%" height={390}>
-              <AreaChart data={spendPoints}>
-                <defs>
-                  <linearGradient id="analyticsSpendGradient" x1="0" y1="0" x2="0" y2="1">
-                    <stop offset="5%" stopColor="var(--accent)" stopOpacity={0.35} />
-                    <stop offset="95%" stopColor="var(--accent)" stopOpacity={0.02} />
-                  </linearGradient>
-                  <linearGradient id="analyticsTokenGradient" x1="0" y1="0" x2="0" y2="1">
-                    <stop offset="5%" stopColor="var(--info)" stopOpacity={0.25} />
-                    <stop offset="95%" stopColor="var(--info)" stopOpacity={0.02} />
-                  </linearGradient>
-                </defs>
-                <CartesianGrid stroke="var(--border)" vertical={false} />
-                <XAxis
-                  dataKey="date"
-                  tick={{ fontSize: 11, fill: 'var(--subtle-foreground)' }}
-                  tickLine={false}
-                  axisLine={false}
-                />
-                <YAxis
-                  yAxisId="cost"
-                  tick={{ fontSize: 11, fill: 'var(--success)' }}
-                  tickLine={false}
-                  axisLine={false}
-                  tickFormatter={(v: number) => `$${v.toFixed(0)}`}
-                />
-                <YAxis
-                  yAxisId="tokens"
-                  orientation="right"
-                  tick={{ fontSize: 11, fill: 'var(--info)' }}
-                  tickLine={false}
-                  axisLine={false}
-                  tickFormatter={(v: number) => formatTokens(v)}
-                />
-                <Tooltip
-                  {...chartTooltipProps}
-                  formatter={(value: number, name: string) => [
-                    name === 'tokens' ? formatTokens(value) : formatCurrency(value),
-                    name === 'tokens' ? t('common.tokens') : t('common.cost'),
-                  ]}
-                />
-                <Area
-                  yAxisId="cost"
-                  type="monotone"
-                  dataKey="spend"
-                  stroke="var(--accent)"
-                  fill="url(#analyticsSpendGradient)"
-                  strokeWidth={2.4}
-                  dot={{ r: 3, fill: 'var(--accent)' }}
-                  opacity={trendMetric === 'cost' ? 1 : 0.45}
-                />
-                <Area
-                  yAxisId="tokens"
-                  type="monotone"
-                  dataKey="tokens"
-                  stroke="var(--info)"
-                  fill="url(#analyticsTokenGradient)"
-                  strokeWidth={2.2}
-                  dot={{ r: 3, fill: 'var(--info)' }}
-                  opacity={trendMetric === 'tokens' ? 1 : 0.45}
-                />
-              </AreaChart>
-            </ResponsiveContainer>
+            <div className="sensitive">
+              <ResponsiveContainer width="100%" height={390}>
+                <AreaChart data={spendPoints}>
+                  <defs>
+                    <linearGradient id="analyticsSpendGradient" x1="0" y1="0" x2="0" y2="1">
+                      <stop offset="5%" stopColor="var(--accent)" stopOpacity={0.35} />
+                      <stop offset="95%" stopColor="var(--accent)" stopOpacity={0.02} />
+                    </linearGradient>
+                    <linearGradient id="analyticsTokenGradient" x1="0" y1="0" x2="0" y2="1">
+                      <stop offset="5%" stopColor="var(--info)" stopOpacity={0.25} />
+                      <stop offset="95%" stopColor="var(--info)" stopOpacity={0.02} />
+                    </linearGradient>
+                  </defs>
+                  <CartesianGrid stroke="var(--border)" vertical={false} />
+                  <XAxis
+                    dataKey="date"
+                    tick={{ fontSize: 11, fill: 'var(--subtle-foreground)' }}
+                    tickLine={false}
+                    axisLine={false}
+                  />
+                  <YAxis
+                    yAxisId="cost"
+                    tick={{ fontSize: 11, fill: 'var(--success)' }}
+                    tickLine={false}
+                    axisLine={false}
+                    tickFormatter={(v: number) => `$${v.toFixed(0)}`}
+                  />
+                  <YAxis
+                    yAxisId="tokens"
+                    orientation="right"
+                    tick={{ fontSize: 11, fill: 'var(--info)' }}
+                    tickLine={false}
+                    axisLine={false}
+                    tickFormatter={(v: number) => formatTokens(v)}
+                  />
+                  <Tooltip
+                    {...chartTooltipProps}
+                    formatter={(value: number, name: string) => [
+                      name === 'tokens' ? formatTokens(value) : formatCurrency(value),
+                      name === 'tokens' ? t('common.tokens') : t('common.cost'),
+                    ]}
+                  />
+                  <Area
+                    yAxisId="cost"
+                    type="monotone"
+                    dataKey="spend"
+                    stroke="var(--accent)"
+                    fill="url(#analyticsSpendGradient)"
+                    strokeWidth={2.4}
+                    dot={{ r: 3, fill: 'var(--accent)' }}
+                    opacity={trendMetric === 'cost' ? 1 : 0.45}
+                  />
+                  <Area
+                    yAxisId="tokens"
+                    type="monotone"
+                    dataKey="tokens"
+                    stroke="var(--info)"
+                    fill="url(#analyticsTokenGradient)"
+                    strokeWidth={2.2}
+                    dot={{ r: 3, fill: 'var(--info)' }}
+                    opacity={trendMetric === 'tokens' ? 1 : 0.45}
+                  />
+                </AreaChart>
+              </ResponsiveContainer>
+            </div>
           )}
         </FigurePanel>
 
@@ -670,7 +673,7 @@ export function AnalyticsPage() {
             <DonutSkeleton className="min-h-[280px]" />
           ) : (
             <div className="grid gap-4 lg:grid-cols-[240px_minmax(0,1fr)] lg:items-center">
-              <div className="relative mx-auto h-56 w-56">
+              <div className="sensitive relative mx-auto h-56 w-56">
                 <ResponsiveContainer width="100%" height="100%">
                   <PieChart>
                     <Pie
@@ -700,9 +703,11 @@ export function AnalyticsPage() {
                 <div className="pointer-events-none absolute inset-0 grid place-items-center text-center">
                   <div>
                     <div className="font-mono text-xl font-semibold text-foreground">
-                      {metric === 'cost'
-                        ? formatCurrency(totalModelCost)
-                        : formatTokens(totalModelTokens)}
+                      {metric === 'cost' ? (
+                        <Sensitive>{formatCurrency(totalModelCost)}</Sensitive>
+                      ) : (
+                        formatTokens(totalModelTokens)
+                      )}
                     </div>
                     <div className="text-[10px] uppercase text-subtle-foreground">
                       {t('common.total')}
@@ -743,37 +748,41 @@ export function AnalyticsPage() {
           {breakdownLoading && !breakdownData ? (
             <ChartSkeleton className="h-[280px]" />
           ) : (
-            <ResponsiveContainer width="100%" height={300}>
-              <BarChart data={breakdown.slice(0, 8)} layout="vertical" margin={{ left: 80 }}>
-                <CartesianGrid stroke="var(--border)" vertical={false} />
-                <XAxis
-                  type="number"
-                  tick={{ fontSize: 11, fill: 'var(--subtle-foreground)' }}
-                  tickLine={false}
-                  axisLine={false}
-                  tickFormatter={(v: number) => (metric === 'cost' ? formatCurrency(v) : String(v))}
-                />
-                <YAxis
-                  type="category"
-                  dataKey="label"
-                  tick={{ fontSize: 11, fill: 'var(--subtle-foreground)' }}
-                  width={80}
-                  tickLine={false}
-                  axisLine={false}
-                />
-                <Tooltip {...chartTooltipProps} />
-                <Bar
-                  dataKey="value"
-                  radius={[0, 4, 4, 0]}
-                  onClick={(data: { label: string }) => setDimensionFilter(data.label)}
-                  className="cursor-pointer"
-                >
-                  {breakdown.slice(0, 8).map((_, index) => (
-                    <Cell key={index} fill={chartColor(index)} />
-                  ))}
-                </Bar>
-              </BarChart>
-            </ResponsiveContainer>
+            <div className="sensitive">
+              <ResponsiveContainer width="100%" height={300}>
+                <BarChart data={breakdown.slice(0, 8)} layout="vertical" margin={{ left: 80 }}>
+                  <CartesianGrid stroke="var(--border)" vertical={false} />
+                  <XAxis
+                    type="number"
+                    tick={{ fontSize: 11, fill: 'var(--subtle-foreground)' }}
+                    tickLine={false}
+                    axisLine={false}
+                    tickFormatter={(v: number) =>
+                      metric === 'cost' ? formatCurrency(v) : String(v)
+                    }
+                  />
+                  <YAxis
+                    type="category"
+                    dataKey="label"
+                    tick={{ fontSize: 11, fill: 'var(--subtle-foreground)' }}
+                    width={80}
+                    tickLine={false}
+                    axisLine={false}
+                  />
+                  <Tooltip {...chartTooltipProps} />
+                  <Bar
+                    dataKey="value"
+                    radius={[0, 4, 4, 0]}
+                    onClick={(data: { label: string }) => setDimensionFilter(data.label)}
+                    className="cursor-pointer"
+                  >
+                    {breakdown.slice(0, 8).map((_, index) => (
+                      <Cell key={index} fill={chartColor(index)} />
+                    ))}
+                  </Bar>
+                </BarChart>
+              </ResponsiveContainer>
+            </div>
           )}
         </FigurePanel>
       </div>
@@ -798,7 +807,7 @@ export function AnalyticsPage() {
             />
             <MetricLine
               label={t('analytics.avgCostToolCall')}
-              value={formatCurrency(productivity?.avgCostPerToolCall)}
+              value={<Sensitive>{formatCurrency(productivity?.avgCostPerToolCall)}</Sensitive>}
             />
             <MetricLine
               label={t('analytics.filesModifiedSession')}
@@ -941,7 +950,7 @@ function AnalyticsKpiCard({
 }: {
   icon: LucideIcon;
   label: string;
-  value: string;
+  value: ReactNode;
   meta: string;
   tone: 'success' | 'info' | 'warning' | 'danger';
   loading?: boolean;
@@ -1066,7 +1075,7 @@ function InsightLinkCard({
   );
 }
 
-function MetricLine({ label, value, muted }: { label: string; value: string; muted?: boolean }) {
+function MetricLine({ label, value, muted }: { label: string; value: ReactNode; muted?: boolean }) {
   return (
     <div className="grid grid-cols-[minmax(0,1fr)_120px_96px] items-center gap-3 border-b border-border px-4 py-3 text-sm last:border-b-0">
       <span className={muted ? 'truncate text-subtle-foreground' : 'truncate text-foreground'}>
@@ -1104,7 +1113,7 @@ function ToolSessionCard({
         <Badge variant="neutral">{session.toolCalls}</Badge>
       </div>
       <div className="mt-4 grid grid-cols-3 gap-2 text-[10px] text-subtle-foreground">
-        <MetricChip label="custo" value={formatCurrency(session.cost)} />
+        <MetricChip label="custo" value={<Sensitive>{formatCurrency(session.cost)}</Sensitive>} />
         <MetricChip label="tokens" value={formatTokens(session.tokens)} />
         <MetricChip label="msgs" value={formatNumber(session.messagesPerToolCall)} />
       </div>
@@ -1138,7 +1147,10 @@ function ModelUsageCard({
         </div>
       </div>
       <div className="mt-4 grid grid-cols-3 gap-2">
-        <MetricChip label="custo" value={formatCurrency(item.totalCostUsd)} />
+        <MetricChip
+          label="custo"
+          value={<Sensitive>{formatCurrency(item.totalCostUsd)}</Sensitive>}
+        />
         <MetricChip label="uso" value={`${item.messageCount}`} />
         <MetricChip label="tokens" value={formatTokens(tokens)} />
       </div>
@@ -1177,7 +1189,7 @@ function InterpretationNote({
   );
 }
 
-function MetricChip({ label, value }: { label: string; value: string }) {
+function MetricChip({ label, value }: { label: string; value: ReactNode }) {
   return (
     <div className="min-w-0">
       <div className="text-[10px] uppercase text-subtle-foreground">{label}</div>
