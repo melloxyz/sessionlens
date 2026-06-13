@@ -2,7 +2,7 @@ import type { FastifyInstance } from 'fastify';
 import { getDatabase, saveDatabase } from '../db/connection.js';
 import { testDestination } from '../notifications/dispatcher.js';
 
-export const VALID_DEST_TYPES = ['discord', 'slack', 'custom'] as const;
+export const VALID_DEST_TYPES = ['discord', 'slack', 'teams', 'ntfy', 'custom'] as const;
 export const VALID_EVENT_TYPES = [
   'ingestion_complete',
   'budget_warning',

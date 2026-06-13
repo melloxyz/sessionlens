@@ -509,11 +509,11 @@ const dictionaries = {
     'settings.integrationHealth': 'Integration health',
     'settings.section.notifications': 'Notifications & Webhooks',
     'settings.section.notifications.description':
-      'Send alerts to Discord, Slack or a custom webhook when events occur.',
+      'Send alerts to Discord, Slack, Teams, ntfy or a custom webhook when events occur.',
     'settings.notifications.addDestination': 'Add destination',
     'settings.notifications.noDestinations': 'No webhook destinations configured yet.',
     'settings.notifications.noDestinations.hint':
-      'Add Discord or Slack webhooks to receive alerts when ingestion completes or a budget is exceeded.',
+      'Add a webhook destination to receive alerts when ingestion completes or a budget threshold is reached. Supports Discord, Slack, Microsoft Teams, ntfy and custom endpoints.',
     'settings.notifications.name': 'Name',
     'settings.notifications.type': 'Type',
     'settings.notifications.webhookUrl': 'Webhook URL',
@@ -1236,11 +1236,11 @@ const dictionaries = {
     'settings.integrationHealth': 'Saúde das integrações',
     'settings.section.notifications': 'Notificações & Webhooks',
     'settings.section.notifications.description':
-      'Envie alertas ao Discord, Slack ou um webhook customizado quando eventos ocorrerem.',
+      'Envie alertas ao Discord, Slack, Teams, ntfy ou um webhook customizado quando eventos ocorrerem.',
     'settings.notifications.addDestination': 'Adicionar destino',
     'settings.notifications.noDestinations': 'Nenhum destino de webhook configurado ainda.',
     'settings.notifications.noDestinations.hint':
-      'Adicione webhooks do Discord ou Slack para receber alertas quando a ingestão concluir ou um orçamento for excedido.',
+      'Adicione um destino de webhook para receber alertas quando a ingestão concluir ou um limite de orçamento for atingido. Suporta Discord, Slack, Microsoft Teams, ntfy e endpoints customizados.',
     'settings.notifications.name': 'Nome',
     'settings.notifications.type': 'Tipo',
     'settings.notifications.webhookUrl': 'URL do Webhook',

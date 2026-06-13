@@ -128,13 +128,72 @@ export function buildSlackPayload(event: NotificationEvent): Record<string, unkn
   blocks.push({
     type: 'context',
     elements: [
-      {
-        type: 'plain_text',
-        text: 'Sessionlens · Local-first AI observability',
-        emoji: true,
-      },
+      { type: 'plain_text', text: 'Sessionlens · Local-first AI observability', emoji: true },
     ],
   });
 
   return { username: 'Sessionlens', blocks };
+}
+
+export function buildTeamsPayload(event: NotificationEvent): Record<string, unknown> {
+  const emoji = resolveEmoji(event);
+  const title = resolveTitle(event);
+  const colorHex = resolveColor(event).toString(16).padStart(6, '0');
+
+  let activityText: string;
+  const facts: { name: string; value: string }[] = [];
+
+  if (event.type === 'ingestion_complete') {
+    activityText = `${event.newSessions} new · ${event.updatedSessions} updated · ${event.totalSessions} total`;
+    if (event.errors.length > 0) {
+      facts.push({ name: 'Errors', value: event.errors.slice(0, 3).join(', ') });
+    }
+  } else {
+    activityText = event.message;
+    facts.push(
+      { name: 'Spend', value: `$${event.currentSpend.toFixed(2)}` },
+      { name: 'Limit', value: `$${event.limitUsd.toFixed(2)}` },
+      { name: 'Usage', value: `${event.percentage.toFixed(0)}%` },
+    );
+  }
+
+  return {
+    '@type': 'MessageCard',
+    '@context': 'http://schema.org/extensions',
+    themeColor: colorHex,
+    summary: `${emoji} ${title}`,
+    sections: [
+      {
+        activityTitle: `${emoji} **${title}**`,
+        activityText,
+        facts,
+      },
+    ],
+  };
+}
+
+export function buildNtfyPayload(event: NotificationEvent): Record<string, unknown> {
+  const emoji = resolveEmoji(event);
+  const title = resolveTitle(event);
+
+  let message: string;
+  let priority: number;
+  let tags: string[];
+
+  if (event.type === 'ingestion_complete') {
+    message = `${event.newSessions} new · ${event.updatedSessions} updated · ${event.totalSessions} total`;
+    priority = event.errors.length > 0 ? 4 : 3;
+    tags = event.errors.length > 0 ? ['warning'] : ['white_check_mark'];
+  } else {
+    message = event.message;
+    priority = event.type === 'budget_exceeded' ? 5 : event.type === 'budget_approaching' ? 4 : 3;
+    tags = event.type === 'budget_exceeded' ? ['rotating_light'] : ['warning'];
+  }
+
+  return {
+    title: `${emoji} ${title}`,
+    message,
+    priority,
+    tags,
+  };
 }

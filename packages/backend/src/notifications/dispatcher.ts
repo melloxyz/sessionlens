@@ -1,12 +1,20 @@
 import { getDatabase } from '../db/connection.js';
-import { buildDiscordPayload, buildSlackPayload, type NotificationEvent } from './formatters.js';
+import {
+  buildDiscordPayload,
+  buildSlackPayload,
+  buildTeamsPayload,
+  buildNtfyPayload,
+  type NotificationEvent,
+} from './formatters.js';
 
 export type { NotificationEvent };
+
+type DestType = 'discord' | 'slack' | 'teams' | 'ntfy' | 'custom';
 
 interface Destination {
   id: number;
   name: string;
-  type: 'discord' | 'slack' | 'custom';
+  type: DestType;
   webhook_url: string;
 }
 
@@ -16,6 +24,10 @@ async function sendToDestination(dest: Destination, event: NotificationEvent): P
     payload = buildDiscordPayload(event);
   } else if (dest.type === 'slack') {
     payload = buildSlackPayload(event);
+  } else if (dest.type === 'teams') {
+    payload = buildTeamsPayload(event);
+  } else if (dest.type === 'ntfy') {
+    payload = buildNtfyPayload(event);
   } else {
     payload = { source: 'sessionlens', event };
   }
@@ -48,7 +60,7 @@ export async function dispatchNotification(event: NotificationEvent): Promise<vo
   const destinations: Destination[] = result[0].values.map((row) => ({
     id: Number(row[0]),
     name: String(row[1]),
-    type: row[2] as Destination['type'],
+    type: row[2] as DestType,
     webhook_url: String(row[3]),
   }));
 
@@ -56,7 +68,7 @@ export async function dispatchNotification(event: NotificationEvent): Promise<vo
 }
 
 export async function testDestination(
-  type: 'discord' | 'slack' | 'custom',
+  type: DestType,
   webhookUrl: string,
   name: string,
 ): Promise<void> {

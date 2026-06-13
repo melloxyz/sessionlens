@@ -4,14 +4,14 @@ import {
   AlertTriangle,
   Bell,
   CheckCircle2,
+  ChevronDown,
   Database,
   Download,
   Globe2,
   Languages,
-  LayoutList,
-  List,
   LockKeyhole,
   Moon,
+  Pencil,
   Play,
   Plus,
   RadioTower,
@@ -93,7 +93,7 @@ export function SettingsPage() {
   const { theme, setTheme } = useTheme();
   const { locale, setLocale, t } = useI18n();
   const { preferences, updateCheck, setPreference, checkForUpdates } = usePreferences();
-  const [density, setDensity] = useState<'comfortable' | 'compact'>('comfortable');
+  const [openSections, setOpenSections] = useState<Set<string>>(() => new Set(['appearance']));
   const [ingestionRunning, setIngestionRunning] = useState(false);
   const [autoUpdating, setAutoUpdating] = useState(false);
   const [autoMutationError, setAutoMutationError] = useState<string | null>(null);
@@ -147,38 +147,16 @@ export function SettingsPage() {
   const integrationsList = integrations?.integrations ?? [];
   const adapterRows = Object.entries(ingestStatus?.adapters ?? {});
   const unacknowledgedAlerts = (alertsData?.alerts ?? []).filter((a) => !a.acknowledged);
-  const detectedCount = integrationsList.filter((item) => item.status === 'available').length;
   const isValidating = overviewValidating || ingestValidating || autoValidating;
 
-  const topCards = useMemo(
-    () => [
-      {
-        icon: theme === 'dark' ? Moon : Sun,
-        label: t('settings.summary.theme'),
-        value: theme === 'dark' ? t('settings.dark') : t('settings.light'),
-        meta: t('settings.summary.active'),
-      },
-      {
-        icon: Globe2,
-        label: t('settings.summary.language'),
-        value: locale === 'pt-BR' ? t('settings.portugueseBrazil') : t('settings.english'),
-        meta: locale === 'pt-BR' ? 'PT-BR' : 'EN',
-      },
-      {
-        icon: ShieldCheck,
-        label: t('settings.summary.privacy'),
-        value: t('settings.summary.localFirst'),
-        meta: t('settings.summary.localOnly'),
-      },
-      {
-        icon: Sparkles,
-        label: t('settings.summary.integrations'),
-        value: String(detectedCount),
-        meta: t('settings.summary.sourcesDetected'),
-      },
-    ],
-    [detectedCount, locale, t, theme],
-  );
+  function toggleSection(id: string) {
+    setOpenSections((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+  }
 
   async function runIngestion() {
     setIngestionRunning(true);
@@ -246,18 +224,16 @@ export function SettingsPage() {
       className="mx-auto flex min-h-full w-full max-w-[1780px] flex-col gap-5 overflow-y-auto p-4 lg:p-6"
       aria-busy={isValidating}
     >
-      <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
-        {topCards.map((card) => (
-          <SettingsSummaryCard key={card.label} {...card} />
-        ))}
-      </div>
-
       <div className="grid gap-5 xl:grid-cols-[minmax(0,1fr)_360px]">
-        <main className="min-w-0 space-y-4">
+        <main className="min-w-0 space-y-3">
           <SettingsSection
+            id="appearance"
+            icon={Sun}
             marker="A."
             title={t('settings.section.appearance')}
             description={t('settings.section.appearance.description')}
+            open={openSections.has('appearance')}
+            onToggle={() => toggleSection('appearance')}
           >
             <ControlGroup
               title={t('settings.theme')}
@@ -277,27 +253,6 @@ export function SettingsPage() {
                 title={t('settings.light')}
                 description={t('settings.alternative')}
                 onClick={() => setTheme('light')}
-              />
-            </ControlGroup>
-
-            <ControlGroup
-              title={t('settings.density')}
-              description={t('settings.density.description')}
-              className="grid gap-3 sm:grid-cols-2"
-            >
-              <ChoiceCard
-                active={density === 'comfortable'}
-                icon={List}
-                title={t('settings.density.comfortable')}
-                description={t('settings.density.comfortable.description')}
-                onClick={() => setDensity('comfortable')}
-              />
-              <ChoiceCard
-                active={density === 'compact'}
-                icon={LayoutList}
-                title={t('settings.density.compact')}
-                description={t('settings.density.compact.description')}
-                onClick={() => setDensity('compact')}
               />
             </ControlGroup>
 
@@ -330,9 +285,13 @@ export function SettingsPage() {
           </SettingsSection>
 
           <SettingsSection
+            id="language"
+            icon={Globe2}
             marker="B."
             title={t('settings.section.language')}
             description={t('settings.section.language.description')}
+            open={openSections.has('language')}
+            onToggle={() => toggleSection('language')}
           >
             <ControlGroup
               title={t('settings.interfaceLanguage')}
@@ -395,9 +354,13 @@ export function SettingsPage() {
           </SettingsSection>
 
           <SettingsSection
+            id="privacy"
+            icon={ShieldCheck}
             marker="C."
             title={t('settings.section.privacy')}
             description={t('settings.section.privacy.description')}
+            open={openSections.has('privacy')}
+            onToggle={() => toggleSection('privacy')}
           >
             <div className="grid gap-3 md:grid-cols-2">
               <PrivacyCard
@@ -436,9 +399,13 @@ export function SettingsPage() {
           </SettingsSection>
 
           <SettingsSection
+            id="startup"
+            icon={SlidersHorizontal}
             marker="D."
             title={t('settings.section.startup')}
             description={t('settings.section.startup.description')}
+            open={openSections.has('startup')}
+            onToggle={() => toggleSection('startup')}
           >
             {trayError ? (
               <ErrorState
@@ -512,9 +479,13 @@ export function SettingsPage() {
           </SettingsSection>
 
           <SettingsSection
+            id="ingestion"
+            icon={Database}
             marker="E."
             title={t('settings.section.ingestion')}
             description={t('settings.section.ingestion.description')}
+            open={openSections.has('ingestion')}
+            onToggle={() => toggleSection('ingestion')}
             action={
               <Button onClick={runIngestion} disabled={ingestionRunning} size="sm">
                 <Play className={cn('h-4 w-4', ingestionRunning && 'animate-spin')} />
@@ -645,7 +616,10 @@ export function SettingsPage() {
             )}
           </SettingsSection>
 
-          <NotificationsSection />
+          <NotificationsSection
+            open={openSections.has('notifications')}
+            onToggle={() => toggleSection('notifications')}
+          />
         </main>
 
         <aside className="space-y-4 xl:sticky xl:top-24 xl:self-start">
@@ -789,34 +763,66 @@ function SettingsSummaryCard({
 }
 
 function SettingsSection({
+  id,
+  icon: Icon,
   marker,
   title,
   description,
   action,
+  open,
+  onToggle,
   children,
 }: {
+  id: string;
+  icon: LucideIcon;
   marker: string;
   title: string;
   description: string;
   action?: ReactNode;
+  open: boolean;
+  onToggle: () => void;
   children: ReactNode;
 }) {
   return (
-    <Card variant="flat">
-      <CardContent className="space-y-4 p-4">
-        <div className="flex flex-col gap-3 border-b border-border pb-3 md:flex-row md:items-start md:justify-between">
-          <div>
-            <h2 className="text-base font-semibold text-foreground">
-              <span className="mr-2 text-subtle-foreground">{marker}</span>
-              {title}
-            </h2>
-            <p className="mt-1 text-sm leading-6 text-muted-foreground">{description}</p>
+    <div id={`section-${id}`} className="scroll-mt-4">
+      <Card variant="flat">
+        <button
+          type="button"
+          onClick={onToggle}
+          className="flex w-full items-center gap-3 p-4 text-left"
+        >
+          <div className="grid h-8 w-8 shrink-0 place-items-center rounded-md border border-border bg-surface-muted text-muted-foreground">
+            <Icon className="h-4 w-4" />
           </div>
-          {action}
-        </div>
-        {children}
-      </CardContent>
-    </Card>
+          <div className="min-w-0 flex-1">
+            <div className="flex items-baseline gap-1.5">
+              <span className="font-mono text-[10px] font-semibold text-subtle-foreground">
+                {marker}
+              </span>
+              <span className="text-sm font-semibold text-foreground">{title}</span>
+            </div>
+            <p className="mt-0.5 truncate text-xs text-muted-foreground">{description}</p>
+          </div>
+          {open && action ? (
+            <div role="none" onClick={(e) => e.stopPropagation()} className="shrink-0">
+              {action}
+            </div>
+          ) : null}
+          <ChevronDown
+            className={cn(
+              'h-4 w-4 shrink-0 text-muted-foreground transition-transform duration-200',
+              open && 'rotate-180',
+            )}
+          />
+        </button>
+
+        {open ? (
+          <CardContent className="space-y-4 border-t border-border px-4 pb-4 pt-4">
+            {children}
+          </CardContent>
+        ) : null}
+      </Card>
+    </div>
   );
 }
 
@@ -1143,7 +1149,7 @@ function IntegrationHealthRow({ item }: { item: IntegrationStatusItem }) {
 
 // ─── Notifications Section ───────────────────────────────────────────────────
 
-type DestType = 'discord' | 'slack' | 'custom';
+type DestType = 'discord' | 'slack' | 'teams' | 'ntfy' | 'custom';
 type EventType = 'ingestion_complete' | 'budget_warning' | 'budget_approaching' | 'budget_exceeded';
 
 interface NotificationDestination {
@@ -1159,7 +1165,17 @@ interface NotificationDestination {
 const DEST_TYPE_LABELS: Record<DestType, string> = {
   discord: 'Discord',
   slack: 'Slack',
+  teams: 'Microsoft Teams',
+  ntfy: 'ntfy',
   custom: 'Custom',
+};
+
+const DEST_TYPE_PLACEHOLDERS: Record<DestType, string> = {
+  discord: 'https://discord.com/api/webhooks/ID/TOKEN',
+  slack: 'https://hooks.slack.com/services/T.../B.../...',
+  teams: 'https://outlook.office.com/webhook/.../IncomingWebhook/...',
+  ntfy: 'https://ntfy.sh/my-topic',
+  custom: 'https://example.com/webhook',
 };
 
 const EVENT_KEYS: EventType[] = [
@@ -1169,13 +1185,28 @@ const EVENT_KEYS: EventType[] = [
   'budget_exceeded',
 ];
 
-function destTypeBadgeVariant(type: DestType): 'info' | 'success' | 'neutral' {
+function destTypeBadgeVariant(type: DestType): 'info' | 'success' | 'warning' | 'neutral' {
   if (type === 'discord') return 'info';
   if (type === 'slack') return 'success';
+  if (type === 'teams') return 'info';
+  if (type === 'ntfy') return 'warning';
   return 'neutral';
 }
 
-function NotificationsSection() {
+function maskWebhookUrl(url: string): string {
+  try {
+    const u = new URL(url);
+    const parts = u.pathname.split('/').filter(Boolean);
+    if (parts.length === 0) return u.hostname;
+    const last = parts[parts.length - 1];
+    const masked = last.length > 12 ? `${last.slice(0, 4)}••••${last.slice(-4)}` : '••••••••';
+    return `${u.hostname}/…/${masked}`;
+  } catch {
+    return url.length > 30 ? `${url.slice(0, 26)}…` : url;
+  }
+}
+
+function NotificationsSection({ open, onToggle }: { open: boolean; onToggle: () => void }) {
   const { t } = useI18n();
   const {
     data: destinations,
@@ -1264,9 +1295,13 @@ function NotificationsSection() {
 
   return (
     <SettingsSection
+      id="notifications"
+      icon={Bell}
       marker="F."
       title={t('settings.section.notifications')}
       description={t('settings.section.notifications.description')}
+      open={open}
+      onToggle={onToggle}
       action={
         !showForm ? (
           <Button size="sm" onClick={() => setShowForm(true)}>
@@ -1279,27 +1314,32 @@ function NotificationsSection() {
       {showForm && (
         <Card variant="inset">
           <CardContent className="space-y-3 p-4">
-            <div className="grid gap-3 sm:grid-cols-2">
-              <div className="space-y-1.5">
+            <div className="flex gap-3">
+              <div className="min-w-0 flex-1 space-y-1.5">
                 <label className="text-xs font-medium text-muted-foreground">
                   {t('settings.notifications.name')}
                 </label>
                 <Input
                   value={formName}
                   onChange={(e) => setFormName(e.target.value)}
-                  placeholder="ex: #alerts"
+                  placeholder="ex: My Alerts"
                 />
               </div>
-              <div className="space-y-1.5">
+              <div className="w-44 shrink-0 space-y-1.5">
                 <label className="text-xs font-medium text-muted-foreground">
                   {t('settings.notifications.type')}
                 </label>
                 <Select
                   value={formType}
-                  onChange={(e) => setFormType(e.target.value as DestType)}
+                  onChange={(e) => {
+                    setFormType(e.target.value as DestType);
+                    setFormUrl('');
+                  }}
                   options={[
                     { label: 'Discord', value: 'discord' },
                     { label: 'Slack', value: 'slack' },
+                    { label: 'Microsoft Teams', value: 'teams' },
+                    { label: 'ntfy', value: 'ntfy' },
                     { label: 'Custom JSON', value: 'custom' },
                   ]}
                 />
@@ -1312,7 +1352,7 @@ function NotificationsSection() {
               <Input
                 value={formUrl}
                 onChange={(e) => setFormUrl(e.target.value)}
-                placeholder="https://discord.com/api/webhooks/..."
+                placeholder={DEST_TYPE_PLACEHOLDERS[formType]}
                 type="url"
               />
             </div>
@@ -1344,7 +1384,7 @@ function NotificationsSection() {
       {loading && destList.length === 0 ? (
         <div className="space-y-2">
           {Array.from({ length: 2 }).map((_, i) => (
-            <Skeleton key={i} className="h-24 w-full rounded-md" />
+            <Skeleton key={i} className="h-28 w-full rounded-md" />
           ))}
         </div>
       ) : destList.length === 0 && !showForm ? (
@@ -1360,7 +1400,7 @@ function NotificationsSection() {
           </div>
         </div>
       ) : (
-        <div className="space-y-3">
+        <div className="space-y-2">
           {destList.map((dest) => (
             <NotificationDestCard
               key={dest.id}
@@ -1372,6 +1412,7 @@ function NotificationsSection() {
               onDelete={() => handleDelete(dest.id)}
               onToggleEnabled={() => handleToggleEnabled(dest)}
               onToggleEvent={(event, enabled) => handleToggleEvent(dest, event, enabled)}
+              onSaved={refetch}
             />
           ))}
         </div>
@@ -1389,6 +1430,7 @@ function NotificationDestCard({
   onDelete,
   onToggleEnabled,
   onToggleEvent,
+  onSaved,
 }: {
   dest: NotificationDestination;
   testResult: 'ok' | 'fail' | undefined;
@@ -1398,31 +1440,74 @@ function NotificationDestCard({
   onDelete: () => void;
   onToggleEnabled: () => void;
   onToggleEvent: (event: EventType, enabled: boolean) => void;
+  onSaved: () => void;
 }) {
   const { t } = useI18n();
+  const [editMode, setEditMode] = useState(false);
+  const [editName, setEditName] = useState(dest.name);
+  const [editUrl, setEditUrl] = useState(dest.webhook_url);
+  const [editSaving, setEditSaving] = useState(false);
+
+  async function handleSaveEdit() {
+    if (!editName.trim() || !editUrl.trim()) return;
+    setEditSaving(true);
+    try {
+      await fetch(`/api/notifications/destinations/${dest.id}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ name: editName.trim(), webhook_url: editUrl.trim() }),
+      });
+      setEditMode(false);
+      onSaved();
+    } finally {
+      setEditSaving(false);
+    }
+  }
+
+  function cancelEdit() {
+    setEditName(dest.name);
+    setEditUrl(dest.webhook_url);
+    setEditMode(false);
+  }
 
   return (
     <Card variant="inset">
-      <CardContent className="p-4">
-        <div className="flex items-start justify-between gap-3">
-          <div className="flex min-w-0 items-center gap-2">
-            <Webhook className="h-4 w-4 shrink-0 text-muted-foreground" />
-            <span className="truncate text-sm font-semibold text-foreground">{dest.name}</span>
-            <Badge variant={destTypeBadgeVariant(dest.type)}>{DEST_TYPE_LABELS[dest.type]}</Badge>
-            <Badge variant={dest.enabled ? 'success' : 'neutral'}>
-              {dest.enabled
-                ? t('settings.notifications.enabled')
-                : t('settings.notifications.disabled')}
-            </Badge>
+      <CardContent className="p-0">
+        {/* ── Header row ── */}
+        <div
+          className={cn(
+            'flex items-center gap-3 p-3 transition-opacity',
+            !dest.enabled && 'opacity-60',
+          )}
+        >
+          <div className="grid h-8 w-8 shrink-0 place-items-center rounded-md border border-border bg-surface-muted text-muted-foreground">
+            <Webhook className="h-4 w-4" />
           </div>
-          <div className="flex shrink-0 items-center gap-1">
-            {testResult === 'ok' ? (
-              <span className="text-xs text-success">
+
+          <div className="min-w-0 flex-1">
+            <div className="flex flex-wrap items-center gap-1.5">
+              <span className="text-sm font-semibold text-foreground">{dest.name}</span>
+              <Badge variant={destTypeBadgeVariant(dest.type)}>{DEST_TYPE_LABELS[dest.type]}</Badge>
+              {!dest.enabled && (
+                <Badge variant="neutral">{t('settings.notifications.disabled')}</Badge>
+              )}
+            </div>
+            <div className="mt-0.5 truncate font-mono text-[11px] text-subtle-foreground">
+              {maskWebhookUrl(dest.webhook_url)}
+            </div>
+          </div>
+
+          <div className="flex shrink-0 items-center gap-0.5">
+            {testResult === 'ok' && (
+              <span className="mr-1 text-xs text-success">
                 {t('settings.notifications.testSuccess')}
               </span>
-            ) : testResult === 'fail' ? (
-              <span className="text-xs text-danger">{t('settings.notifications.testFailed')}</span>
-            ) : null}
+            )}
+            {testResult === 'fail' && (
+              <span className="mr-1 text-xs text-danger">
+                {t('settings.notifications.testFailed')}
+              </span>
+            )}
             <Button
               variant="outline"
               size="sm"
@@ -1434,33 +1519,82 @@ function NotificationDestCard({
             </Button>
             <button
               type="button"
+              onClick={() => setEditMode((v) => !v)}
+              className={cn(
+                'rounded p-1.5 transition-colors',
+                editMode ? 'text-accent' : 'text-subtle-foreground hover:text-foreground',
+              )}
+              aria-label="Editar"
+            >
+              <Pencil className="h-3.5 w-3.5" />
+            </button>
+            <button
+              type="button"
               onClick={onToggleEnabled}
               disabled={toggling}
-              className="rounded p-1 text-subtle-foreground transition-colors hover:text-foreground"
+              className="rounded p-1.5 text-subtle-foreground transition-colors hover:text-foreground"
               aria-label={dest.enabled ? 'Pausar' : 'Ativar'}
             >
-              {dest.enabled ? (
-                <Bell className="h-4 w-4" />
-              ) : (
-                <Bell className="h-4 w-4 opacity-40" />
-              )}
+              <Bell className={cn('h-3.5 w-3.5', !dest.enabled && 'opacity-40')} />
             </button>
             <button
               type="button"
               onClick={onDelete}
-              className="rounded p-1 text-subtle-foreground transition-colors hover:text-danger"
+              className="rounded p-1.5 text-subtle-foreground transition-colors hover:text-danger"
               aria-label="Remover"
             >
-              <Trash2 className="h-4 w-4" />
+              <Trash2 className="h-3.5 w-3.5" />
             </button>
           </div>
         </div>
 
-        <div className="mt-3">
-          <div className="mb-2 text-[10px] font-semibold uppercase text-subtle-foreground">
+        {/* ── Edit form ── */}
+        {editMode && (
+          <div className="space-y-3 border-t border-border bg-surface-muted/40 p-3">
+            <div className="grid gap-3 sm:grid-cols-2">
+              <div className="space-y-1.5">
+                <label className="text-xs font-medium text-muted-foreground">
+                  {t('settings.notifications.name')}
+                </label>
+                <Input
+                  value={editName}
+                  onChange={(e) => setEditName(e.target.value)}
+                  placeholder={dest.name}
+                />
+              </div>
+              <div className="space-y-1.5">
+                <label className="text-xs font-medium text-muted-foreground">
+                  {t('settings.notifications.webhookUrl')}
+                </label>
+                <Input
+                  value={editUrl}
+                  onChange={(e) => setEditUrl(e.target.value)}
+                  placeholder={DEST_TYPE_PLACEHOLDERS[dest.type]}
+                  type="url"
+                />
+              </div>
+            </div>
+            <div className="flex justify-end gap-2">
+              <Button variant="outline" size="sm" onClick={cancelEdit}>
+                {t('settings.notifications.cancel')}
+              </Button>
+              <Button
+                size="sm"
+                onClick={handleSaveEdit}
+                disabled={editSaving || !editName.trim() || !editUrl.trim()}
+              >
+                {t('settings.notifications.save')}
+              </Button>
+            </div>
+          </div>
+        )}
+
+        {/* ── Events row ── */}
+        <div className="border-t border-border px-3 py-2.5">
+          <div className="mb-1.5 text-[10px] font-semibold uppercase tracking-wide text-subtle-foreground">
             {t('settings.notifications.events')}
           </div>
-          <div className="flex flex-wrap gap-2">
+          <div className="flex flex-wrap gap-1.5">
             {EVENT_KEYS.map((event) => {
               const active = dest.rules[event];
               return (
@@ -1469,10 +1603,10 @@ function NotificationDestCard({
                   type="button"
                   onClick={() => onToggleEvent(event, !active)}
                   className={cn(
-                    'rounded-full border px-2.5 py-1 text-[11px] font-medium transition-colors',
+                    'rounded-full border px-2.5 py-0.5 text-[11px] font-medium transition-colors',
                     active
                       ? 'border-accent/30 bg-accent-soft text-accent'
-                      : 'border-border bg-surface-muted text-subtle-foreground hover:border-border-strong hover:text-muted-foreground',
+                      : 'border-border bg-surface text-subtle-foreground hover:border-border-strong hover:text-muted-foreground',
                   )}
                 >
                   {t(`settings.notifications.event.${event}` as Parameters<typeof t>[0])}

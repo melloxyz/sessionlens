@@ -1,7 +1,7 @@
 CREATE TABLE IF NOT EXISTS notification_destinations (
   id INTEGER PRIMARY KEY AUTOINCREMENT,
   name TEXT NOT NULL,
-  type TEXT NOT NULL CHECK(type IN ('discord', 'slack', 'custom')),
+  type TEXT NOT NULL CHECK(type IN ('discord', 'slack', 'teams', 'ntfy', 'custom')),
   webhook_url TEXT NOT NULL,
   enabled INTEGER NOT NULL DEFAULT 1,
   created_at TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%SZ', 'now'))
