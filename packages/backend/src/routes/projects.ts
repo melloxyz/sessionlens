@@ -153,6 +153,81 @@ export function registerProjectRoutes(app: FastifyInstance): void {
     return { project: proj, sessions, providerBreakdown, modelBreakdown, spendOverTime, commits };
   });
 
+  app.get('/api/projects/:id/cli-comparison', async (req, reply) => {
+    try {
+      const { id } = req.params as { id: string };
+      const db = getDatabase();
+      const decodedId = decodeURIComponent(id);
+      const isNumeric = /^\d+$/.test(decodedId);
+
+      const projResult = db.exec(
+        `SELECT path FROM projects
+         WHERE ${isNumeric ? 'id = ?' : 'path = ?'}
+           AND NOT EXISTS (SELECT 1 FROM hidden_projects hp WHERE hp.path = projects.path)`,
+        [isNumeric ? Number(decodedId) : decodedId],
+      );
+      if (!projResult.length || !projResult[0].values?.length) {
+        reply.code(404);
+        return { error: { code: 'PROJECT_NOT_FOUND', message: 'Project not found' } };
+      }
+      const path = String(projResult[0].values[0][0]);
+
+      // Aggregate tokens per session first to avoid row inflation on JOIN
+      const result = db.exec(
+        `SELECT
+           s.cli,
+           COUNT(*) AS session_count,
+           COALESCE(SUM(s.total_cost_usd), 0) AS total_cost,
+           COALESCE(SUM(s.tool_call_count), 0) AS total_tool_calls,
+           COALESCE(SUM(tok.total_tokens), 0) AS total_tokens
+         FROM sessions s
+         LEFT JOIN (
+           SELECT session_fk, SUM(input_tokens + output_tokens) AS total_tokens
+           FROM usage_events GROUP BY session_fk
+         ) tok ON tok.session_fk = s.id
+         WHERE COALESCE(s.project_path, 'unknown') = ? AND ${validSessionSql('s')}
+         GROUP BY s.cli
+         ORDER BY total_cost DESC`,
+        [path],
+      );
+
+      const comparison: {
+        cli: string;
+        sessionCount: number;
+        totalCost: number;
+        totalToolCalls: number;
+        totalTokens: number;
+        costPerToolCall: number;
+        avgCostPerSession: number;
+      }[] = [];
+
+      if (result.length > 0 && result[0].values) {
+        for (const r of result[0].values) {
+          const totalCost = Number(r[2]) || 0;
+          const totalToolCalls = Number(r[3]) || 0;
+          const sessionCount = Number(r[1]) || 0;
+          comparison.push({
+            cli: String(r[0]),
+            sessionCount,
+            totalCost: Math.round(totalCost * 10000) / 10000,
+            totalToolCalls,
+            totalTokens: Number(r[4]) || 0,
+            costPerToolCall:
+              totalToolCalls > 0 ? Math.round((totalCost / totalToolCalls) * 10000) / 10000 : 0,
+            avgCostPerSession:
+              sessionCount > 0 ? Math.round((totalCost / sessionCount) * 10000) / 10000 : 0,
+          });
+        }
+      }
+
+      return { cliCount: comparison.length, comparison };
+    } catch (error) {
+      req.log.error(error, 'Failed to load CLI comparison');
+      reply.code(500);
+      return { error: { code: 'CLI_COMPARISON_FAILED', message: 'Failed to load CLI comparison' } };
+    }
+  });
+
   app.delete('/api/projects/:id', async (req, reply) => {
     try {
       const { id } = req.params as { id: string };

@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react';
+import { useMemo, useState, type ReactNode } from 'react';
 import { useParams, Link, useNavigate } from 'react-router-dom';
 import {
   ArrowLeft,
@@ -27,8 +27,10 @@ import {
   formatCurrency,
   formatDate,
   formatDuration,
+  formatTokens,
 } from '../lib/format.js';
 import { chartColor } from '../lib/chart-colors.js';
+import { BrandBadge, BrandMark } from '../components/brand/BrandMark.js';
 import { Badge } from '../components/ui/Badge.js';
 import { Button } from '../components/ui/Button.js';
 import { CompactStat } from '../components/ui/CompactStat.js';
@@ -62,6 +64,21 @@ interface ProjectDetailResponse {
   };
 }
 
+interface CliComparisonRow {
+  cli: string;
+  sessionCount: number;
+  totalCost: number;
+  totalToolCalls: number;
+  totalTokens: number;
+  costPerToolCall: number;
+  avgCostPerSession: number;
+}
+
+interface CliComparisonResponse {
+  cliCount: number;
+  comparison: CliComparisonRow[];
+}
+
 export function ProjectDetailPage() {
   const { t } = useI18n();
   const { id } = useParams<{ id: string }>();
@@ -69,6 +86,9 @@ export function ProjectDetailPage() {
   const [openingProject, setOpeningProject] = useState(false);
   const { data, loading, validating, error, refetch } = useApi<ProjectDetailResponse>(
     `/api/projects/${projectApiId}`,
+  );
+  const { data: cliComparison } = useApi<CliComparisonResponse>(
+    `/api/projects/${projectApiId}/cli-comparison`,
   );
 
   const derived = useMemo(() => {
@@ -276,6 +296,10 @@ export function ProjectDetailPage() {
         />
       </div>
 
+      {cliComparison && cliComparison.cliCount >= 2 && (
+        <CliComparisonCard comparison={cliComparison.comparison} />
+      )}
+
       <div className="grid grid-cols-1 gap-4 xl:grid-cols-[minmax(0,1fr)_420px]">
         <FigurePanel figure="LEDGER 03" title={t('project.recentSessions')} contentClassName="p-0">
           <DataTableContainer>
@@ -325,6 +349,62 @@ export function ProjectDetailPage() {
           </FigurePanel>
         </div>
       </div>
+    </div>
+  );
+}
+
+function CliComparisonCard({ comparison }: { comparison: CliComparisonRow[] }) {
+  const { t } = useI18n();
+
+  return (
+    <FigurePanel
+      figure="CLI COMP"
+      title={t('project.cliComparison')}
+      description={t('project.cliComparisonDescription')}
+      meta={<Badge variant="neutral">{comparison.length} CLIs</Badge>}
+      contentClassName="p-0"
+    >
+      <div
+        className="grid divide-x divide-border"
+        style={{ gridTemplateColumns: `repeat(${comparison.length}, minmax(0, 1fr))` }}
+      >
+        {comparison.map((row) => (
+          <div key={row.cli} className="min-w-0 space-y-3 p-4">
+            <div className="flex items-center gap-2">
+              <BrandMark value={row.cli} size="sm" />
+              <BrandBadge value={row.cli} />
+            </div>
+            <div className="space-y-1 border-t border-border pt-3">
+              <ComparisonMetric
+                label={t('common.cost')}
+                value={<Sensitive>{formatCurrency(row.totalCost)}</Sensitive>}
+              />
+              <ComparisonMetric label={t('common.sessions')} value={String(row.sessionCount)} />
+              <ComparisonMetric label={t('common.tools')} value={String(row.totalToolCalls)} />
+              <ComparisonMetric
+                label={t('project.costPerToolCall')}
+                value={
+                  row.totalToolCalls > 0 ? (
+                    <Sensitive>{formatCurrency(row.costPerToolCall)}</Sensitive>
+                  ) : (
+                    '—'
+                  )
+                }
+              />
+              <ComparisonMetric label={t('common.tokens')} value={formatTokens(row.totalTokens)} />
+            </div>
+          </div>
+        ))}
+      </div>
+    </FigurePanel>
+  );
+}
+
+function ComparisonMetric({ label, value }: { label: string; value: ReactNode }) {
+  return (
+    <div className="flex items-center justify-between gap-2 rounded-sm py-1">
+      <span className="text-[11px] font-semibold uppercase text-muted-foreground">{label}</span>
+      <span className="font-mono text-sm font-medium text-foreground">{value}</span>
     </div>
   );
 }
