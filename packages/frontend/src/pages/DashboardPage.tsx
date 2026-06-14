@@ -116,6 +116,16 @@ interface BudgetStatusItem {
   status: 'ok' | 'warning' | 'approaching' | 'exceeded';
 }
 
+interface Forecast {
+  currentMonthSpend: number;
+  projectedMonthSpend: number;
+  daysElapsed: number;
+  daysRemaining: number;
+  daysInMonth: number;
+  avgDailySpend: number;
+  hasData: boolean;
+}
+
 type QualityTone = 'real' | 'partial' | 'estimated' | 'unknown';
 
 export function DashboardPage() {
@@ -194,9 +204,17 @@ export function DashboardPage() {
   const { data: budgetStatus } = useApi<BudgetStatusItem[]>('/api/budgets/status', {
     initialData: [],
   });
+  const { data: forecastData } = useApi<Forecast>('/api/overview/forecast');
   const exceededBudgets = (budgetStatus ?? []).filter(
     (b) => b.status === 'exceeded' || b.status === 'approaching',
   );
+  const globalMonthlyBudget = (budgetStatus ?? []).find(
+    (b) => b.scope_type === 'global' && b.period === 'monthly',
+  );
+  const forecastExceedsBudget =
+    !!globalMonthlyBudget &&
+    !!forecastData?.hasData &&
+    forecastData.projectedMonthSpend > globalMonthlyBudget.limit_usd;
 
   const spendPoints = spendData?.points ?? [];
   const tokenPoints = tokenData?.points ?? [];
@@ -329,7 +347,7 @@ export function DashboardPage() {
             }
             meta={rangeLabel}
             icon={CircleDollarSign}
-            tone={exceededBudgets.length > 0 ? 'warning' : 'success'}
+            tone={exceededBudgets.length > 0 || forecastExceedsBudget ? 'warning' : 'success'}
             loading={overviewLoading}
             sub={
               overview && overview.confirmedSpend > 0 && overview.estimatedSpend > 0 ? (
@@ -341,6 +359,25 @@ export function DashboardPage() {
                 </>
               ) : overview && overview.estimatedSpend > 0 && overview.confirmedSpend === 0 ? (
                 t('common.estimated')
+              ) : undefined
+            }
+            forecast={
+              forecastData?.hasData ? (
+                <span>
+                  {t('dashboard.forecastPrefix')}
+                  <Sensitive>
+                    {'~' + formatCurrency(forecastData.projectedMonthSpend)}
+                  </Sensitive>{' '}
+                  {t('dashboard.forecastSuffix').replace(
+                    '{{day}}',
+                    String(forecastData.daysInMonth),
+                  )}
+                  {forecastExceedsBudget && (
+                    <span className="ml-1 font-medium text-warning">
+                      · {t('dashboard.forecastExceedsBudget')}
+                    </span>
+                  )}
+                </span>
               ) : undefined
             }
           />
@@ -835,6 +872,7 @@ function DashboardKpiCard({
   tone,
   loading,
   sub,
+  forecast,
 }: {
   label: string;
   value: ReactNode;
@@ -843,6 +881,7 @@ function DashboardKpiCard({
   tone: 'success' | 'warning' | 'info';
   loading?: boolean;
   sub?: ReactNode;
+  forecast?: ReactNode;
 }) {
   return (
     <Card variant="figure" className="overflow-hidden">
@@ -863,6 +902,9 @@ function DashboardKpiCard({
             {loading ? '...' : value}
           </div>
           {sub && <div className="mt-1.5 truncate text-[11px] text-subtle-foreground">{sub}</div>}
+          {forecast && (
+            <div className="mt-0.5 truncate text-[11px] text-subtle-foreground">{forecast}</div>
+          )}
         </div>
       </CardContent>
     </Card>

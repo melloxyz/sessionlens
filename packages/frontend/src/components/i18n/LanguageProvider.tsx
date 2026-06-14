@@ -241,6 +241,9 @@ const dictionaries = {
     'dashboard.noSpend.title': 'No spend data yet',
     'dashboard.noSpend.description':
       'Cost distribution will appear after sessions with spend are indexed.',
+    'dashboard.forecastPrefix': 'Forecast: ',
+    'dashboard.forecastSuffix': 'by day {{day}}',
+    'dashboard.forecastExceedsBudget': 'exceeds budget',
     'analytics.failed': 'Analytics failed to load',
     'analytics.failed.message': 'One or more analytics requests failed.',
     'analytics.byModel': 'By Model',
@@ -972,6 +975,9 @@ const dictionaries = {
     'dashboard.noSpend.title': 'Sem dados de gasto ainda',
     'dashboard.noSpend.description':
       'A distribuição de custos aparece após indexar sessões com gasto.',
+    'dashboard.forecastPrefix': 'Projeção: ',
+    'dashboard.forecastSuffix': 'até dia {{day}}',
+    'dashboard.forecastExceedsBudget': 'excede o budget',
     'analytics.failed': 'Falha ao carregar analytics',
     'analytics.failed.message': 'Uma ou mais requisições de analytics falharam.',
     'analytics.byModel': 'Por modelo',
