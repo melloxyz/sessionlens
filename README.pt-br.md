@@ -11,7 +11,7 @@
 **Observabilidade local-first para AI Coding CLIs — multi-CLI, open-source, privado.**
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-00c853.svg?style=flat-square)](LICENSE)
-[![v0.9.4](https://img.shields.io/badge/v0.9.4-00c853?style=flat-square)](https://github.com/melloxyz/sessionlens/releases)
+[![v0.9.5](https://img.shields.io/badge/v0.9.5-00c853?style=flat-square)](https://github.com/melloxyz/sessionlens/releases)
 [![Node.js](https://img.shields.io/badge/node-%3E%3D20-339933?style=flat-square&logo=node.js&logoColor=white)](https://nodejs.org)
 [![pnpm](https://img.shields.io/badge/pnpm-%3E%3D9-f69220?style=flat-square&logo=pnpm&logoColor=white)](https://pnpm.io)
 [![TypeScript](https://img.shields.io/badge/TypeScript-5.9-3178c6?style=flat-square&logo=typescript&logoColor=white)](https://www.typescriptlang.org)
@@ -62,17 +62,17 @@ _Rastreie custos, analise sessões e compare eficiência entre suas CLIs de IA �
 
 ---
 
-## Novidades na v0.9.4
+## Novidades na v0.9.5
 
 > Histórico completo em [CHANGELOG.md](CHANGELOG.md).
 
-- **Spend confirmado vs estimado** separados nos KPIs do Dashboard e Overview
-- **Controles de privacidade:** redação opt-in de inputs sensíveis nas Configurações
-- **Contadores de drift:** sinais de qualidade por adapter expostos em Settings
-- **Ingestão incremental:** arquivos não alterados são pulados via checkpoints — re-scans mais rápidos
-- **IDs de projeto estáveis:** upsert por path — IDs não mudam entre ingestões
-- **Utilitários de adapter compartilhados:** ~200 linhas de duplicação removidas entre adapters
-- **Segurança:** CORS restrito; git sem modo shell; sanitização de erros
+- **Página de Sources:** página dedicada exibindo os adapters CLI detectados e seus status em tempo real (habilitado/desabilitado, caminho, erros)
+- **Notificações via webhook:** sistema completo de CRUD para destinos webhook, com suporte nativo a Microsoft Teams e ntfy
+- **Gerenciamento de alertas:** ação "Limpar tudo" para descartar todos os alertas ativos de uma vez
+- **Cooldown de notificações:** configuração de cooldown por destino para evitar spam de alertas
+- **Metadados de sessão:** novos campos de metadados no modelo de sessão, preenchidos durante a ingestão
+- **Resiliência de adapters:** erros de detecção são capturados e logados; adapters com falha são ignorados sem interromper a ingestão
+- **Melhoria de privacidade:** valores de moeda na UI agora passam pelo componente `Sensitive`
 
 ---
 

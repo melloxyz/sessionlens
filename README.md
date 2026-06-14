@@ -11,7 +11,7 @@
 **Local-first observability for AI Coding CLIs — multi-CLI, open-source, private.**
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-00c853.svg?style=flat-square)](LICENSE)
-[![v0.9.4](https://img.shields.io/badge/v0.9.4-00c853?style=flat-square)](https://github.com/melloxyz/sessionlens/releases)
+[![v0.9.5](https://img.shields.io/badge/v0.9.5-00c853?style=flat-square)](https://github.com/melloxyz/sessionlens/releases)
 [![Node.js](https://img.shields.io/badge/node-%3E%3D20-339933?style=flat-square&logo=node.js&logoColor=white)](https://nodejs.org)
 [![pnpm](https://img.shields.io/badge/pnpm-%3E%3D9-f69220?style=flat-square&logo=pnpm&logoColor=white)](https://pnpm.io)
 [![TypeScript](https://img.shields.io/badge/TypeScript-5.9-3178c6?style=flat-square&logo=typescript&logoColor=white)](https://www.typescriptlang.org)
@@ -62,17 +62,17 @@ _Track costs, analyze sessions, and compare efficiency across your AI CLIs — f
 
 ---
 
-## What's New in v0.9.4
+## What's New in v0.9.5
 
 > Full history in [CHANGELOG.md](CHANGELOG.md).
 
-- **Confirmed vs. estimated spend** split in Dashboard KPIs and Overview
-- **Privacy controls:** opt-in redaction of sensitive tool inputs in Settings
-- **Adapter drift counters:** per-adapter quality signals surfaced in `/api/integrations/status` and Settings
-- **Incremental ingestion:** unchanged files skipped via file-level checkpoints — faster re-scans
-- **Stable project IDs:** upsert by path — IDs no longer change between ingestions
-- **Shared adapter utilities:** ~200 lines of duplication removed across adapters
-- **Security hardening:** CORS restricted; git calls use no-shell mode; error sanitization
+- **Sources page:** dedicated page showing detected CLI adapters and their live status (enabled/disabled, path, errors)
+- **Webhook notifications:** full CRUD system for webhook destinations, with built-in support for Microsoft Teams and ntfy
+- **Alert management:** "Clear all" action to dismiss all active alerts at once
+- **Notification cooldown:** per-destination cooldown setting to prevent alert spam
+- **Session metadata:** new metadata fields on the session model, populated during ingestion
+- **Adapter resilience:** detection errors are caught and logged; failing adapters are skipped without breaking ingestion
+- **Privacy enhancement:** currency values in the UI now pass through the `Sensitive` component
 
 ---
 

@@ -5,6 +5,27 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ---
 
+## [0.9.5] — 2026-06-13
+
+### Added
+
+- **Sources page:** dedicated page showing detected CLI adapters and their live status (enabled/disabled, path, errors)
+- **Webhook notifications:** full CRUD system for webhook notification destinations with built-in support for Microsoft Teams and ntfy
+- **Alert management:** "Clear all" action to dismiss all active alerts at once from the UI
+- **Notification cooldown:** per-destination cooldown setting to prevent alert spam
+- **Session metadata:** new metadata fields added to the session model and populated during ingestion
+- **Custom profile networks:** support for custom networks in the profile with per-network language selection
+
+### Changed
+
+- **Privacy enhancement:** currency values displayed in the UI now pass through the `Sensitive` component to respect the privacy setting
+
+### Fixed
+
+- **Adapter resilience:** errors during adapter detection are caught and logged; adapters that fail detection are skipped without interrupting ingestion
+
+---
+
 ## [0.9.4] — 2026-06-12
 
 ### Added
