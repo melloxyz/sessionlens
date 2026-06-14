@@ -50,6 +50,7 @@ interface SessionRow {
   message_count: number;
   tool_call_count: number;
   session_id: string;
+  fts_snippet?: string;
 }
 
 export function SessionsPage() {
@@ -237,13 +238,18 @@ export function SessionsPage() {
                           size="md"
                           className="group-hover:border-accent/30"
                         />
-                        <div>
+                        <div className="min-w-0">
                           <div className="text-sm font-medium text-foreground group-hover:text-accent">
                             {session.session_id.slice(0, 10)}
                           </div>
                           <div className="text-xs text-subtle-foreground">
                             {formatRelativeTime(session.started_at)}
                           </div>
+                          {session.fts_snippet && (
+                            <div className="mt-0.5 max-w-[220px] truncate text-[10px] italic text-subtle-foreground">
+                              <FtsSnippet text={session.fts_snippet} />
+                            </div>
+                          )}
                         </div>
                       </Link>
                     </DataTableCell>
@@ -326,6 +332,11 @@ export function SessionsPage() {
                             <div className="text-xs text-subtle-foreground">
                               {formatRelativeTime(session.started_at)}
                             </div>
+                            {session.fts_snippet && (
+                              <div className="mt-0.5 truncate text-[10px] italic text-subtle-foreground">
+                                <FtsSnippet text={session.fts_snippet} />
+                              </div>
+                            )}
                           </div>
                         </div>
                         <Badge
@@ -442,5 +453,22 @@ function MobileMetric({ label, value }: { label: string; value: ReactNode }) {
       <div className="text-[10px] uppercase text-subtle-foreground">{label}</div>
       <div className="mt-1 truncate font-mono text-xs font-semibold text-foreground">{value}</div>
     </div>
+  );
+}
+
+function FtsSnippet({ text }: { text: string }) {
+  const parts = text.split(/(\[\[.*?\]\])/);
+  return (
+    <>
+      {parts.map((part, i) =>
+        part.startsWith('[[') && part.endsWith(']]') ? (
+          <mark key={i} className="rounded-sm bg-accent/20 px-0.5 not-italic text-accent">
+            {part.slice(2, -2)}
+          </mark>
+        ) : (
+          <span key={i}>{part}</span>
+        ),
+      )}
+    </>
   );
 }

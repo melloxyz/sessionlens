@@ -42,6 +42,7 @@ export function runMigrations(): void {
     '0010_notification_webhooks',
     '0011_notification_cooldown',
     '0012_session_metadata',
+    '0013_messages_fts',
   ];
 
   for (const name of migrations) {
@@ -177,6 +178,17 @@ function ensureMigrationSatisfied(name: string): boolean {
     }
     if (!columnExists('sessions', 'is_automated')) {
       db.run(`ALTER TABLE sessions ADD COLUMN is_automated INTEGER NOT NULL DEFAULT 0`);
+    }
+    return true;
+  }
+
+  if (name === '0013_messages_fts') {
+    try {
+      if (!tableExists('messages_fts')) {
+        db.run(`CREATE VIRTUAL TABLE messages_fts USING fts5(content, session_fk UNINDEXED)`);
+      }
+    } catch {
+      // FTS5 not available in this sqlite build — skip silently
     }
     return true;
   }

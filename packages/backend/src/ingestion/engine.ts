@@ -347,6 +347,7 @@ function upsertSession(raw: RawSession, redact: boolean): 'new' | 'updated' | 's
     db.run(`DELETE FROM messages WHERE session_fk = ?`, [sessionPk]);
     db.run(`DELETE FROM session_model_usage WHERE session_fk = ?`, [sessionPk]);
     insertEvents(db, sessionPk, raw, redact);
+    syncMessagesFts(db, sessionPk);
     persistToolEvents(db, sessionPk, raw.toolEvents ?? [], redact);
     persistFileEvents(db, sessionPk, raw.fileEvents ?? []);
     persistModelUsage(sessionPk, cost.modelUsage);
@@ -388,6 +389,7 @@ function upsertSession(raw: RawSession, redact: boolean): 'new' | 'updated' | 's
   const lastId = db.exec(`SELECT last_insert_rowid()`);
   sessionPk = Number(lastId[0].values[0][0]);
   insertEvents(db, sessionPk, raw, redact);
+  syncMessagesFts(db, sessionPk);
   persistToolEvents(db, sessionPk, raw.toolEvents ?? [], redact);
   persistFileEvents(db, sessionPk, raw.fileEvents ?? []);
   persistModelUsage(sessionPk, cost.modelUsage);
@@ -463,6 +465,20 @@ export function backfillEstimatedCosts(forceAll = false): void {
     }
   } finally {
     clearPricingCache();
+  }
+}
+
+function syncMessagesFts(db: ReturnType<typeof getDatabase>, sessionFk: number): void {
+  try {
+    db.run(`DELETE FROM messages_fts WHERE session_fk = ?`, [sessionFk]);
+    db.run(
+      `INSERT INTO messages_fts (content, session_fk)
+       SELECT content, session_fk FROM messages
+       WHERE session_fk = ? AND content IS NOT NULL AND content != ''`,
+      [sessionFk],
+    );
+  } catch {
+    // FTS sync is best-effort; failure doesn't break ingestion
   }
 }
 

@@ -36,6 +36,15 @@ export function registerSessionRoutes(app: FastifyInstance): void {
       ];
       const sortCol = allowedSort.includes(sortBy) ? sortBy : 'started_at';
 
+      // Check FTS availability once per request
+      let hasFts = false;
+      try {
+        db.exec(`SELECT 1 FROM messages_fts LIMIT 0`);
+        hasFts = true;
+      } catch {
+        // FTS table not available
+      }
+
       // Count query
       let countSql = `SELECT COUNT(*) FROM sessions WHERE ${visibleSessionSql()}`;
       const countParams: (string | number | null)[] = [];
@@ -68,8 +77,13 @@ export function registerSessionRoutes(app: FastifyInstance): void {
         countParams.push(confidence);
       }
       if (search) {
-        countSql += ` AND (session_id LIKE ? OR project_path LIKE ?)`;
-        countParams.push(`%${search}%`, `%${search}%`);
+        if (hasFts) {
+          countSql += ` AND (session_id LIKE ? OR project_path LIKE ? OR id IN (SELECT DISTINCT session_fk FROM messages_fts WHERE content MATCH ?))`;
+          countParams.push(`%${search}%`, `%${search}%`, `"${search.replace(/"/g, '""')}"`);
+        } else {
+          countSql += ` AND (session_id LIKE ? OR project_path LIKE ?)`;
+          countParams.push(`%${search}%`, `%${search}%`);
+        }
       }
 
       const countResult = db.exec(countSql, countParams);
@@ -111,8 +125,13 @@ export function registerSessionRoutes(app: FastifyInstance): void {
         dataParams.push(confidence);
       }
       if (search) {
-        dataSql += ` AND (session_id LIKE ? OR project_path LIKE ?)`;
-        dataParams.push(`%${search}%`, `%${search}%`);
+        if (hasFts) {
+          dataSql += ` AND (session_id LIKE ? OR project_path LIKE ? OR id IN (SELECT DISTINCT session_fk FROM messages_fts WHERE content MATCH ?))`;
+          dataParams.push(`%${search}%`, `%${search}%`, `"${search.replace(/"/g, '""')}"`);
+        } else {
+          dataSql += ` AND (session_id LIKE ? OR project_path LIKE ?)`;
+          dataParams.push(`%${search}%`, `%${search}%`);
+        }
       }
 
       dataSql += ` ORDER BY ${sortCol} ${sortOrder} LIMIT ? OFFSET ?`;
@@ -129,6 +148,35 @@ export function registerSessionRoutes(app: FastifyInstance): void {
             obj[cols[i]] = row[i];
           }
           data.push(obj);
+        }
+      }
+
+      // Fetch FTS snippets for matched sessions
+      if (search && hasFts && data.length > 0) {
+        const ftsTerm = `"${search.replace(/"/g, '""')}"`;
+        const sessionPks = data.map((d) => Number(d.id));
+        try {
+          const inPlaceholders = sessionPks.map(() => '?').join(',');
+          const snippetResult = db.exec(
+            `SELECT session_fk, snippet(messages_fts, 0, '[[', ']]', '···', 15)
+             FROM messages_fts
+             WHERE content MATCH ? AND session_fk IN (${inPlaceholders})
+             GROUP BY session_fk`,
+            [ftsTerm, ...sessionPks],
+          );
+          if (snippetResult.length > 0 && snippetResult[0].values) {
+            const snippetMap = new Map<number, string>();
+            for (const row of snippetResult[0].values) {
+              const sfk = Number(row[0]);
+              if (!snippetMap.has(sfk)) snippetMap.set(sfk, String(row[1]));
+            }
+            for (const session of data) {
+              const sfk = Number(session.id);
+              if (snippetMap.has(sfk)) session.fts_snippet = snippetMap.get(sfk);
+            }
+          }
+        } catch {
+          // snippet retrieval is best-effort
         }
       }
 
