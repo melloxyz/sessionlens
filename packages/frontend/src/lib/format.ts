@@ -40,6 +40,19 @@ export function formatCurrency(value: number | null | undefined): string {
   }).format(normalizedValue);
 }
 
+/**
+ * Format a monetary value respecting cost source.
+ * - unknown + null/0 → "—"
+ * - estimated → "~$X.XX"
+ * - actual → "$X.XX"
+ */
+export function formatCost(value: number | null | undefined, costSource?: string | null): string {
+  if ((value == null || value === 0) && costSource === 'unknown') return '—';
+  if (value == null) return '—';
+  const formatted = formatCurrency(value);
+  return costSource === 'estimated' ? `~${formatted}` : formatted;
+}
+
 export function formatTokens(value: number | null | undefined): string {
   if (value == null) return '0';
   if (value >= 1_000_000) return `${(value / 1_000_000).toFixed(1)}M`;

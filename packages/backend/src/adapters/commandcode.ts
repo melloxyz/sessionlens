@@ -103,6 +103,10 @@ function decodeProjectPath(dirName: string): string | null {
   if (!dirName || dirName.length < 2) return null;
   const drive = dirName[0].toUpperCase();
   const rest = dirName.slice(1).replace(/-/g, '\\');
+  // Known limitation: CommandCode encodes path separators as '-', which is ambiguous
+  // with hyphens in directory names (e.g. 'my-project' decodes to 'my\project').
+  // Without a reversible encoding spec we cannot disambiguate — the path is marked
+  // 'inferred' in dataQuality.projectPath accordingly.
   return `${drive}:${rest}`;
 }
 
@@ -345,6 +349,8 @@ function buildSession(
     let totalReasoningTokens = 0;
     let totalCacheReadTokens = 0;
     let totalCacheWriteTokens = 0;
+    let sessionGitBranch: string | null = null;
+    let sessionIsAutomated = false;
 
     for (const evt of group) {
       const tokens = extractTokens(evt);
@@ -356,6 +362,9 @@ function buildSession(
         totalCacheReadTokens += tokens.cacheReadTokens;
         totalCacheWriteTokens += tokens.cacheWriteTokens;
       }
+
+      if (evt.gitBranch && !sessionGitBranch) sessionGitBranch = evt.gitBranch;
+      if (evt.metadata?.isAutomated) sessionIsAutomated = true;
 
       const msgContent = extractMessageContent(evt);
       if (msgContent) {
@@ -450,6 +459,9 @@ function buildSession(
       toolEvents,
       fileEvents,
       dataQuality,
+      title: meta.title ?? null,
+      gitBranch: sessionGitBranch,
+      isAutomated: sessionIsAutomated,
     });
   }
 

@@ -62,6 +62,10 @@ export interface RawSession {
   toolEvents?: RawToolEvent[];
   fileEvents?: RawFileEvent[];
   dataQuality?: SessionDataQuality;
+  title?: string | null;
+  gitOriginUrl?: string | null;
+  gitBranch?: string | null;
+  isAutomated?: boolean;
 }
 
 export interface RawModelUsage {

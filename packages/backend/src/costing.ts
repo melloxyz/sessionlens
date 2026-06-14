@@ -29,10 +29,19 @@ export function clearPricingCache(): void {
 }
 
 const FALLBACK_PRICING: Record<string, Omit<PricingRow, 'provider' | 'modelName'>> = {
+  // OpenAI / Codex
   'gpt-5.5': { inputCostPerMillion: 2.5, outputCostPerMillion: 20, cachedInputCost: 1.25 },
   'gpt-5.4': { inputCostPerMillion: 1.75, outputCostPerMillion: 14, cachedInputCost: 0.875 },
   'gpt-5.4-mini': { inputCostPerMillion: 0.15, outputCostPerMillion: 0.6, cachedInputCost: 0.075 },
   'gpt-5.3-codex': { inputCostPerMillion: 3, outputCostPerMillion: 15, cachedInputCost: null },
+  'gpt-4.1': { inputCostPerMillion: 2, outputCostPerMillion: 8, cachedInputCost: 0.5 },
+  'gpt-4.1-mini': { inputCostPerMillion: 0.4, outputCostPerMillion: 1.6, cachedInputCost: 0.1 },
+  'gpt-4o': { inputCostPerMillion: 2.5, outputCostPerMillion: 10, cachedInputCost: 1.25 },
+  // Anthropic Claude — new versioning (claude-<family>-<major>-<minor>)
+  'claude-sonnet-4-6': { inputCostPerMillion: 3, outputCostPerMillion: 15, cachedInputCost: 0.3 },
+  'claude-opus-4-8': { inputCostPerMillion: 15, outputCostPerMillion: 75, cachedInputCost: 1.5 },
+  'claude-haiku-4-5': { inputCostPerMillion: 0.8, outputCostPerMillion: 4, cachedInputCost: 0.08 },
+  // Anthropic Claude — legacy date-stamp versioning
   'claude-sonnet-4-20250514': {
     inputCostPerMillion: 3,
     outputCostPerMillion: 15,
@@ -43,6 +52,16 @@ const FALLBACK_PRICING: Record<string, Omit<PricingRow, 'provider' | 'modelName'
     outputCostPerMillion: 75,
     cachedInputCost: 1.5,
   },
+  'claude-3-7-sonnet': { inputCostPerMillion: 3, outputCostPerMillion: 15, cachedInputCost: 0.3 },
+  'claude-3-5-sonnet': { inputCostPerMillion: 3, outputCostPerMillion: 15, cachedInputCost: 0.3 },
+  'claude-3-5-haiku': { inputCostPerMillion: 0.8, outputCostPerMillion: 4, cachedInputCost: 0.08 },
+  'claude-3-opus': { inputCostPerMillion: 15, outputCostPerMillion: 75, cachedInputCost: 1.5 },
+  'claude-3-haiku': {
+    inputCostPerMillion: 0.25,
+    outputCostPerMillion: 1.25,
+    cachedInputCost: 0.03,
+  },
+  // Google Gemini
   'gemini-3.1-pro-preview': {
     inputCostPerMillion: 2,
     outputCostPerMillion: 12,
@@ -54,6 +73,12 @@ const FALLBACK_PRICING: Record<string, Omit<PricingRow, 'provider' | 'modelName'
     outputCostPerMillion: 0.6,
     cachedInputCost: null,
   },
+  'gemini-2.0-flash': {
+    inputCostPerMillion: 0.1,
+    outputCostPerMillion: 0.4,
+    cachedInputCost: null,
+  },
+  // Others
   'qwen-plus': { inputCostPerMillion: 0.4, outputCostPerMillion: 1.2, cachedInputCost: null },
   'deepseek-v4-pro': { inputCostPerMillion: 2.5, outputCostPerMillion: 10, cachedInputCost: null },
   'deepseek-chat': { inputCostPerMillion: 0.27, outputCostPerMillion: 1.1, cachedInputCost: 0.07 },

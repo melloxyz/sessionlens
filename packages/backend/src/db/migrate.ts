@@ -41,6 +41,7 @@ export function runMigrations(): void {
     '0009_adapter_drift_counters',
     '0010_notification_webhooks',
     '0011_notification_cooldown',
+    '0012_session_metadata',
   ];
 
   for (const name of migrations) {
@@ -160,6 +161,22 @@ function ensureMigrationSatisfied(name: string): boolean {
     }
     if (!columnExists('notification_destinations', 'last_notified_at')) {
       db.run(`ALTER TABLE notification_destinations ADD COLUMN last_notified_at TEXT`);
+    }
+    return true;
+  }
+
+  if (name === '0012_session_metadata') {
+    if (!columnExists('sessions', 'title')) {
+      db.run(`ALTER TABLE sessions ADD COLUMN title TEXT`);
+    }
+    if (!columnExists('sessions', 'git_origin_url')) {
+      db.run(`ALTER TABLE sessions ADD COLUMN git_origin_url TEXT`);
+    }
+    if (!columnExists('sessions', 'git_branch')) {
+      db.run(`ALTER TABLE sessions ADD COLUMN git_branch TEXT`);
+    }
+    if (!columnExists('sessions', 'is_automated')) {
+      db.run(`ALTER TABLE sessions ADD COLUMN is_automated INTEGER NOT NULL DEFAULT 0`);
     }
     return true;
   }

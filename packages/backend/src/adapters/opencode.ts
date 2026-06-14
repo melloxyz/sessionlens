@@ -606,8 +606,11 @@ function inferFileOperation(toolName: string): RawFileEvent['operation'] {
 function buildSummaryFileEvents(session: SessionRow): RawFileEvent[] {
   const files = new Set<string>();
   if (session.summary_diffs) {
+    // Use only `diff --git a/` and `+++ b/` lines — both yield the same path after stripping
+    // the prefix, so Set deduplication works correctly. `--- a/` is intentionally excluded
+    // because it would capture `a/path` instead of `path`, defeating the dedup.
     for (const match of session.summary_diffs.matchAll(
-      /(?:\+\+\+|---|diff --git a\/)(?:b\/)?([^\n\r\t ]+)/g,
+      /(?:diff --git a\/|(?:\+\+\+ )b\/)([^\n\r\t ]+)/g,
     )) {
       const file = match[1]?.trim();
       if (file && file !== '/dev/null') files.add(file);

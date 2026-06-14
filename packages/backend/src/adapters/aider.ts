@@ -1,5 +1,6 @@
 import { existsSync, readdirSync, readFileSync, statSync } from 'node:fs';
 import { join, dirname, resolve } from 'node:path';
+import { homedir } from 'node:os';
 import type { Adapter, AdapterCapabilities, Checkpoint, RawMessage, RawSession } from './types.js';
 import type { CliProvider, SourceConfidence } from '@sessionlens/shared';
 
@@ -149,7 +150,8 @@ function findSessionFile(): string | null {
   const historyFile = findHistoryFile();
   if (historyFile) return historyFile;
 
-  const llmHistoryFile = findLlmHistoryFile(process.cwd());
+  // Scan home directory for .aider.llm.history (depth 3 covers ~/project/subdir)
+  const llmHistoryFile = findLlmHistoryFile(homedir());
   return llmHistoryFile && existsSync(llmHistoryFile) ? llmHistoryFile : null;
 }
 
@@ -157,11 +159,9 @@ function findHistoryFile(): string | null {
   const envFile = process.env.AIDER_CHAT_HISTORY_FILE;
   if (envFile && existsSync(envFile)) return resolve(envFile);
 
-  const cwd = process.cwd();
-  const local = join(cwd, DEFAULT_HISTORY_FILE);
-  if (existsSync(local)) return local;
-
-  const candidates = scanForFiles(cwd, 3, DEFAULT_HISTORY_FILE);
+  // Scan the user's home directory, not process.cwd() (which is the backend dir)
+  const home = homedir();
+  const candidates = scanForFiles(home, 3, DEFAULT_HISTORY_FILE);
   return candidates[0] ?? null;
 }
 
@@ -192,6 +192,11 @@ function scanForFiles(root: string, depth: number, targetName: string): string[]
   return found;
 }
 
+// Known limitation (12.6.2): .aider.chat.history.md accumulates all Aider sessions in a
+// single file separated by `# aider chat started at YYYY-MM-DD HH:MM:SS` headers.
+// The current implementation treats the entire file as one session. Proper segmentation
+// would require splitting on those date headers and assigning individual timestamps —
+// deferred until there is a concrete user request for multi-session Aider history.
 function parseMarkdownHistory(content: string): {
   messages: RawMessage[];
   prompts: string[];

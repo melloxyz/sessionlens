@@ -93,7 +93,10 @@ export function createCodexAdapter(): Adapter {
 
       const paths = new Set<string>();
       try {
-        const results = db.exec(`SELECT rollout_path FROM threads WHERE rollout_path IS NOT NULL`);
+        // Exclude archived threads — user intentionally removed them from Codex
+        const results = db.exec(
+          `SELECT rollout_path FROM threads WHERE rollout_path IS NOT NULL AND archived = 0`,
+        );
         if (results.length > 0 && results[0].values) {
           for (const row of results[0].values) {
             if (typeof row[0] === 'string' && row[0].length > 0) {
@@ -290,6 +293,9 @@ function buildSession(events: Record<string, unknown>[], thread: ThreadRow): Raw
       modelUsage,
       toolEvents,
       fileEvents,
+      title: thread.title || null,
+      gitOriginUrl: thread.git_origin_url || null,
+      gitBranch: thread.git_branch || null,
       dataQuality: {
         messages: messages.length > 0 ? 'real' : 'unavailable',
         tokens: totalTokens > 0 ? 'estimated' : 'unavailable',

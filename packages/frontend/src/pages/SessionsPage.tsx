@@ -30,6 +30,7 @@ import { useApi } from '../hooks/useApi.js';
 import {
   basename,
   compactPath,
+  formatCost,
   formatCurrency,
   formatDuration,
   formatRelativeTime,
@@ -269,11 +270,18 @@ export function SessionsPage() {
                     </DataTableCell>
                     <DataTableCell className="text-right font-mono font-medium tabular-nums text-foreground">
                       <div>
-                        <Sensitive>{formatCurrency(session.total_cost_usd)}</Sensitive>
+                        <Sensitive>
+                          {formatCost(session.total_cost_usd, session.cost_source)}
+                        </Sensitive>
                       </div>
                       {session.cost_source === 'estimated' && (
                         <div className="mt-1 text-[10px] uppercase text-warning">
                           {t('common.estimated')}
+                        </div>
+                      )}
+                      {session.cost_source === 'unknown' && (
+                        <div className="mt-1 text-[10px] uppercase text-muted-foreground">
+                          {t('common.unknown')}
                         </div>
                       )}
                     </DataTableCell>
@@ -343,7 +351,11 @@ export function SessionsPage() {
                       <div className="grid grid-cols-3 gap-2 text-xs">
                         <MobileMetric
                           label={t('common.cost')}
-                          value={<Sensitive>{formatCurrency(session.total_cost_usd)}</Sensitive>}
+                          value={
+                            <Sensitive>
+                              {formatCost(session.total_cost_usd, session.cost_source)}
+                            </Sensitive>
+                          }
                         />
                         <MobileMetric
                           label={t('common.duration')}

@@ -316,7 +316,11 @@ function upsertSession(raw: RawSession, redact: boolean): 'new' | 'updated' | 's
         project_path = ?, model = ?, started_at = ?, ended_at = ?,
         duration_ms = ?, total_cost_usd = ?, cost_source = ?,
         source_confidence = ?, message_count = ?, tool_call_count = ?,
-        raw_tool_call_count = ?, source_path = ?, data_quality_json = ?
+        raw_tool_call_count = ?, source_path = ?, data_quality_json = ?,
+        title = COALESCE(?, title),
+        git_origin_url = COALESCE(?, git_origin_url),
+        git_branch = COALESCE(?, git_branch),
+        is_automated = ?
       WHERE id = ?`,
       [
         normalizePath(raw.projectPath),
@@ -332,6 +336,10 @@ function upsertSession(raw: RawSession, redact: boolean): 'new' | 'updated' | 's
         toolCallCount,
         sourcePath,
         JSON.stringify(dataQuality),
+        raw.title ?? null,
+        raw.gitOriginUrl ?? null,
+        raw.gitBranch ?? null,
+        raw.isAutomated ? 1 : 0,
         sessionPk,
       ],
     );
@@ -349,9 +357,10 @@ function upsertSession(raw: RawSession, redact: boolean): 'new' | 'updated' | 's
     `INSERT INTO sessions (
       provider, cli, session_id, project_path, model, started_at, ended_at, duration_ms,
       total_cost_usd, cost_source, source_confidence, message_count, tool_call_count,
-      raw_tool_call_count, source_path, data_quality_json
+      raw_tool_call_count, source_path, data_quality_json,
+      title, git_origin_url, git_branch, is_automated
     )
-     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
     [
       normalizedProvider,
       raw.cli,
@@ -369,6 +378,10 @@ function upsertSession(raw: RawSession, redact: boolean): 'new' | 'updated' | 's
       toolCallCount,
       sourcePath,
       JSON.stringify(dataQuality),
+      raw.title ?? null,
+      raw.gitOriginUrl ?? null,
+      raw.gitBranch ?? null,
+      raw.isAutomated ? 1 : 0,
     ],
   );
 

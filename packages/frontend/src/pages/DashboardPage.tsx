@@ -320,7 +320,13 @@ export function DashboardPage() {
         <section className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
           <DashboardKpiCard
             label={t('dashboard.totalSpend')}
-            value={<Sensitive>{formatCurrency(overview?.totalSpend)}</Sensitive>}
+            value={
+              <Sensitive>
+                {overview && overview.confirmedSpend === 0 && overview.estimatedSpend > 0
+                  ? `~${formatCurrency(overview.totalSpend)}`
+                  : formatCurrency(overview?.totalSpend)}
+              </Sensitive>
+            }
             meta={rangeLabel}
             icon={CircleDollarSign}
             tone={exceededBudgets.length > 0 ? 'warning' : 'success'}

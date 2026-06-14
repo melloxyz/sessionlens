@@ -1,4 +1,4 @@
-import { useState, type ReactNode } from 'react';
+import { useState } from 'react';
 import { Link, useParams } from 'react-router-dom';
 import { ArrowLeft, Bot, FileCode2, MessageSquare, Terminal, Wrench } from 'lucide-react';
 import { BrandBadge, BrandMark } from '../components/brand/BrandMark.js';
@@ -18,6 +18,7 @@ import { useApi } from '../hooks/useApi.js';
 import {
   basename,
   compactPath,
+  formatCost,
   formatCurrency,
   formatDate,
   formatDateTime,
@@ -280,9 +281,17 @@ export function SessionDetailPage() {
             label={
               session.cost_source === 'estimated' ? t('session.costEstimated') : t('common.cost')
             }
-            value={<Sensitive>{formatCurrency(session.total_cost_usd)}</Sensitive>}
-            meta={t(`common.${session.cost_source}`)}
-            tone="success"
+            value={<Sensitive>{formatCost(session.total_cost_usd, session.cost_source)}</Sensitive>}
+            meta={
+              session.cost_source === 'unknown' ? (
+                <span className="text-xs text-muted-foreground">
+                  {t('common.unknown')} &mdash; {t('session.costUnavailableHint')}
+                </span>
+              ) : (
+                t(`common.${session.cost_source}`)
+              )
+            }
+            tone={session.cost_source === 'unknown' ? 'default' : 'success'}
           />
           <MetricBlock
             variant="compact"

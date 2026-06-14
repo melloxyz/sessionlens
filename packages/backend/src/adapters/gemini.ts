@@ -329,7 +329,16 @@ function extractUsage(value: unknown): {
     Number(obj.input_tokens ?? obj.inputTokens ?? obj.input ?? obj.prompt_tokens ?? 0) || 0;
   const output =
     Number(obj.output_tokens ?? obj.outputTokens ?? obj.output ?? obj.completion_tokens ?? 0) || 0;
-  const reasoning = Number(obj.reasoning_tokens ?? obj.reasoningTokens ?? obj.thoughts ?? 0) || 0;
+  const reasoning =
+    Number(
+      obj.reasoning_tokens ??
+        obj.reasoningTokens ??
+        obj.thinking_tokens ??
+        obj.thinkingTokens ??
+        obj.thought_tokens ??
+        obj.thoughts ??
+        0,
+    ) || 0;
   const cacheRead =
     Number(obj.cached_tokens ?? obj.cache_read_tokens ?? obj.cacheReadTokens ?? obj.cached ?? 0) ||
     0;
@@ -358,14 +367,16 @@ function normalizeToolCall(
   const toolName = pickString(tool.name) ?? 'unknown';
   const args = readObject(tool.args) ?? {};
   const timestamp = pickString(tool.timestamp) ?? fallbackTimestamp;
+  const firstResult = Array.isArray(tool.result) ? tool.result[0] : null;
+  const funcResponse = (firstResult as Record<string, unknown> | null)?.functionResponse as
+    | Record<string, unknown>
+    | undefined;
+  const funcResponseOutput =
+    funcResponse?.response ?? funcResponse?.output ?? funcResponse?.content;
   const outputPreview =
     pickString(tool.resultDisplay) ??
-    pickString(
-      (
-        ((Array.isArray(tool.result) ? tool.result[0] : null) as Record<string, unknown> | null)
-          ?.functionResponse as Record<string, unknown> | undefined
-      )?.response as unknown,
-    ) ??
+    pickString(tool.output) ??
+    pickString(funcResponseOutput as unknown) ??
     null;
 
   return {
