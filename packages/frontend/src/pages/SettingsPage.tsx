@@ -14,7 +14,6 @@ import {
   Pencil,
   Play,
   Plus,
-  RadioTower,
   ShieldAlert,
   ShieldCheck,
   SlidersHorizontal,
@@ -33,7 +32,6 @@ import { ErrorState } from '../components/ui/ErrorState.js';
 import { Input } from '../components/ui/Input.js';
 import { Select } from '../components/ui/Select.js';
 import { Skeleton } from '../components/ui/Skeleton.js';
-import type { IntegrationStatusItem } from '../components/layout/IntegrationStatus.js';
 import { useApi, invalidateAllCaches } from '../hooks/useApi.js';
 import { formatCurrency, formatDateTime } from '../lib/format.js';
 import { Sensitive } from '../components/ui/Sensitive.js';
@@ -117,9 +115,6 @@ export function SettingsPage() {
     error: autoError,
     refetch: refetchAuto,
   } = useApi<AutoIngestionStatus>('/api/ingest/auto');
-  const { data: integrations, loading: integrationsLoading } = useApi<{
-    integrations: IntegrationStatusItem[];
-  }>('/api/integrations/status', { initialData: { integrations: [] } });
   const {
     data: trayStatus,
     loading: trayLoading,
@@ -144,7 +139,6 @@ export function SettingsPage() {
     initialData: { alerts: [], total: 0 },
   });
 
-  const integrationsList = integrations?.integrations ?? [];
   const adapterRows = Object.entries(ingestStatus?.adapters ?? {});
   const unacknowledgedAlerts = (alertsData?.alerts ?? []).filter((a) => !a.acknowledged);
   const isValidating = overviewValidating || ingestValidating || autoValidating;
@@ -686,24 +680,6 @@ export function SettingsPage() {
             </div>
           </SidePanel>
 
-          <SidePanel title={t('settings.integrationHealth')} icon={RadioTower}>
-            <div className="space-y-3">
-              {integrationsLoading && integrationsList.length === 0
-                ? Array.from({ length: 6 }).map((_, index) => (
-                    <div key={index} className="flex items-center justify-between gap-3">
-                      <div className="flex items-center gap-3">
-                        <Skeleton className="h-8 w-8 rounded-md" />
-                        <Skeleton className="h-4 w-24" />
-                      </div>
-                      <Skeleton className="h-6 w-16" />
-                    </div>
-                  ))
-                : integrationsList.map((item) => (
-                    <IntegrationHealthRow key={item.cli} item={item} />
-                  ))}
-            </div>
-          </SidePanel>
-
           <SidePanel
             title={t('budget.alerts.title')}
             icon={Bell}
@@ -1099,117 +1075,6 @@ function SummaryRow({
       ) : (
         <span className="text-right font-mono font-semibold text-foreground">{value}</span>
       )}
-    </div>
-  );
-}
-
-const CAP_VARIANT: Record<string, 'success' | 'warning' | 'info' | 'neutral'> = {
-  real: 'success',
-  actual: 'success',
-  estimated: 'warning',
-  partial: 'info',
-  unavailable: 'neutral',
-  unknown: 'neutral',
-};
-
-const CAP_SHORT: Record<string, string> = {
-  real: 'real',
-  actual: 'real',
-  estimated: '~est',
-  partial: 'partial',
-  unavailable: 'N/A',
-  unknown: '?',
-};
-
-const CAP_TOOLTIP: Record<string, Record<string, string>> = {
-  cost: {
-    real: 'Cost reported directly by the CLI billing API',
-    estimated: 'Cost estimated from token counts via pricing table — may not match your bill',
-    unknown: 'CLI does not expose tokens or billing in local files',
-  },
-  tokens: {
-    real: 'Token counts reported directly by the CLI',
-    estimated: 'Token counts approximated from message length',
-    unavailable: 'No token data available from this CLI',
-    partial: 'Some token fields missing (e.g. cache or reasoning tokens)',
-  },
-  model: {
-    real: 'Model name captured directly from session data',
-    inferred: 'Model inferred from context — may not be exact',
-    unknown: 'Model name not available from this CLI',
-  },
-  messages: {
-    real: 'Full conversation messages captured',
-    partial: 'Only some messages captured (e.g. assistant-only)',
-    unavailable: 'No message content available from this CLI',
-  },
-  toolCalls: {
-    real: 'Tool calls captured with full detail',
-    partial: 'Tool calls captured but with limited detail',
-    unavailable: 'Tool calls not available from this CLI',
-  },
-};
-
-const PRIORITY_CAPS = ['cost', 'tokens', 'model', 'messages', 'toolCalls'] as const;
-
-function CapabilityPill({ name, level }: { name: string; level: string }) {
-  const variant = CAP_VARIANT[level] ?? 'neutral';
-  const short = CAP_SHORT[level] ?? level;
-  const tooltip = CAP_TOOLTIP[name]?.[level] ?? `${name}: ${level}`;
-  return (
-    <Badge variant={variant} title={tooltip}>
-      <span className="text-[10px] font-mono opacity-70">{name}:</span>
-      <span className="text-[10px] font-mono ml-0.5">{short}</span>
-    </Badge>
-  );
-}
-
-function IntegrationHealthRow({ item }: { item: IntegrationStatusItem }) {
-  const { t } = useI18n();
-  const available = item.status === 'available';
-  const driftCount =
-    (item.sessionsZeroTokens ?? 0) + (item.sessionsNoCost ?? 0) + (item.sessionsNoModel ?? 0);
-  const caps = item.capabilities;
-
-  return (
-    <div className="flex flex-col gap-1.5">
-      <div className="flex items-center justify-between gap-3">
-        <div className="flex min-w-0 items-center gap-3">
-          <BrandMark value={item.cli} size="sm" />
-          <div className="min-w-0">
-            <div className="truncate text-sm font-semibold text-foreground">
-              {getBrandMeta(item.cli).label}
-            </div>
-            <div className="truncate text-xs text-muted-foreground">
-              {(item.pathsFound ?? 0).toString()} {t('settings.pathsDiscovered')}
-            </div>
-          </div>
-        </div>
-        <div className="flex shrink-0 items-center gap-2">
-          {driftCount > 0 ? (
-            <Badge
-              variant="warning"
-              title={`${item.sessionsZeroTokens ?? 0} zero-token · ${item.sessionsNoCost ?? 0} no-cost · ${item.sessionsNoModel ?? 0} no-model`}
-            >
-              <AlertTriangle className="h-3 w-3" />
-              {driftCount} {t('settings.driftDetected')}
-            </Badge>
-          ) : null}
-          {typeof item.completenessScore === 'number' ? (
-            <Badge variant="neutral">{item.completenessScore}%</Badge>
-          ) : null}
-          <Badge variant={available ? 'success' : 'neutral'}>
-            {available ? t('common.detected') : t('common.missing')}
-          </Badge>
-        </div>
-      </div>
-      {caps && available ? (
-        <div className="ml-9 flex flex-wrap gap-1">
-          {PRIORITY_CAPS.map((key) =>
-            caps[key] ? <CapabilityPill key={key} name={key} level={caps[key]} /> : null,
-          )}
-        </div>
-      ) : null}
     </div>
   );
 }

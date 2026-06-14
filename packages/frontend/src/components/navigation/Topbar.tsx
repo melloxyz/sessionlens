@@ -1,4 +1,5 @@
 import { CalendarDays, Database, RefreshCw } from 'lucide-react';
+import { Link } from 'react-router-dom';
 import { useDateRange } from '../filters/DateRangeProvider.js';
 import { useI18n } from '../i18n/LanguageProvider.js';
 import { Button } from '../ui/Button.js';
@@ -37,13 +38,21 @@ export function Topbar({ section, title, subtitle, onRefresh, showDateRange }: T
         </div>
 
         <div className="flex flex-col gap-2 sm:flex-row sm:flex-wrap sm:items-center xl:justify-end">
-          <Badge
-            variant={availableSources.length > 0 ? 'success' : 'warning'}
-            className="h-9 justify-center rounded-md px-3"
-          >
-            <Database className="h-3.5 w-3.5" />
-            {availableSources.length} local sources
-          </Badge>
+          <Link to="/sources" tabIndex={-1}>
+            <Badge
+              variant={availableSources.length > 0 ? 'success' : 'warning'}
+              className="h-9 cursor-pointer justify-center gap-1.5 rounded-md px-3 transition-opacity hover:opacity-80"
+              title="View all sources"
+            >
+              <Database className="h-3.5 w-3.5 shrink-0" />
+              <span>
+                <span className="font-semibold">{availableSources.length}</span>{' '}
+                <span className="font-normal opacity-80">
+                  {availableSources.length === 1 ? 'source' : 'sources'} detected
+                </span>
+              </span>
+            </Badge>
+          </Link>
           {showDateRange && (
             <div className="relative flex min-w-[172px] items-center">
               <CalendarDays className="pointer-events-none absolute left-3 z-10 h-4 w-4 text-subtle-foreground" />

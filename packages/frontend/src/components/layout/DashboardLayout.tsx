@@ -29,10 +29,11 @@ const PAGE_KEYS: Record<
   },
   '/models': { title: 'topbar.models.title', subtitle: 'topbar.models.subtitle', section: '05' },
   '/budgets': { title: 'topbar.budgets.title', subtitle: 'topbar.budgets.subtitle', section: '06' },
+  '/sources': { title: 'topbar.sources.title', subtitle: 'topbar.sources.subtitle', section: '07' },
   '/settings': {
     title: 'topbar.settings.title',
     subtitle: 'topbar.settings.subtitle',
-    section: '07',
+    section: '08',
   },
   '/profile': {
     title: 'topbar.profile.title',

@@ -102,6 +102,7 @@ async function main() {
               pathsFound: sourceStats.pathsFound,
               sessionsIndexed: sourceStats.sessionsIndexed,
               lastIngestedAt: sourceStats.lastIngestedAt ?? getLastStatus()?.completedAt ?? null,
+              lastSessionAt: sourceStats.lastSessionAt,
               lastError: sourceStats.lastError,
               capabilities,
               dataQualitySummary,
@@ -120,6 +121,7 @@ async function main() {
               pathsFound: 0,
               sessionsIndexed: 0,
               lastIngestedAt: null as string | null,
+              lastSessionAt: null as string | null,
               lastError: err instanceof Error ? err.message : String(err),
               capabilities: unknownCapabilities(),
               dataQualitySummary: {} as Record<string, string>,
@@ -254,6 +256,7 @@ function getAdapterSourceStats(cli: string): {
   pathsFound: number;
   sessionsIndexed: number;
   lastIngestedAt: string | null;
+  lastSessionAt: string | null;
   lastError: string | null;
   sessionsZeroTokens: number;
   sessionsNoCost: number;
@@ -280,12 +283,14 @@ function getAdapterSourceStats(cli: string): {
     Number(
       db.exec(`SELECT COUNT(*) FROM sessions WHERE cli = ?`, [cli])[0]?.values?.[0]?.[0] ?? 0,
     ) || 0;
+  const lastSessionResult = db.exec(`SELECT MAX(started_at) FROM sessions WHERE cli = ?`, [cli]);
 
   return {
     path: (sourceResult[0]?.values?.[0]?.[0] as string | undefined) ?? null,
     pathsFound: Number(aggregateResult[0]?.values?.[0]?.[0] ?? 0) || 0,
     sessionsIndexed: Number(aggregateResult[0]?.values?.[0]?.[1] ?? 0) || fallbackSessionCount,
     lastIngestedAt: (sourceResult[0]?.values?.[0]?.[1] as string | undefined) ?? null,
+    lastSessionAt: (lastSessionResult[0]?.values?.[0]?.[0] as string | undefined) ?? null,
     lastError: (sourceResult[0]?.values?.[0]?.[2] as string | undefined) ?? null,
     sessionsZeroTokens: Number(aggregateResult[0]?.values?.[0]?.[2] ?? 0),
     sessionsNoCost: Number(aggregateResult[0]?.values?.[0]?.[3] ?? 0),

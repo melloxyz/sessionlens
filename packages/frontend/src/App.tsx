@@ -47,6 +47,9 @@ const ProfilePage = lazy(() =>
 const BudgetsPage = lazy(() =>
   import('./pages/BudgetsPage.js').then((module) => ({ default: module.BudgetsPage })),
 );
+const SourcesPage = lazy(() =>
+  import('./pages/SourcesPage.js').then((module) => ({ default: module.SourcesPage })),
+);
 
 export function App() {
   return (
@@ -69,6 +72,7 @@ export function App() {
                     <Route path="/settings" element={<SettingsPage />} />
                     <Route path="/profile" element={<ProfilePage />} />
                     <Route path="/budgets" element={<BudgetsPage />} />
+                    <Route path="/sources" element={<SourcesPage />} />
                   </Route>
                 </Routes>
               </Suspense>

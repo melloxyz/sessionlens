@@ -1,11 +1,11 @@
 import { NavLink } from 'react-router-dom';
 import {
   BarChart3,
-  CircleDot,
   Command,
   Eye,
   EyeOff,
   FolderOpen,
+  Layers,
   LayoutDashboard,
   MessageSquare,
   Moon,
@@ -20,11 +20,7 @@ import {
 import { useI18n } from '../i18n/LanguageProvider.js';
 import { useTheme } from '../theme/ThemeProvider.js';
 import { usePrivacy } from '../privacy/PrivacyProvider.js';
-import { useApi } from '../../hooks/useApi.js';
 import { cn } from '../../lib/utils.js';
-import type { IntegrationStatusItem } from './IntegrationStatus.js';
-import { BrandMark, getBrandMeta } from '../brand/BrandMark.js';
-import { Tooltip } from '../ui/Tooltip.js';
 
 type NavLabelKey =
   | 'nav.dashboard'
@@ -33,6 +29,7 @@ type NavLabelKey =
   | 'nav.models'
   | 'nav.analytics'
   | 'nav.budgets'
+  | 'nav.sources'
   | 'nav.profile';
 
 const NAV_ITEMS: {
@@ -47,6 +44,7 @@ const NAV_ITEMS: {
   { to: '/analytics', labelKey: 'nav.analytics', icon: BarChart3, code: '04' },
   { to: '/models', labelKey: 'nav.models', icon: PackageOpen, code: '05' },
   { to: '/budgets', labelKey: 'nav.budgets', icon: WalletCards, code: '06' },
+  { to: '/sources', labelKey: 'nav.sources', icon: Layers, code: '07' },
 ];
 
 const MOBILE_NAV_ITEMS = [
@@ -58,13 +56,6 @@ export function Sidebar() {
   const { t } = useI18n();
   const { theme, toggleTheme } = useTheme();
   const { isPrivate, togglePrivacy } = usePrivacy();
-  const { data } = useApi<{ integrations: IntegrationStatusItem[] }>('/api/integrations/status', {
-    initialData: { integrations: [] },
-  });
-
-  const integrations = (data?.integrations ?? [])
-    .filter((item) => item.status === 'available')
-    .map((item) => ({ ...item, label: getBrandMeta(item.cli, 'cli').label }));
 
   return (
     <aside className="hidden h-full w-[276px] shrink-0 flex-col border-r border-border bg-canvas lg:flex">
@@ -120,48 +111,6 @@ export function Sidebar() {
           </NavLink>
         ))}
       </nav>
-
-      <div className="mt-2 px-4">
-        <div className="mb-3 flex items-center justify-between gap-3 text-xs font-semibold uppercase text-subtle-foreground">
-          <span>{t('sidebar.sources')}</span>
-          <span className="font-mono">{integrations.length}</span>
-        </div>
-        <div className="flex flex-col gap-1">
-          {integrations.map((item) => (
-            <Tooltip
-              key={item.label}
-              content={`${item.pathsFound ?? 0} paths · ${item.sessionsIndexed ?? 0} sessions · ${item.completenessScore ?? 0}%`}
-              className="w-full"
-            >
-              <button
-                type="button"
-                className="flex min-h-10 w-full items-center justify-between rounded-md border border-border bg-surface-muted px-2 text-left text-xs text-muted-foreground transition-colors hover:border-border-strong hover:bg-surface hover:text-foreground"
-                onClick={async () => {
-                  await fetch(`/api/integrations/${item.cli}/open`, { method: 'POST' });
-                }}
-              >
-                <div className="flex items-center gap-2.5">
-                  <BrandMark value={item.cli} size="sm" />
-                  <div className="min-w-0">
-                    <div className="truncate text-foreground">{item.label}</div>
-                    <div className="font-mono text-[10px] text-subtle-foreground">
-                      {item.completenessScore ?? 0}% {t('sidebar.coverage')}
-                    </div>
-                  </div>
-                </div>
-                <CircleDot
-                  className={cn(
-                    'h-3 w-3',
-                    item.status === 'available'
-                      ? 'fill-success text-success'
-                      : 'fill-muted-foreground text-muted-foreground',
-                  )}
-                />
-              </button>
-            </Tooltip>
-          ))}
-        </div>
-      </div>
 
       <div className="mt-auto p-3">
         <div className="mb-3 rounded-md border border-border bg-surface p-3 text-xs text-muted-foreground">

@@ -6,6 +6,7 @@ export interface IntegrationStatusItem {
   pathsFound?: number;
   sessionsIndexed?: number;
   lastIngestedAt?: string | null;
+  lastSessionAt?: string | null;
   lastError?: string | null;
   completenessScore?: number;
   capabilities?: Record<string, string>;
