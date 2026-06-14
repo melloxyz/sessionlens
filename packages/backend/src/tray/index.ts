@@ -7,12 +7,39 @@ import { isIngestionRunning, runIngestion } from '../ingestion/engine.js';
 import { getLastStatus } from '../ingestion/engine.js';
 import { isAutoStartEnabled, setAutoStart } from './autostart.js';
 import { buildMenu, type TrayCallbacks } from './menu.js';
+import { getDatabase } from '../db/connection.js';
+import { visibleSessionSql } from '../db/session-filters.js';
 
 const require = createRequire(import.meta.url);
 const TrayIcon = require('trayicon');
 
 const ENABLED_KEY = 'tray.enabled';
 const MINIMIZED_KEY = 'tray.startMinimized';
+
+function getTodayStats(): { todaySpend: number; todaySessionCount: number } {
+  try {
+    const db = getDatabase();
+    const todayStart = new Date();
+    todayStart.setHours(0, 0, 0, 0);
+    const todayStr = todayStart.toISOString();
+    const results = db.exec(
+      `SELECT COALESCE(SUM(total_cost_usd), 0), COUNT(*)
+       FROM sessions
+       WHERE ${visibleSessionSql()} AND started_at >= ?`,
+      [todayStr],
+    );
+    if (!results.length || !results[0].values?.length) {
+      return { todaySpend: 0, todaySessionCount: 0 };
+    }
+    const r = results[0].values[0];
+    return {
+      todaySpend: Number(r[0]) || 0,
+      todaySessionCount: Number(r[1]) || 0,
+    };
+  } catch {
+    return { todaySpend: 0, todaySessionCount: 0 };
+  }
+}
 
 export function isTrayEnabled(): boolean {
   return getBooleanSetting(ENABLED_KEY, true);
@@ -64,7 +91,8 @@ export class TrayManager {
       });
 
       this.tray = tray;
-      const items = buildMenu(tray, callbacks);
+      const { todaySpend } = getTodayStats();
+      const items = buildMenu(tray, callbacks, todaySpend);
       tray.setMenu(...items);
 
       this.startStatusPolling();
@@ -93,15 +121,14 @@ export class TrayManager {
     try {
       this.tray?.setTitle('Sessionlens - Ingesting...');
       await runIngestion();
-      const status = getLastStatus();
-      const total = status?.totalSessions ?? 0;
-      this.tray?.setTitle(`Sessionlens - ${total} sessions indexed`);
-      this.tray?.notify('Ingestion Complete', `${total} sessions indexed`);
+      const { todaySpend, todaySessionCount } = getTodayStats();
+      const spendStr = `$${todaySpend.toFixed(2)}`;
+      this.tray?.notify('Ingestion Complete', `${todaySessionCount} sessões hoje · ${spendStr}`);
     } catch {
-      this.tray?.setTitle('Sessionlens - Ingestion failed');
       this.tray?.notify('Ingestion Failed', 'Could not complete the ingestion cycle');
     } finally {
-      setTimeout(() => this.refreshStatus(), 5000);
+      this.refreshStatus();
+      this.rebuildMenu();
     }
   }
 
@@ -119,17 +146,16 @@ export class TrayManager {
   private refreshStatus() {
     if (!this.tray) return;
 
-    const status = getLastStatus();
-    const total = status?.totalSessions ?? 0;
-    const running = isIngestionRunning();
-
-    if (running) {
+    if (isIngestionRunning()) {
       this.tray.setTitle('Sessionlens - Ingesting...');
-    } else if (status?.errors.length) {
-      this.tray.setTitle(`Sessionlens - ${total} sessions (warnings)`);
-    } else {
-      this.tray.setTitle(`Sessionlens - ${total} sessions indexed`);
+      return;
     }
+
+    const { todaySpend, todaySessionCount } = getTodayStats();
+    const spendStr = `$${todaySpend.toFixed(2)}`;
+    const status = getLastStatus();
+    const suffix = status?.errors.length ? ' (avisos)' : '';
+    this.tray.setTitle(`SessionLens · ${spendStr} hoje · ${todaySessionCount} sessões${suffix}`);
   }
 
   private rebuildMenu() {
@@ -143,7 +169,8 @@ export class TrayManager {
       quit: () => this.quit(),
     };
 
-    const items = buildMenu(tray, callbacks);
+    const { todaySpend } = getTodayStats();
+    const items = buildMenu(tray, callbacks, todaySpend);
     tray.setMenu(...items);
   }
 

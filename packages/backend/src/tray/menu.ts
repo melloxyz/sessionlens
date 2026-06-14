@@ -9,8 +9,13 @@ export interface TrayCallbacks {
 }
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
-export function buildMenu(tray: any, callbacks: TrayCallbacks) {
+export function buildMenu(tray: any, callbacks: TrayCallbacks, todaySpend: number) {
   const startMinimized = getBooleanSetting('tray.startMinimized', false);
+
+  const todayItem = tray.item(`Hoje: $${todaySpend.toFixed(2)}`, () => {});
+  todayItem.disabled = true;
+
+  const sep0 = tray.separator();
 
   const statusItem = tray.item('Sessionlens', () => {});
   statusItem.disabled = true;
@@ -41,6 +46,8 @@ export function buildMenu(tray: any, callbacks: TrayCallbacks) {
   const quitItem = tray.item('Quit', () => callbacks.quit());
 
   return [
+    todayItem,
+    sep0,
     statusItem,
     sep1,
     dashboardItem,
