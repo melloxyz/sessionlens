@@ -179,7 +179,13 @@ function findLlmHistoryFile(root: string): string | null {
 function scanForFiles(root: string, depth: number, targetName: string): string[] {
   if (depth < 0 || !existsSync(root)) return [];
   const found: string[] = [];
-  for (const entry of readdirSync(root, { withFileTypes: true })) {
+  let entries;
+  try {
+    entries = readdirSync(root, { withFileTypes: true });
+  } catch {
+    return found; // skip directories we cannot read (EPERM, access denied, etc.)
+  }
+  for (const entry of entries) {
     const full = join(root, entry.name);
     if (entry.isFile() && entry.name === targetName) {
       found.push(full);

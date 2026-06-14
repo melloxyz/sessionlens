@@ -89,26 +89,46 @@ async function main() {
       const adapters = registry.getAll();
       const resolved = await Promise.all(
         adapters.map(async (adapter) => {
-          const detected = await adapter.detect();
-          const sourceStats = getAdapterSourceStats(adapter.cli);
-          const capabilities = adapter.getCapabilities?.() ?? unknownCapabilities();
-          const dataQualitySummary = getCliDataQualitySummary(adapter.cli);
-          return {
-            cli: adapter.cli,
-            detected,
-            status: detected ? 'available' : 'missing',
-            path: sourceStats.path ?? resolveIntegrationPath(adapter.cli, detected),
-            pathsFound: sourceStats.pathsFound,
-            sessionsIndexed: sourceStats.sessionsIndexed,
-            lastIngestedAt: sourceStats.lastIngestedAt ?? getLastStatus()?.completedAt ?? null,
-            lastError: sourceStats.lastError,
-            capabilities,
-            dataQualitySummary,
-            completenessScore: capabilityScore(capabilities),
-            sessionsZeroTokens: sourceStats.sessionsZeroTokens,
-            sessionsNoCost: sourceStats.sessionsNoCost,
-            sessionsNoModel: sourceStats.sessionsNoModel,
-          };
+          try {
+            const detected = await adapter.detect();
+            const sourceStats = getAdapterSourceStats(adapter.cli);
+            const capabilities = adapter.getCapabilities?.() ?? unknownCapabilities();
+            const dataQualitySummary = getCliDataQualitySummary(adapter.cli);
+            return {
+              cli: adapter.cli,
+              detected,
+              status: detected ? ('available' as const) : ('missing' as const),
+              path: sourceStats.path ?? resolveIntegrationPath(adapter.cli, detected),
+              pathsFound: sourceStats.pathsFound,
+              sessionsIndexed: sourceStats.sessionsIndexed,
+              lastIngestedAt: sourceStats.lastIngestedAt ?? getLastStatus()?.completedAt ?? null,
+              lastError: sourceStats.lastError,
+              capabilities,
+              dataQualitySummary,
+              completenessScore: capabilityScore(capabilities),
+              sessionsZeroTokens: sourceStats.sessionsZeroTokens,
+              sessionsNoCost: sourceStats.sessionsNoCost,
+              sessionsNoModel: sourceStats.sessionsNoModel,
+            };
+          } catch (err) {
+            app.log.warn({ cli: adapter.cli, err }, 'adapter detect() failed — skipping');
+            return {
+              cli: adapter.cli,
+              detected: false,
+              status: 'missing' as const,
+              path: null as string | null,
+              pathsFound: 0,
+              sessionsIndexed: 0,
+              lastIngestedAt: null as string | null,
+              lastError: err instanceof Error ? err.message : String(err),
+              capabilities: unknownCapabilities(),
+              dataQualitySummary: {} as Record<string, string>,
+              completenessScore: 0,
+              sessionsZeroTokens: 0,
+              sessionsNoCost: 0,
+              sessionsNoModel: 0,
+            };
+          }
         }),
       );
       return {
