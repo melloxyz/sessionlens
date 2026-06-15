@@ -26,6 +26,7 @@ import { syncOpenRouterPricing } from './openrouter.js';
 import { registerBudgetRoutes } from './routes/budgets.js';
 import { registerPrivacyRoutes } from './routes/privacy.js';
 import { registerNotificationRoutes } from './routes/notifications.js';
+import { registerExportRoutes } from './routes/export.js';
 
 const PORT = Number(process.env.SESSIONLENS_PORT) || 3030;
 
@@ -55,6 +56,7 @@ async function main() {
     registerBudgetRoutes(app);
     registerPrivacyRoutes(app);
     registerNotificationRoutes(app);
+    registerExportRoutes(app);
 
     app.get('/api/ingest/status', async () => {
       const status = getLastStatus();

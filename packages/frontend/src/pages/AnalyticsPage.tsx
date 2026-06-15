@@ -265,6 +265,16 @@ export function AnalyticsPage() {
   const topAnomalies = anomalies.slice(0, 2);
   const topToolSessions = productivity?.topToolCallSessions ?? [];
   const topModels = modelUsage.slice(0, 6);
+  function handleExportBreakdown() {
+    const url = `/api/export/breakdown.csv?dimension=${dimension}&metric=${metric}${filteredSuffix}`;
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = 'breakdown.csv';
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+  }
+
   const activeFilters = [
     cliFilter
       ? {
@@ -744,6 +754,11 @@ export function AnalyticsPage() {
           figure="FIG. 03"
           title={breakdownTitle}
           description={t('analytics.topProjectsDescription')}
+          action={
+            <Button variant="outline" size="sm" onClick={handleExportBreakdown}>
+              {t('common.exportCsv')} <Download className="ml-1 h-4 w-4" />
+            </Button>
+          }
         >
           {breakdownLoading && !breakdownData ? (
             <ChartSkeleton className="h-[280px]" />

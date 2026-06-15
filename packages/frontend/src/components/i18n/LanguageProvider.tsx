@@ -317,6 +317,7 @@ const dictionaries = {
       'A quick read of spend, activity and model usage for the selected filters.',
     'analytics.workbenchTitle': 'Analytics workbench',
     'analytics.exportReport': 'Export report',
+    'common.exportCsv': 'Export CSV',
     'analytics.spendUsageTitle': 'Spend and usage over time',
     'analytics.spendUsageDescription': 'Daily cost and token evolution for selected sessions.',
     'analytics.insightsTop': 'Top insights',
@@ -1040,6 +1041,7 @@ const dictionaries = {
       'Uma leitura rápida de gasto, atividade e modelos para os filtros selecionados.',
     'analytics.workbenchTitle': 'Bancada de analytics',
     'analytics.exportReport': 'Exportar relatório',
+    'common.exportCsv': 'Exportar CSV',
     'analytics.spendUsageTitle': 'Gasto e uso ao longo do tempo',
     'analytics.spendUsageDescription':
       'Evolução diária de custo e tokens nas sessões selecionadas.',

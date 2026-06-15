@@ -1,6 +1,6 @@
 import { useState, type ReactNode } from 'react';
 import { Link, useSearchParams } from 'react-router-dom';
-import { ArrowUpDown, Search } from 'lucide-react';
+import { ArrowUpDown, Download, Search } from 'lucide-react';
 import { BrandBadge, BrandMark } from '../components/brand/BrandMark.js';
 import { Badge } from '../components/ui/Badge.js';
 import { Button } from '../components/ui/Button.js';
@@ -93,6 +93,22 @@ export function SessionsPage() {
       ? { key: 'sort', label: `${t('common.sort')}: ${sortBy} ${sortOrder}` }
       : null,
   ].filter(Boolean) as { key: string; label: string; onClear?: () => void }[];
+
+  function handleExportCsv() {
+    const params = new URLSearchParams();
+    if (search) params.set('search', search);
+    if (cli) params.set('cli', cli);
+    if (queryString) {
+      new URLSearchParams(queryString).forEach((v, k) => params.set(k, v));
+    }
+    const url = `/api/export/sessions.csv?${params.toString()}`;
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = 'sessions.csv';
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+  }
 
   function updateParam(key: string, value: string, resetPage = true) {
     const params = new URLSearchParams(searchParams);
@@ -197,6 +213,11 @@ export function SessionsPage() {
           <Badge variant="neutral">
             {validating && !isInitialLoading ? t('common.loading') : `${page}/${totalPages}`}
           </Badge>
+        }
+        action={
+          <Button variant="outline" size="sm" onClick={handleExportCsv}>
+            {t('common.exportCsv')} <Download className="ml-1 h-4 w-4" />
+          </Button>
         }
         contentClassName="p-0"
         aria-busy={validating}
