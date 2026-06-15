@@ -57,7 +57,8 @@ _Rastreie custos, analise sessões e compare eficiência entre suas CLIs de IA �
 | **UI premium**              | Design system próprio — DataPanel, DataTable, FigurePanel, CompactStat, ControlField, skeleton states e tooltips                         |
 | **Temas**                   | Modo escuro e claro com contraste refinado, chart palette acessível e persistência via localStorage                                      |
 | **i18n**                    | Inglês e Português (PT-BR) com formatação localizada de datas, durações, moedas e labels de insights                                     |
-| **System Tray**             | Ícone na bandeja do Windows com auto-start, ingestão rápida e contagem de sessões ao vivo                                                |
+| **Exportação CSV**          | Exporte sessões filtradas e breakdowns analíticos para CSV diretamente pela UI                                                           |
+| **Busca full-text**         | Pesquise por session IDs, caminhos de projeto e conteúdo completo de mensagens com trechos de resultado                                  |
 | **Controles de projeto**    | Ocultar/restaurar projetos sem deletar dados; abrir pasta; acompanhar timeline git e sessões relacionadas                                |
 
 ---
@@ -123,7 +124,6 @@ Frontend: **http://localhost:5173** — API Backend: **http://127.0.0.1:3030**
 | **Gráficos**    | Recharts          | 2.x      |
 | **Ícones**      | Lucide React      | latest   |
 | **Pricing**     | OpenRouter API    | sync     |
-| **Tray**        | trayicon          | Windows  |
 
 ---
 
@@ -135,7 +135,7 @@ sessionlens/
 │   ├── logo/              # Logotipos preto e branco (theme-aware)
 │   └── screenshots/       # Prints da interface
 ├── packages/
-│   ├── backend/           # Fastify + sql.js + adapters + costing + tray
+│   ├── backend/           # Fastify + sql.js + adapters + costing
 │   ├── frontend/          # React + Vite + Tailwind v4 + Recharts
 │   └── shared/            # Tipos TypeScript compartilhados
 ├── scripts/               # Dev scripts (Windows-safe)
@@ -191,39 +191,15 @@ sessionlens/
 
 Copie `.env.example` para `.env`:
 
-| Variável                   | Descrição                                | Padrão                  |
-| -------------------------- | ---------------------------------------- | ----------------------- |
-| `SESSIONLENS_PORT`         | Porta do backend                         | `3030`                  |
-| `SESSIONLENS_FRONTEND_URL` | URL do frontend (usada pelo CORS e tray) | `http://127.0.0.1:5173` |
-| `DATABASE_PATH`            | Caminho do arquivo SQLite                | `./data/sessionlens.db` |
+| Variável                   | Descrição                         | Padrão                  |
+| -------------------------- | --------------------------------- | ----------------------- |
+| `SESSIONLENS_PORT`         | Porta do backend                  | `3030`                  |
+| `SESSIONLENS_FRONTEND_URL` | URL do frontend (usada pelo CORS) | `http://127.0.0.1:5173` |
+| `DATABASE_PATH`            | Caminho do arquivo SQLite         | `./data/sessionlens.db` |
 
 ### Auto-Ingestão
 
 O Sessionlens observa automaticamente os diretórios de dados das CLIs e atualiza ao detectar novos arquivos. Desative em **Configurações → Auto-ingestão**.
-
-### System Tray (Windows)
-
-- **Auto-start:** Iniciar ao fazer login
-- **Ingestão rápida:** Acionar pelo menu do tray
-- **Status ao vivo:** Total de sessões indexadas no ícone
-
----
-
-## Roadmap
-
-| Fase        | Status       | Descrição                                                                                     |
-| ----------- | ------------ | --------------------------------------------------------------------------------------------- |
-| **Fase 1**  | ✅ Concluído | Bootstrap & Core — ingestão multi-CLI, SQLite, rastreamento de custo                          |
-| **Fase 2**  | ✅ Concluído | Analytics & Orçamentos — insights, anomalias, trends de gasto, limites de budget              |
-| **Fase 3**  | ✅ Concluído | Expansão de CLIs — Gemini, Kimi, Aider, Qwen, Antigravity, CommandCode                        |
-| **Fase 4**  | ✅ Concluído | Design System & UI Premium — linguagem visual Sessionlens, biblioteca de componentes          |
-| **Fase 5**  | ✅ Concluído | Runtime & Tray — auto-ingestão, filesystem watcher, bandeja Windows, CI/CD                    |
-| **Fase 6**  | ✅ Concluído | Confiabilidade de Dados — qualidade por campo, diagnósticos de adapter, backfill idempotente  |
-| **Fase 7**  | ✅ Concluído | Integridade de Custo & Performance — classificação honesta, ingestão incremental, cache       |
-| **Fase 8**  | ✅ Concluído | Segurança & Qualidade — redação de dados, CORS, remoção de código morto, limpeza de auditoria |
-| **Fase 9**  | 📋 Planejado | Export & Compartilhamento — export local CSV/JSON, Discord webhooks, templates                |
-| **Fase 10** | 📋 Planejado | Extensibilidade — plugin SDK, integração com IDEs                                             |
-| **Fase 11** | 🔮 Futuro    | Cloud Opcional — sync opt-in, analytics para equipes                                          |
 
 ---
 

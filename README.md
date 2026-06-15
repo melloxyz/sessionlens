@@ -57,7 +57,8 @@ _Track costs, analyze sessions, and compare efficiency across your AI CLIs — f
 | **Premium UI**         | Sessionlens design system — DataPanel, DataTable, FigurePanel, CompactStat, ControlField, skeleton states, and tooltips                                         |
 | **Themes**             | Dark and light mode with refined contrast, accessible chart palette, and localStorage persistence                                                               |
 | **i18n**               | English and Português (PT-BR) with localized dates, durations, currencies, and insight labels                                                                   |
-| **System Tray**        | Windows tray icon with auto-start, quick ingestion, and live session count                                                                                      |
+| **CSV export**         | Export filtered sessions and analytics breakdowns to CSV directly from the UI                                                                                   |
+| **Full-text search**   | Search across session IDs, project paths, and full message content with result snippets                                                                         |
 | **Project controls**   | Hide/restore projects without deleting data; open folder; follow git timeline and related sessions                                                              |
 
 ---
@@ -123,7 +124,6 @@ Frontend: **http://localhost:5173** — Backend API: **http://127.0.0.1:3030**
 | **Charts**          | Recharts          | 2.x      |
 | **Icons**           | Lucide React      | latest   |
 | **Pricing**         | OpenRouter API    | sync     |
-| **Tray**            | trayicon          | Windows  |
 
 ---
 
@@ -135,7 +135,7 @@ sessionlens/
 │   ├── logo/              # Black and white logos (theme-aware)
 │   └── screenshots/       # UI screenshots
 ├── packages/
-│   ├── backend/           # Fastify + sql.js + adapters + costing + tray
+│   ├── backend/           # Fastify + sql.js + adapters + costing
 │   ├── frontend/          # React + Vite + Tailwind v4 + Recharts
 │   └── shared/            # Shared TypeScript types
 ├── scripts/               # Dev orchestration (Windows-safe)
@@ -191,39 +191,15 @@ sessionlens/
 
 Copy `.env.example` to `.env`:
 
-| Variable                   | Description                          | Default                 |
-| -------------------------- | ------------------------------------ | ----------------------- |
-| `SESSIONLENS_PORT`         | Backend port                         | `3030`                  |
-| `SESSIONLENS_FRONTEND_URL` | Frontend URL (used by CORS and tray) | `http://127.0.0.1:5173` |
-| `DATABASE_PATH`            | SQLite file path                     | `./data/sessionlens.db` |
+| Variable                   | Description                 | Default                 |
+| -------------------------- | --------------------------- | ----------------------- |
+| `SESSIONLENS_PORT`         | Backend port                | `3030`                  |
+| `SESSIONLENS_FRONTEND_URL` | Frontend URL (used by CORS) | `http://127.0.0.1:5173` |
+| `DATABASE_PATH`            | SQLite file path            | `./data/sessionlens.db` |
 
 ### Auto-ingestion
 
 Sessionlens watches CLI data directories and updates automatically on new files. Disable in **Settings → Auto-ingestion**.
-
-### System Tray (Windows)
-
-- **Auto-start:** Launch on login
-- **Quick ingestion:** Trigger from the tray menu
-- **Live status:** Total indexed sessions on the icon
-
----
-
-## Roadmap
-
-| Phase        | Status     | Description                                                                                |
-| ------------ | ---------- | ------------------------------------------------------------------------------------------ |
-| **Phase 1**  | ✅ Done    | Bootstrap & Core — multi-CLI ingestion, SQLite, cost tracking                              |
-| **Phase 2**  | ✅ Done    | Analytics & Budgets — insights, anomalies, spend trends, budget limits                     |
-| **Phase 3**  | ✅ Done    | CLI Expansion — Gemini, Kimi, Aider, Qwen, Antigravity, CommandCode                        |
-| **Phase 4**  | ✅ Done    | Design System & Premium UI — Sessionlens visual language, component library                |
-| **Phase 5**  | ✅ Done    | Runtime & Tray — auto-ingestion, filesystem watcher, Windows tray, CI/CD                   |
-| **Phase 6**  | ✅ Done    | Data Reliability — per-field quality, adapter diagnostics, idempotent backfill             |
-| **Phase 7**  | ✅ Done    | Cost Integrity & Performance — honest cost classification, incremental ingestion, caching  |
-| **Phase 8**  | ✅ Done    | Security & Code Quality — data redaction, CORS hardening, dead code removal, audit cleanup |
-| **Phase 9**  | 📋 Planned | Export & Sharing — local CSV/JSON export, Discord webhooks, sharing templates              |
-| **Phase 10** | 📋 Planned | Extensibility — plugin SDK, IDE integration                                                |
-| **Phase 11** | 🔮 Future  | Cloud Optional — opt-in sync, team analytics                                               |
 
 ---
 
