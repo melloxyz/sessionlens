@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { Link, useParams } from 'react-router-dom';
-import { ArrowLeft, Bot, FileCode2, MessageSquare, Terminal, Wrench } from 'lucide-react';
+import { ArrowLeft, Bot, Brain, FileCode2, MessageSquare, Terminal, Wrench } from 'lucide-react';
 import { BrandBadge, BrandMark } from '../components/brand/BrandMark.js';
 import { Badge } from '../components/ui/Badge.js';
 import { Button } from '../components/ui/Button.js';
@@ -266,6 +266,11 @@ export function SessionDetailPage() {
               <div className="mb-2 flex flex-wrap items-center gap-2">
                 <BrandBadge value={session.cli} />
                 <BrandBadge value={session.provider} kind="provider" />
+                {reasoning > 0 && (
+                  <Badge variant="info">
+                    <Brain className="h-3 w-3" /> {t('session.extendedThinking')}
+                  </Badge>
+                )}
                 <span className="text-xs text-subtle-foreground">
                   {formatRelativeTime(session.started_at)}
                 </span>
@@ -420,10 +425,8 @@ export function SessionDetailPage() {
               output={totalOutput}
               cacheRead={cacheRead}
               cacheWrite={cacheWrite}
+              reasoning={reasoning}
             />
-            {reasoning > 0 && (
-              <DetailRow label={t('common.reasoning')} value={formatTokens(reasoning)} />
-            )}
           </FigurePanel>
 
           <DataPanel title="Evidence trail" contentClassName="space-y-3 pt-3 text-sm">

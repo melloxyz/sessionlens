@@ -5,6 +5,7 @@ interface TokenUsageBarProps {
   output: number;
   cacheRead?: number;
   cacheWrite?: number;
+  reasoning?: number;
 }
 
 export function TokenUsageBar({
@@ -12,13 +13,15 @@ export function TokenUsageBar({
   output,
   cacheRead = 0,
   cacheWrite = 0,
+  reasoning = 0,
 }: TokenUsageBarProps) {
-  const total = Math.max(1, input + output + cacheRead + cacheWrite);
+  const total = Math.max(1, input + output + cacheRead + cacheWrite + reasoning);
   const rows = [
     { label: 'Input', value: input, color: 'bg-success' },
     { label: 'Output', value: output, color: 'bg-accent' },
     { label: 'Cache Read', value: cacheRead, color: 'bg-info' },
     { label: 'Cache Write', value: cacheWrite, color: 'bg-warning' },
+    ...(reasoning > 0 ? [{ label: 'Reasoning', value: reasoning, color: 'bg-danger' }] : []),
   ];
 
   return (

@@ -2,6 +2,7 @@ import { useMemo, useState, type ReactNode } from 'react';
 import { Link } from 'react-router-dom';
 import {
   AlertTriangle,
+  Brain,
   CircleDollarSign,
   Coins,
   Database,
@@ -131,6 +132,22 @@ interface AnalyticsReport {
     toolCallsCount: number;
     totalCostUsd: number;
   }[];
+  extendedThinking?: {
+    sessionsWithReasoning: number;
+    totalSessions: number;
+    reasoningSharePercent: number;
+    avgReasoningTokens: number | null;
+    avgReasoningRatio: number | null;
+    topReasoningSessions: {
+      sessionId: string;
+      cli: string;
+      provider: string;
+      model: string | null;
+      projectPath: string | null;
+      reasoningTokens: number;
+      totalCostUsd: number | null;
+    }[];
+  };
 }
 
 interface FilterOption {
@@ -265,6 +282,9 @@ export function AnalyticsPage() {
   const topAnomalies = anomalies.slice(0, 2);
   const topToolSessions = productivity?.topToolCallSessions ?? [];
   const topModels = modelUsage.slice(0, 6);
+  const extendedThinking = report?.extendedThinking;
+  const hasExtendedThinking = (extendedThinking?.sessionsWithReasoning ?? 0) > 0;
+  const anyModelHasReasoning = modelUsage.some((m) => m.reasoningTokens > 0);
   function handleExportBreakdown() {
     const url = `/api/export/breakdown.csv?dimension=${dimension}&metric=${metric}${filteredSuffix}`;
     const a = document.createElement('a');
@@ -870,6 +890,81 @@ export function AnalyticsPage() {
         </FigurePanel>
       </div>
 
+      {hasExtendedThinking && (
+        <>
+          <SectionHeader
+            title={t('analytics.extendedThinking')}
+            description={t('analytics.extendedThinking.description')}
+          />
+          <div className="grid grid-cols-1 gap-4 xl:grid-cols-[1fr_1fr_1.2fr]">
+            <AnalyticsKpiCard
+              icon={Brain}
+              label={t('analytics.extendedThinking.sessionsWithReasoning')}
+              value={`${extendedThinking!.sessionsWithReasoning} / ${extendedThinking!.totalSessions}`}
+              meta={`${extendedThinking!.reasoningSharePercent.toFixed(1)}% ${t('common.sessions').toLowerCase()}`}
+              tone="info"
+              loading={reportLoading && !report}
+            />
+            <AnalyticsKpiCard
+              icon={Brain}
+              label={t('analytics.extendedThinking.avgReasoningTokens')}
+              value={formatTokens(extendedThinking!.avgReasoningTokens)}
+              meta={
+                extendedThinking!.avgReasoningRatio != null
+                  ? `${(extendedThinking!.avgReasoningRatio * 100).toFixed(1)}% ${t('analytics.extendedThinking.ofTotal')}`
+                  : '—'
+              }
+              tone="warning"
+              loading={reportLoading && !report}
+            />
+            <FigurePanel
+              figure="THINKING"
+              title={t('analytics.extendedThinking.topSessions')}
+              contentClassName="space-y-2 pt-3"
+            >
+              {extendedThinking!.topReasoningSessions.length > 0 ? (
+                extendedThinking!.topReasoningSessions.map((session, index) => (
+                  <Link
+                    key={session.sessionId}
+                    to={`/sessions/${session.sessionId}`}
+                    className="flex items-center justify-between gap-3 rounded-md border border-border bg-surface p-3 text-sm transition-colors hover:border-border-strong hover:bg-surface-hover"
+                  >
+                    <div className="flex items-center gap-3 min-w-0">
+                      <span
+                        className="size-2.5 shrink-0 rounded-full bg-danger"
+                        style={{ opacity: 1 - index * 0.2 }}
+                      />
+                      <div className="min-w-0">
+                        <div className="truncate font-mono text-xs font-semibold text-foreground">
+                          {session.sessionId.slice(0, 12)}
+                        </div>
+                        <div className="text-[10px] text-subtle-foreground">
+                          {session.model ?? session.provider}
+                        </div>
+                      </div>
+                    </div>
+                    <div className="shrink-0 text-right">
+                      <div className="font-mono text-xs font-semibold text-danger">
+                        {formatTokens(session.reasoningTokens)}
+                      </div>
+                      <div className="text-[10px] text-subtle-foreground">
+                        {t('common.reasoning').toLowerCase()}
+                      </div>
+                    </div>
+                  </Link>
+                ))
+              ) : (
+                <EmptyState
+                  title={t('analytics.extendedThinking.noSessions.title')}
+                  description={t('analytics.extendedThinking.noSessions.description')}
+                  icon={Brain}
+                />
+              )}
+            </FigurePanel>
+          </div>
+        </>
+      )}
+
       <SectionHeader
         title={t('analytics.modelUsageTitle')}
         description={t('analytics.multiModelDescription')}
@@ -882,6 +977,7 @@ export function AnalyticsPage() {
                 key={`${item.provider}/${item.model}`}
                 item={item}
                 color={chartColor(index)}
+                showReasoning={anyModelHasReasoning}
                 onClick={() => {
                   setProviderFilter(providerFilter === item.provider ? '' : item.provider);
                   setModelFilter(modelFilter === item.model ? '' : item.model);
@@ -1141,10 +1237,12 @@ function ModelUsageCard({
   item,
   color,
   onClick,
+  showReasoning,
 }: {
   item: AnalyticsReport['modelUsageBreakdown'][number];
   color: string;
   onClick: () => void;
+  showReasoning?: boolean;
 }) {
   const tokens = item.inputTokens + item.outputTokens + item.reasoningTokens;
 
@@ -1157,17 +1255,29 @@ function ModelUsageCard({
       <div className="flex items-start gap-3">
         <BrandBadge value={item.provider} kind="provider" />
         <div className="min-w-0 flex-1">
-          <div className="truncate text-sm font-semibold text-foreground">{item.model}</div>
+          <div className="flex items-center gap-2 min-w-0">
+            <span className="truncate text-sm font-semibold text-foreground">{item.model}</span>
+            {item.reasoningTokens > 0 && (
+              <span className="shrink-0 rounded-full border border-danger/30 bg-danger-soft px-1.5 py-0.5 text-[9px] font-semibold uppercase text-danger">
+                thinking
+              </span>
+            )}
+          </div>
           <div className="mt-1 text-xs text-subtle-foreground">{item.provider}</div>
         </div>
       </div>
-      <div className="mt-4 grid grid-cols-3 gap-2">
+      <div
+        className={`mt-4 grid gap-2 ${showReasoning && item.reasoningTokens > 0 ? 'grid-cols-4' : 'grid-cols-3'}`}
+      >
         <MetricChip
           label="custo"
           value={<Sensitive>{formatCurrency(item.totalCostUsd)}</Sensitive>}
         />
         <MetricChip label="uso" value={`${item.messageCount}`} />
         <MetricChip label="tokens" value={formatTokens(tokens)} />
+        {showReasoning && item.reasoningTokens > 0 && (
+          <MetricChip label="think" value={formatTokens(item.reasoningTokens)} />
+        )}
       </div>
       <SparkTrace color={color} seed={item.messageCount + item.toolCallsCount} />
     </button>

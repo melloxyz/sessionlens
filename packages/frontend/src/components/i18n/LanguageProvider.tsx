@@ -396,6 +396,17 @@ const dictionaries = {
     'analytics.clickToView': 'Click to view session',
     'analytics.clickToFilterByModel': 'Click to filter by this model',
     'analytics.granularity': 'Granularity',
+    'analytics.extendedThinking': 'Extended Thinking',
+    'analytics.extendedThinking.description':
+      'Sessions that used reasoning tokens — availability depends on adapter and model support.',
+    'analytics.extendedThinking.sessionsWithReasoning': 'Sessions with reasoning',
+    'analytics.extendedThinking.avgReasoningTokens': 'Avg reasoning tokens',
+    'analytics.extendedThinking.ofTotal': 'of total tokens',
+    'analytics.extendedThinking.topSessions': 'Top reasoning sessions',
+    'analytics.extendedThinking.noSessions.title': 'No reasoning sessions',
+    'analytics.extendedThinking.noSessions.description':
+      'No sessions with reasoning tokens found in the selected range.',
+    'session.extendedThinking': 'Extended Thinking',
     'settings.userOptions.title': 'User options',
     'settings.userOptions.description':
       'Preferences that change how Sessionlens feels and behaves on this machine.',
@@ -1123,6 +1134,17 @@ const dictionaries = {
     'analytics.clickToView': 'Clique para ver a sessão',
     'analytics.clickToFilterByModel': 'Clique para filtrar por este modelo',
     'analytics.granularity': 'Granularidade',
+    'analytics.extendedThinking': 'Extended Thinking',
+    'analytics.extendedThinking.description':
+      'Sessões que usaram reasoning tokens — disponibilidade depende do adaptador e suporte do modelo.',
+    'analytics.extendedThinking.sessionsWithReasoning': 'Sessões com reasoning',
+    'analytics.extendedThinking.avgReasoningTokens': 'Média de reasoning tokens',
+    'analytics.extendedThinking.ofTotal': 'do total de tokens',
+    'analytics.extendedThinking.topSessions': 'Top sessões de reasoning',
+    'analytics.extendedThinking.noSessions.title': 'Nenhuma sessão com reasoning',
+    'analytics.extendedThinking.noSessions.description':
+      'Nenhuma sessão com reasoning tokens encontrada no período selecionado.',
+    'session.extendedThinking': 'Extended Thinking',
     'settings.userOptions.title': 'Opções do usuário',
     'settings.userOptions.description':
       'Preferências que mudam como o Sessionlens se apresenta e se comporta nesta máquina.',

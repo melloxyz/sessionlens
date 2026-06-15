@@ -22,6 +22,23 @@ export interface AnalyticsAnomaly {
   sessionId?: string;
 }
 
+export interface ExtendedThinkingStats {
+  sessionsWithReasoning: number;
+  totalSessions: number;
+  reasoningSharePercent: number;
+  avgReasoningTokens: number | null;
+  avgReasoningRatio: number | null;
+  topReasoningSessions: {
+    sessionId: string;
+    cli: string;
+    provider: string;
+    model: string | null;
+    projectPath: string | null;
+    reasoningTokens: number;
+    totalCostUsd: number | null;
+  }[];
+}
+
 export interface AnalyticsReport {
   generatedAt: string;
   summary: {
@@ -36,6 +53,7 @@ export interface AnalyticsReport {
   trend: { date: string; spend: number }[];
   productivity: ProductivityReport;
   modelUsageBreakdown: ModelUsageSummary[];
+  extendedThinking: ExtendedThinkingStats;
 }
 
 export interface AnalyticsFilters {
@@ -354,6 +372,43 @@ export function buildAnalyticsReport(filters: AnalyticsFilters = {}): AnalyticsR
     });
   }
 
+  const sessionsWithReasoning = aggregatedSessions.filter((s) => s.reasoningTokens > 0);
+  const avgReasoningTokens =
+    sessionsWithReasoning.length > 0
+      ? sessionsWithReasoning.reduce((sum, s) => sum + s.reasoningTokens, 0) /
+        sessionsWithReasoning.length
+      : null;
+  const avgReasoningRatio =
+    sessionsWithReasoning.length > 0
+      ? sessionsWithReasoning.reduce(
+          (sum, s) => sum + (s.totalTokens > 0 ? s.reasoningTokens / s.totalTokens : 0),
+          0,
+        ) / sessionsWithReasoning.length
+      : null;
+  const extendedThinking: ExtendedThinkingStats = {
+    sessionsWithReasoning: sessionsWithReasoning.length,
+    totalSessions: aggregatedSessions.length,
+    reasoningSharePercent:
+      aggregatedSessions.length > 0
+        ? (sessionsWithReasoning.length / aggregatedSessions.length) * 100
+        : 0,
+    avgReasoningTokens,
+    avgReasoningRatio,
+    topReasoningSessions: [...aggregatedSessions]
+      .filter((s) => s.reasoningTokens > 0)
+      .sort((a, b) => b.reasoningTokens - a.reasoningTokens)
+      .slice(0, 3)
+      .map((s) => ({
+        sessionId: s.session.session_id,
+        cli: s.session.cli,
+        provider: s.session.provider,
+        model: s.session.model,
+        projectPath: s.session.project_path,
+        reasoningTokens: s.reasoningTokens,
+        totalCostUsd: s.session.total_cost_usd,
+      })),
+  };
+
   const sessionsById = new Map(aggregatedSessions.map((item) => [item.session.id, item]));
   const productivityRows: ProductivitySession[] = sessions.map((session) => {
     const usage = sessionsById.get(session.id);
@@ -426,6 +481,7 @@ export function buildAnalyticsReport(filters: AnalyticsFilters = {}): AnalyticsR
       ],
     },
     modelUsageBreakdown,
+    extendedThinking,
   };
 }
 
