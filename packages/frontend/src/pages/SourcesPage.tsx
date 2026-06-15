@@ -216,7 +216,6 @@ function SourceCard({ item }: { item: IntegrationStatusItem }) {
 // ─── Page ─────────────────────────────────────────────────────────────────────
 
 export function SourcesPage() {
-  const { t } = useI18n();
   const { data, loading } = useApi<{ integrations: IntegrationStatusItem[] }>(
     '/api/integrations/status',
     { initialData: { integrations: [] } },
