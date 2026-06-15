@@ -23,14 +23,11 @@ import { registerSessionRoutes } from './routes/sessions.js';
 import { registerProjectRoutes } from './routes/projects.js';
 import { registerModelRoutes } from './routes/models.js';
 import { syncOpenRouterPricing } from './openrouter.js';
-import { trayManager, isTrayEnabled } from './tray/index.js';
-import { registerTrayRoutes } from './routes/tray.js';
 import { registerBudgetRoutes } from './routes/budgets.js';
 import { registerPrivacyRoutes } from './routes/privacy.js';
 import { registerNotificationRoutes } from './routes/notifications.js';
 
 const PORT = Number(process.env.SESSIONLENS_PORT) || 3030;
-const NO_TRAY = process.argv.includes('--no-tray');
 
 async function main() {
   try {
@@ -55,7 +52,6 @@ async function main() {
     registerSessionRoutes(app);
     registerProjectRoutes(app);
     registerModelRoutes(app);
-    registerTrayRoutes(app);
     registerBudgetRoutes(app);
     registerPrivacyRoutes(app);
     registerNotificationRoutes(app);
@@ -174,12 +170,7 @@ async function main() {
 
     await app.listen({ port: PORT, host: '127.0.0.1' });
 
-    if (!NO_TRAY && isTrayEnabled()) {
-      await trayManager.init(app);
-    }
-
     const gracefulShutdown = async () => {
-      await trayManager.destroy();
       await app.close();
       process.exit(0);
     };

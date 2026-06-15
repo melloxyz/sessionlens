@@ -67,13 +67,6 @@ interface AutoIngestionStatus {
   lastError: string | null;
 }
 
-interface TrayStatus {
-  enabled: boolean;
-  autoStart: boolean;
-  startMinimized: boolean;
-  available: boolean;
-}
-
 interface AlertRow {
   id: number;
   budget_id: number | null;
@@ -115,14 +108,6 @@ export function SettingsPage() {
     error: autoError,
     refetch: refetchAuto,
   } = useApi<AutoIngestionStatus>('/api/ingest/auto');
-  const {
-    data: trayStatus,
-    loading: trayLoading,
-    error: trayError,
-    refetch: refetchTray,
-  } = useApi<TrayStatus>('/api/tray/status');
-  const [trayUpdating, setTrayUpdating] = useState(false);
-  const [trayMutationError, setTrayMutationError] = useState<string | null>(null);
   const [clearingAlerts, setClearingAlerts] = useState(false);
   const {
     data: privacySettings,
@@ -178,24 +163,6 @@ export function SettingsPage() {
       setAutoMutationError(err instanceof Error ? err.message : String(err));
     } finally {
       setAutoUpdating(false);
-    }
-  }
-
-  async function updateTraySetting(key: string, value: boolean) {
-    setTrayUpdating(true);
-    setTrayMutationError(null);
-    try {
-      const res = await fetch('/api/tray/settings', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ [key]: value }),
-      });
-      if (!res.ok) throw new Error(await res.text());
-      await refetchTray();
-    } catch (err) {
-      setTrayMutationError(err instanceof Error ? err.message : String(err));
-    } finally {
-      setTrayUpdating(false);
     }
   }
 
@@ -411,56 +378,20 @@ export function SettingsPage() {
             open={openSections.has('startup')}
             onToggle={() => toggleSection('startup')}
           >
-            {trayError ? (
-              <ErrorState
-                title={t('settings.tray.loadFailed')}
-                message={trayError.message}
-                code={trayError.code}
-                details={trayError.details}
-                onRetry={refetchTray}
-              />
-            ) : (
-              <Card variant="inset">
-                <CardContent className="divide-y divide-border p-0">
-                  <SwitchRow
-                    title={t('settings.tray.enable')}
-                    description={t('settings.tray.enable.description')}
-                    enabled={Boolean(trayStatus?.enabled)}
-                    loading={trayLoading && !trayStatus}
-                    disabled={trayUpdating || trayLoading || !trayStatus?.available}
-                    onChange={() => updateTraySetting('enabled', !trayStatus?.enabled)}
-                  />
-                  <SwitchRow
-                    title={t('settings.tray.autoStart')}
-                    description={t('settings.tray.autoStart.description')}
-                    enabled={Boolean(trayStatus?.autoStart)}
-                    loading={trayLoading && !trayStatus}
-                    disabled={trayUpdating || trayLoading || !trayStatus?.available}
-                    onChange={() => updateTraySetting('autoStart', !trayStatus?.autoStart)}
-                  />
-                  <SwitchRow
-                    title={t('settings.tray.startMinimized')}
-                    description={t('settings.tray.startMinimized.description')}
-                    enabled={Boolean(trayStatus?.startMinimized)}
-                    loading={trayLoading && !trayStatus}
-                    disabled={trayUpdating || trayLoading || !trayStatus?.available}
-                    onChange={() =>
-                      updateTraySetting('startMinimized', !trayStatus?.startMinimized)
-                    }
-                  />
-                  <SwitchRow
-                    title={t('settings.checkUpdates')}
-                    description={t('settings.checkUpdates.description')}
-                    enabled={preferences.checkUpdatesOnStartup}
-                    onChange={() => {
-                      const nextValue = !preferences.checkUpdatesOnStartup;
-                      setPreference('checkUpdatesOnStartup', nextValue);
-                      if (nextValue) void checkForUpdates();
-                    }}
-                  />
-                </CardContent>
-              </Card>
-            )}
+            <Card variant="inset">
+              <CardContent className="divide-y divide-border p-0">
+                <SwitchRow
+                  title={t('settings.checkUpdates')}
+                  description={t('settings.checkUpdates.description')}
+                  enabled={preferences.checkUpdatesOnStartup}
+                  onChange={() => {
+                    const nextValue = !preferences.checkUpdatesOnStartup;
+                    setPreference('checkUpdatesOnStartup', nextValue);
+                    if (nextValue) void checkForUpdates();
+                  }}
+                />
+              </CardContent>
+            </Card>
             {updateCheck ? (
               <div className="rounded-md border border-border bg-surface-muted p-3 text-xs leading-5 text-muted-foreground">
                 <span className="font-semibold text-foreground">{t('settings.updateStatus')}:</span>{' '}
@@ -472,20 +403,12 @@ export function SettingsPage() {
                 </span>
               </div>
             ) : null}
-            {trayStatus && !trayStatus.available ? (
-              <div className="rounded-md border border-border bg-surface-muted p-3 text-sm text-muted-foreground">
-                {t('settings.tray.windowsOnly')}
-              </div>
-            ) : null}
-            {trayMutationError ? (
-              <div className="font-mono text-sm text-danger">{trayMutationError}</div>
-            ) : null}
           </SettingsSection>
 
           <SettingsSection
             id="ingestion"
             icon={Database}
-            marker="E."
+            marker="D."
             title={t('settings.section.ingestion')}
             description={t('settings.section.ingestion.description')}
             open={openSections.has('ingestion')}
@@ -1240,7 +1163,7 @@ function NotificationsSection({ open, onToggle }: { open: boolean; onToggle: () 
     <SettingsSection
       id="notifications"
       icon={Bell}
-      marker="F."
+      marker="E."
       title={t('settings.section.notifications')}
       description={t('settings.section.notifications.description')}
       open={open}

@@ -400,7 +400,7 @@ const dictionaries = {
       'Preferences that change how Sessionlens feels and behaves on this machine.',
     'settings.workspaceControls.title': 'Workspace controls',
     'settings.workspaceControls.description':
-      'Ingestion, tray behavior and local runtime controls for your current workspace.',
+      'Ingestion and local runtime controls for your current workspace.',
     'settings.generalStatus.title': 'General info & status',
     'settings.generalStatus.description':
       'High-level health, local storage details and integration availability.',
@@ -505,15 +505,14 @@ const dictionaries = {
     'settings.redactSensitiveData.description':
       'Masks API keys, tokens and passwords before storing tool inputs and messages. Affects future ingestions only.',
     'settings.section.startup': 'Startup and system',
-    'settings.section.startup.description': 'System tray, login and startup behavior.',
+    'settings.section.startup.description': 'Login and startup behavior.',
     'settings.checkUpdates': 'Check updates on startup',
     'settings.checkUpdates.description': 'Check for new versions automatically.',
     'settings.updateStatus': 'Update check',
     'settings.latestVersion': 'latest version',
     'settings.lastChecked': 'Last checked',
     'settings.section.ingestion': 'Local ingestion',
-    'settings.section.ingestion.description':
-      'Ingestion, tray behavior and local runtime controls.',
+    'settings.section.ingestion.description': 'Ingestion and local runtime controls.',
     'settings.supportedSources': 'Supported sources',
     'settings.supportedSources.description': 'Detected local adapter status.',
     'settings.noSourcesYet': 'No local sources detected yet.',
@@ -727,20 +726,6 @@ const dictionaries = {
     'budget.alerts.more': 'more budget alerts',
     'budget.project.empty': 'No budget set for this project yet.',
     'budget.project.create': 'Create project budget',
-    'settings.tray': 'System Tray',
-    'settings.tray.description': 'Keep Sessionlens running in the system tray for quick access.',
-    'settings.tray.enable': 'Enable system tray',
-    'settings.tray.enable.description':
-      'Show Sessionlens icon in the notification area. Requires restart.',
-    'settings.tray.autoStart': 'Start with system',
-    'settings.tray.autoStart.description': 'Launch Sessionlens when you log in.',
-    'settings.tray.startMinimized': 'Start minimized',
-    'settings.tray.startMinimized.description': 'Do not open the dashboard on startup.',
-    'settings.tray.restartNote': 'Restart Sessionlens for tray changes to take effect.',
-    'settings.tray.windowsOnly': 'System tray is only available on Windows.',
-    'settings.tray.unavailable': 'Unavailable (non-Windows)',
-    'settings.tray.available': 'Available on this machine',
-    'settings.tray.loadFailed': 'Tray status failed',
   },
   'pt-BR': {
     'nav.dashboard': 'Dashboard',
@@ -1141,7 +1126,7 @@ const dictionaries = {
       'Preferências que mudam como o Sessionlens se apresenta e se comporta nesta máquina.',
     'settings.workspaceControls.title': 'Controles do workspace',
     'settings.workspaceControls.description':
-      'Ingestão, comportamento de bandeja e controles locais do runtime do seu workspace atual.',
+      'Ingestão e controles locais do runtime do seu workspace atual.',
     'settings.generalStatus.title': 'Informações gerais e status',
     'settings.generalStatus.description':
       'Saúde geral, detalhes do armazenamento local e disponibilidade das integrações.',
@@ -1246,15 +1231,14 @@ const dictionaries = {
     'settings.redactSensitiveData.description':
       'Mascara chaves de API, tokens e senhas antes de armazenar entradas de ferramentas e mensagens. Afeta apenas ingestões futuras.',
     'settings.section.startup': 'Inicialização e sistema',
-    'settings.section.startup.description': 'Bandeja, login e comportamento de inicialização.',
+    'settings.section.startup.description': 'Login e comportamento de inicialização.',
     'settings.checkUpdates': 'Verificar atualizações ao iniciar',
     'settings.checkUpdates.description': 'Verifica novas versões automaticamente.',
     'settings.updateStatus': 'Verificação de updates',
     'settings.latestVersion': 'última versão',
     'settings.lastChecked': 'Última verificação',
     'settings.section.ingestion': 'Ingestão local',
-    'settings.section.ingestion.description':
-      'Ingestão, comportamento de bandeja e controles locais do runtime.',
+    'settings.section.ingestion.description': 'Ingestão e controles locais do runtime.',
     'settings.supportedSources': 'Fontes suportadas',
     'settings.supportedSources.description': 'Status dos adapters locais detectados.',
     'settings.noSourcesYet': 'Nenhuma fonte local detectada ainda.',
@@ -1702,20 +1686,6 @@ const dictionaries = {
     'budget.alerts.more': 'alertas de orçamento',
     'budget.project.empty': 'Ainda não existe orçamento para este projeto.',
     'budget.project.create': 'Criar orçamento do projeto',
-    'settings.tray': 'Bandeja do Sistema',
-    'settings.tray.description': 'Mantenha o Sessionlens rodando na bandeja para acesso rápido.',
-    'settings.tray.enable': 'Ativar bandeja do sistema',
-    'settings.tray.enable.description':
-      'Mostrar ícone do Sessionlens na área de notificação. Requer reinício.',
-    'settings.tray.autoStart': 'Iniciar com o sistema',
-    'settings.tray.autoStart.description': 'Abrir o Sessionlens ao fazer login.',
-    'settings.tray.startMinimized': 'Iniciar minimizado',
-    'settings.tray.startMinimized.description': 'Não abrir o dashboard ao iniciar.',
-    'settings.tray.restartNote': 'Reinicie o Sessionlens para aplicar as mudanças na bandeja.',
-    'settings.tray.windowsOnly': 'A bandeja do sistema está disponível apenas no Windows.',
-    'settings.tray.unavailable': 'Indisponível (não-Windows)',
-    'settings.tray.available': 'Disponível nesta máquina',
-    'settings.tray.loadFailed': 'Falha ao carregar status da bandeja',
   },
 } as const;
 
