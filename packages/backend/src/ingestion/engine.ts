@@ -91,6 +91,11 @@ export function getLastStatus(): IngestionStatus | null {
   return lastStatus;
 }
 
+export function _resetIngestionState(): void {
+  lastStatus = null;
+  activeIngestion = null;
+}
+
 export function isIngestionRunning(): boolean {
   return activeIngestion !== null;
 }

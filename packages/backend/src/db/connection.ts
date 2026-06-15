@@ -111,7 +111,7 @@ export async function initDatabase(): Promise<void> {
 }
 
 export function saveDatabase(): void {
-  if (!db) return;
+  if (!db || !dbPath) return;
   const data = db.export();
   const buffer = Buffer.from(data);
   const tmp = `${dbPath}.tmp`;
@@ -125,4 +125,14 @@ export function closeDatabase(): void {
   saveDatabase();
   db.close();
   db = null;
+}
+
+export function _setDatabaseForTesting(testDb: SqlJsDatabase): void {
+  db = testDb;
+  dbPath = '';
+}
+
+export function _clearDatabase(): void {
+  db = null;
+  dbPath = '';
 }

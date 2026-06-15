@@ -16,6 +16,10 @@ export class AdapterRegistry {
     return [...this.adapters.values()];
   }
 
+  clear(): void {
+    this.adapters.clear();
+  }
+
   saveCheckpoint(cli: string, sessionPath: string, checkpoint: Checkpoint): void {
     const db = getDatabase();
     db.run(
