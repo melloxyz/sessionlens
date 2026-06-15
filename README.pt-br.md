@@ -104,7 +104,6 @@ Frontend: **http://localhost:5173** — API Backend: **http://127.0.0.1:3030**
 | `pnpm typecheck`                                       | Typecheck em todos os packages                            |
 | `pnpm lint`                                            | Lint em todos os packages                                 |
 | `pnpm -r test`                                         | Executar suite de testes                                  |
-| `pnpm changelog`                                       | Regenerar `CHANGELOG.md` via git-cliff                    |
 | `pnpm --filter @sessionlens/backend diagnose:adapters` | Diagnóstico de adapters (capabilities, fontes, qualidade) |
 | `pnpm --filter @sessionlens/backend backfill:quality`  | Backfill idempotente de tools, files e data quality       |
 
