@@ -42,6 +42,9 @@ jobs:
       - name: Test
         run: pnpm -r test
 
+      - name: Coverage (backend)
+        run: pnpm --filter @sessionlens/backend test:coverage
+
       - name: Build frontend
         run: pnpm --filter @sessionlens/frontend build
 

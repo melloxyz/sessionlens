@@ -14,3 +14,4 @@ AGENTS.md
 .agents/
 .claude/
 CLAUDE.md
+packages/backend/coverage/*
