@@ -19,11 +19,8 @@
 <br/>
 
 <!-- row 1: project / status badges -->
-[![License: MIT](https://img.shields.io/github/license/melloxyz/sessionlens?style=for-the-badge&color=00c853)](LICENSE)
-[![Latest Release](https://img.shields.io/github/v/release/melloxyz/sessionlens?style=for-the-badge&color=00c853&label=version&sort=semver)](https://github.com/melloxyz/sessionlens/releases)
 <!-- If ci.yml is renamed, update the badge URL below -->
 [![CI](https://img.shields.io/github/actions/workflow/status/melloxyz/sessionlens/ci.yml?style=for-the-badge&label=ci&branch=master)](https://github.com/melloxyz/sessionlens/actions/workflows/ci.yml)
-[![Stars](https://img.shields.io/github/stars/melloxyz/sessionlens?style=for-the-badge&color=ffd54f)](https://github.com/melloxyz/sessionlens)
 [![i18n](https://img.shields.io/badge/i18n-EN%20%7C%20PT--BR-1f6feb?style=for-the-badge)](README.md)
 
 <br/>
@@ -226,17 +223,6 @@ sessionlens/
 | **Antigravity** | ⚠️ Experimental | `~/.gemini/antigravity/`                                | PARTIAL   |
 
 > Cada adapter é isolado — uma mudança no schema de uma CLI não afeta as outras. A confiança reflete a qualidade e completude dos dados disponíveis por fonte.
-
----
-
-## Roadmap
-
-O Sessionlens está em **desenvolvimento ativo** (v0.9.x). O plano completo vive em `.agents/ROADMAP.md` (apenas para mantenedores) — o destaque do próximo ciclo de release é:
-
-- **Refinamentos de precisão de custo** — mais dados `actual`, menos fallbacks `estimated`
-- **Mais adapters de CLI** — conduzido pela comunidade; veja [Contribuindo](CONTRIBUTING.md)
-- **Templates nativos de webhook** — Slack e Discord em cima do sistema de webhooks da v0.9.5
-- **Telemetria cloud read-only opcional** — opt-in, transparente, desligada por padrão
 
 ---
 

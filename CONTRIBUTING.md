@@ -31,7 +31,6 @@ Thank you for considering contributing to Sessionlens!
 ## Table of Contents
 
 - [Ways to Contribute](#ways-to-contribute)
-- [Areas where help is welcome](#areas-where-help-is-welcome)
 - [Development Guide](#development-guide)
 - [Adding a New CLI Adapter](#adding-a-new-cli-adapter)
 - [Engineering Rules](#engineering-rules)
@@ -53,19 +52,6 @@ Thank you for considering contributing to Sessionlens!
 | **Feature requests**| Problem + use case, not just a wish                    | Discussions tab (recommended)                               |
 | **New CLI adapters**| See [§ Adding a New CLI Adapter](#adding-a-new-cli-adapter) | Open an issue first to align on CLI                      |
 | **Translations**    | Currently EN + PT-BR                                   | Open an issue to coordinate                                 |
-
----
-
-## Areas where help is welcome
-
-<!-- Keep in sync with README.md → Roadmap -->
-
-The project is in active development. These are the areas where contributions are most valuable right now:
-
-- **Cost accuracy refinements** — more `actual` data, fewer `estimated` fallbacks
-- **More CLI adapters** — community-driven; see [§ Adding a New CLI Adapter](#adding-a-new-cli-adapter)
-- **First-class webhook templates** — Slack, Discord on top of the v0.9.5 webhook system
-- **Optional cloud-read-only telemetry** — opt-in, transparent, off by default
 
 ---
 

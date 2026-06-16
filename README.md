@@ -19,11 +19,8 @@
 <br/>
 
 <!-- row 1: project / status badges -->
-[![License: MIT](https://img.shields.io/github/license/melloxyz/sessionlens?style=for-the-badge&color=00c853)](LICENSE)
-[![Latest Release](https://img.shields.io/github/v/release/melloxyz/sessionlens?style=for-the-badge&color=00c853&label=version&sort=semver)](https://github.com/melloxyz/sessionlens/releases)
 <!-- If ci.yml is renamed, update the badge URL below -->
 [![CI](https://img.shields.io/github/actions/workflow/status/melloxyz/sessionlens/ci.yml?style=for-the-badge&label=ci&branch=master)](https://github.com/melloxyz/sessionlens/actions/workflows/ci.yml)
-[![Stars](https://img.shields.io/github/stars/melloxyz/sessionlens?style=for-the-badge&color=ffd54f)](https://github.com/melloxyz/sessionlens)
 [![i18n](https://img.shields.io/badge/i18n-EN%20%7C%20PT--BR-1f6feb?style=for-the-badge)](README.pt-br.md)
 
 <br/>
@@ -226,17 +223,6 @@ sessionlens/
 | **Antigravity** | ⚠️ Experimental | `~/.gemini/antigravity/`                                | PARTIAL    |
 
 > Each adapter is isolated — a schema change in one CLI does not affect the others. Confidence reflects the quality and completeness of data exposed by each source. Where CLIs don't expose cost, tokens, or tools, Sessionlens preserves what's available and flags the gap.
-
----
-
-## Roadmap
-
-Sessionlens is in **active development** (v0.9.x). The full plan lives in `.agents/ROADMAP.md` (maintainer-only) — the headline for the next release cycle is:
-
-- **Cost accuracy refinements** — more `actual` data, fewer `estimated` fallbacks
-- **More CLI adapters** — community-driven; see [Contributing](CONTRIBUTING.md)
-- **First-class webhook templates** — Slack, Discord on top of the v0.9.5 webhook system
-- **Optional cloud-read-only telemetry** — opt-in, transparent, off by default
 
 ---
 
