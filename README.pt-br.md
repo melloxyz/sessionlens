@@ -103,17 +103,17 @@ A maioria dos times que alterna entre várias AI coding CLIs não consegue respo
 
 ---
 
-## Novidades na v0.9.5
+## Novidades na v0.9.6
 
 > Histórico completo em [CHANGELOG.md](CHANGELOG.md).
 
-- **Página de Sources:** página dedicada exibindo os adapters CLI detectados e seus status em tempo real (habilitado/desabilitado, caminho, erros)
-- **Notificações via webhook:** sistema completo de CRUD para destinos webhook, com suporte nativo a Microsoft Teams e ntfy
-- **Gerenciamento de alertas:** ação "Limpar tudo" para descartar todos os alertas ativos de uma vez
-- **Cooldown de notificações:** configuração de cooldown por destino para evitar spam de alertas
-- **Metadados de sessão:** novos campos de metadados no modelo de sessão, preenchidos durante a ingestão
-- **Resiliência de adapters:** erros de detecção são capturados e logados; adapters com falha são ignorados sem interromper a ingestão
-- **Melhoria de privacidade:** valores de moeda na UI agora passam pelo componente `Sensitive`
+- **Forecast de overview:** novo tile no dashboard com projeção de gasto de fim de mês via regressão linear dos últimos 7 dias
+- **Card de comparação de CLIs:** eficiência de custo/tool calls/tokens por CLI exibida na página de detalhes do projeto
+- **Métricas de extended thinking:** superfície dedicada de analytics para uso de tokens de raciocínio
+- **Busca full-text em mensagens:** busca via SQLite FTS5 na página de Sessões, com snippets de resultado
+- **Reformulação do README e CONTRIBUTING:** hero reestruturado, bloco de badges em 2 linhas, Features agrupadas e nova seção `Contribuindo`
+- **Remoção da feature de tray:** system tray e entradas relacionadas em Configurações foram removidos
+- **Correção de ordem no CI:** o step de testes agora roda antes da cobertura, fazendo a pipeline falhar mais cedo
 
 ---
 

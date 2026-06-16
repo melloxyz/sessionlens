@@ -5,6 +5,28 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ---
 
+## [0.9.6] — 2026-06-16
+
+### Added
+
+- **Overview forecast:** new `/api/overview/forecast` endpoint and dashboard tile projecting month-end spend via linear regression on the last 7 days
+- **CLI comparison card:** new `/api/projects/:id/cli-comparison` endpoint and `CliComparisonCard` component on the project detail page, surfacing per-CLI cost/tool-call/token efficiency
+- **Extended thinking metrics:** new analytics page and backend support for reasoning/thinking token usage
+- **Full-text search for messages:** SQLite FTS5 virtual table backing a new search input on the Sessions page, with result snippets
+
+### Changed
+
+- **README overhaul:** restructured hero (theme-aware logo, 2-row shields.io badge block, 2-tier screenshot layout), grouped Features into Tracking / Analytics & Insights / Privacy & Control, and added a `## Contributing` pointer section (EN + PT-BR)
+- **CONTRIBUTING polish:** added a theme-aware hero, a `## Ways to Contribute` table, and a file-tree callout above the new-adapter guide
+- **Removed changelog command:** dropped `pnpm changelog` from the README usage instructions; CHANGELOG is now maintained manually
+- **Removed tray feature:** deleted the system tray and related Settings entries (Windows-only start-minimized auto-start was unreliable across builds)
+
+### Fixed
+
+- **CI workflow order:** moved the `pnpm -r test` step above the coverage job so failing tests stop the pipeline before coverage reports
+
+---
+
 ## [0.9.5] — 2026-06-13
 
 ### Added

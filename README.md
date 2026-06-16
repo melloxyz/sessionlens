@@ -103,17 +103,17 @@ Most teams juggling multiple AI coding CLIs can't answer basic questions: _which
 
 ---
 
-## What's New in v0.9.5
+## What's New in v0.9.6
 
 > Full history in [CHANGELOG.md](CHANGELOG.md).
 
-- **Sources page:** dedicated page showing detected CLI adapters and their live status (enabled/disabled, path, errors)
-- **Webhook notifications:** full CRUD system for webhook destinations, with built-in support for Microsoft Teams and ntfy
-- **Alert management:** "Clear all" action to dismiss all active alerts at once
-- **Notification cooldown:** per-destination cooldown setting to prevent alert spam
-- **Session metadata:** new metadata fields on the session model, populated during ingestion
-- **Adapter resilience:** detection errors are caught and logged; failing adapters are skipped without breaking ingestion
-- **Privacy enhancement:** currency values in the UI now pass through the `Sensitive` component
+- **Overview forecast:** new dashboard tile projecting month-end spend via linear regression on the last 7 days
+- **CLI comparison card:** per-CLI cost/tool-call/token efficiency surfaced on the project detail page
+- **Extended thinking metrics:** dedicated analytics surface for reasoning/thinking token usage
+- **Full-text search for messages:** SQLite FTS5-backed search on the Sessions page with result snippets
+- **README & CONTRIBUTING overhaul:** restructured hero, 2-row shields.io badge block, grouped Features, new `Contributing` pointer
+- **Removed tray feature:** dropped the system tray and related Settings entries
+- **CI order fix:** test step now runs before coverage so failures stop the pipeline earlier
 
 ---
 
