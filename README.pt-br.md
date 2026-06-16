@@ -1,65 +1,108 @@
 <div align="center">
 
+<br/>
+
 <picture>
   <source media="(prefers-color-scheme: dark)" srcset="assets/logo/sessionlens-white-logo.png">
   <source media="(prefers-color-scheme: light)" srcset="assets/logo/sessionlens-black-logo.png">
-  <img alt="Sessionlens" src="assets/logo/sessionlens-black-logo.png" height="56">
+  <img alt="Sessionlens" src="assets/logo/sessionlens-black-logo.png" height="72">
 </picture>
+
+<br/><br/>
 
 # Sessionlens
 
-**Observabilidade local-first para AI Coding CLIs — multi-CLI, open-source, privado.**
+### Observabilidade local-first para AI Coding CLIs
 
-[![License: MIT](https://img.shields.io/badge/License-MIT-00c853.svg?style=flat-square)](LICENSE)
-[![v0.9.5](https://img.shields.io/badge/v0.9.5-00c853?style=flat-square)](https://github.com/melloxyz/sessionlens/releases)
-[![Node.js](https://img.shields.io/badge/node-%3E%3D20-339933?style=flat-square&logo=node.js&logoColor=white)](https://nodejs.org)
-[![pnpm](https://img.shields.io/badge/pnpm-%3E%3D9-f69220?style=flat-square&logo=pnpm&logoColor=white)](https://pnpm.io)
-[![TypeScript](https://img.shields.io/badge/TypeScript-5.9-3178c6?style=flat-square&logo=typescript&logoColor=white)](https://www.typescriptlang.org)
+**Rastreie custos, analise sessões e compare eficiência entre 9 AI CLIs — tudo offline, tudo local.**
+
+<br/>
+
+<!-- row 1: project / status badges -->
+[![License: MIT](https://img.shields.io/github/license/melloxyz/sessionlens?style=for-the-badge&color=00c853)](LICENSE)
+[![Latest Release](https://img.shields.io/github/v/release/melloxyz/sessionlens?style=for-the-badge&color=00c853&label=version&sort=semver)](https://github.com/melloxyz/sessionlens/releases)
+<!-- If ci.yml is renamed, update the badge URL below -->
+[![CI](https://img.shields.io/github/actions/workflow/status/melloxyz/sessionlens/ci.yml?style=for-the-badge&label=ci&branch=master)](https://github.com/melloxyz/sessionlens/actions/workflows/ci.yml)
+[![Stars](https://img.shields.io/github/stars/melloxyz/sessionlens?style=for-the-badge&color=ffd54f)](https://github.com/melloxyz/sessionlens)
+[![i18n](https://img.shields.io/badge/i18n-EN%20%7C%20PT--BR-1f6feb?style=for-the-badge)](README.md)
+
+<br/>
+
+<!-- row 2: technology badges -->
+[![Node](https://img.shields.io/badge/node-%E2%89%A520-339933?style=for-the-badge&logo=node.js&logoColor=white)](https://nodejs.org)
+[![pnpm](https://img.shields.io/badge/pnpm-%E2%89%A59-f69220?style=for-the-badge&logo=pnpm&logoColor=white)](https://pnpm.io)
+[![TypeScript](https://img.shields.io/badge/typescript-5.x-3178c6?style=for-the-badge&logo=typescript&logoColor=white)](https://www.typescriptlang.org)
+[![React](https://img.shields.io/badge/react-18-149eca?style=for-the-badge&logo=react&logoColor=white)](https://react.dev)
+[![Fastify](https://img.shields.io/badge/fastify-5.x-000000?style=for-the-badge&logo=fastify&logoColor=white)](https://fastify.dev)
+
+<br/>
 
 <p>
   <a href="README.md">English</a> · <strong>Português (BR)</strong>
 </p>
 
-_Rastreie custos, analise sessões e compare eficiência entre suas CLIs de IA — tudo offline, tudo local._
+[Funcionalidades](#funcionalidades) · [Quick Start](#quick-start) · [Stack](#stack-tecnológica) · [Integrações](#integrações-suportadas) · [Changelog](CHANGELOG.md) · [Contribuindo](CONTRIBUTING.md)
 
-[Funcionalidades](#funcionalidades) · [Quick Start](#quick-start) · [Stack](#stack-tecnológica) · [Arquitetura](#arquitetura) · [Integrações](#integrações-suportadas) · [Changelog](CHANGELOG.md) · [Contribuindo](CONTRIBUTING.md)
+</div>
 
-<br/>
+### Veja em ação
+
+<div align="center">
+  <img src="assets/screenshots/dashboard-screenshot.png" alt="Dashboard do Sessionlens" width="880"/>
+</div>
+
+### Todas as visualizações
 
 <table>
   <tr>
-    <td align="center"><strong>Dashboard</strong><br/><img src="assets/screenshots/dashboard-screenshot.png" alt="Dashboard" width="380"/></td>
-    <td align="center"><strong>Sessions</strong><br/><img src="assets/screenshots/sessions-screenshot.png" alt="Sessions" width="380"/></td>
+    <td align="center" width="50%" valign="top"><strong>Sessões</strong><br/><img src="assets/screenshots/sessions-screenshot.png" alt="Sessões" width="100%"/></td>
+    <td align="center" width="50%" valign="top"><strong>Analytics</strong><br/><img src="assets/screenshots/analytics-screenshot.png" alt="Analytics" width="100%"/></td>
   </tr>
   <tr>
-    <td align="center"><strong>Analytics</strong><br/><img src="assets/screenshots/analytics-screenshot.png" alt="Analytics" width="380"/></td>
-    <td align="center"><strong>Budgets</strong><br/><img src="assets/screenshots/budgets-screenshot.png" alt="Budgets" width="380"/></td>
+    <td align="center" width="50%" valign="top"><strong>Orçamentos</strong><br/><img src="assets/screenshots/budgets-screenshot.png" alt="Orçamentos" width="100%"/></td>
+    <td align="center" width="50%" valign="top"><em>(Dashboard mostrado acima)</em></td>
   </tr>
 </table>
 
-</div>
+---
+
+## Por que o Sessionlens
+
+A maioria dos times que alterna entre várias AI coding CLIs não consegue responder perguntas básicas: _qual CLI é mais barata? qual é mais confiável? pra onde vai o dinheiro?_ O Sessionlens responde lendo os artefatos em disco que cada CLI já produz — sem scraping, sem proxies, sem cloud. **Seus dados nunca saem da sua máquina, todo custo é marcado como `actual` ou `estimated`, e você fica produtivo em 60 segundos depois de `pnpm install`.**
 
 ---
 
 ## Funcionalidades
 
-| Recurso                     | Descrição                                                                                                                                |
-| --------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------- |
-| **Multi-CLI**               | 9 CLIs suportadas: Codex, Claude Code, OpenCode, Gemini CLI, Kimi, Aider, Qwen, Antigravity e CommandCode                                |
-| **Rastreamento de custos**  | Custo real da CLI, estimativa por tokens e sync com OpenRouter. Spend confirmado e estimado exibidos separadamente                       |
-| **Sessões inteligentes**    | Tokens (input/output/cache/reasoning), tool calls, duração, contexto do projeto, breakdown por modelo                                    |
-| **Analytics**               | Dashboard com filtros contextuais, trends de gasto, breakdown por modelo/provider/projeto, páginas dedicadas de insights e anomalias     |
-| **Confiabilidade de dados** | Qualidade por campo, contadores de drift por adapter, tools capturadas, arquivos tocados e coverage por CLI em Settings e Session Detail |
-| **Orçamentos**              | Limites globais, por projeto, CLI, provider ou modelo com histórico de alertas locais                                                    |
-| **Privacidade & segurança** | Redação opt-in de inputs sensíveis; CORS restrito ao localhost; sem detalhes de erro expostos; chamadas git sem shell injection          |
-| **Local-first**             | SQLite via sql.js WASM — zero dados enviados externamente, zero telemetria, zero contas                                                  |
-| **Auto-ingestão**           | Filesystem watcher com debounce; checkpoints incrementais pulam arquivos não alterados automaticamente                                   |
-| **UI premium**              | Design system próprio — DataPanel, DataTable, FigurePanel, CompactStat, ControlField, skeleton states e tooltips                         |
-| **Temas**                   | Modo escuro e claro com contraste refinado, chart palette acessível e persistência via localStorage                                      |
-| **i18n**                    | Inglês e Português (PT-BR) com formatação localizada de datas, durações, moedas e labels de insights                                     |
-| **Exportação CSV**          | Exporte sessões filtradas e breakdowns analíticos para CSV diretamente pela UI                                                           |
-| **Busca full-text**         | Pesquise por session IDs, caminhos de projeto e conteúdo completo de mensagens com trechos de resultado                                  |
-| **Controles de projeto**    | Ocultar/restaurar projetos sem deletar dados; abrir pasta; acompanhar timeline git e sessões relacionadas                                |
+#### Tracking
+
+| Recurso                      | Descrição                                                                                                                                                       |
+| ---------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **Multi-CLI**                | 9 CLIs suportadas: Codex, Claude Code, OpenCode, Gemini CLI, Kimi, Aider, Qwen, Antigravity e CommandCode                                                       |
+| **Rastreamento de custos**   | Custo real da CLI, estimativa por tokens e sync com OpenRouter. Spend confirmado e estimado exibidos separadamente                                              |
+| **Sessões inteligentes**     | Tokens (input/output/cache/reasoning), tool calls, duração, contexto do projeto, breakdown por modelo                                                            |
+| **Auto-ingestão**            | Filesystem watcher com debounce; checkpoints incrementais pulam arquivos não alterados automaticamente                                                         |
+
+#### Analytics & Insights
+
+| Recurso                      | Descrição                                                                                                                                                       |
+| ---------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **Analytics**                | Dashboard com filtros contextuais, trends de gasto, breakdown por modelo/provider/projeto, páginas dedicadas de insights e anomalias                           |
+| **Confiabilidade de dados**  | Qualidade por campo, contadores de drift por adapter, tools capturadas, arquivos tocados e coverage por CLI em Settings e Session Detail                      |
+| **Orçamentos**               | Limites globais, por projeto, CLI, provider ou modelo com histórico de alertas locais                                                                           |
+| **Busca full-text**          | Pesquise por session IDs, caminhos de projeto e conteúdo completo de mensagens com trechos de resultado                                                         |
+| **Exportação CSV**           | Exporte sessões filtradas e breakdowns analíticos para CSV diretamente pela UI                                                                                  |
+| **Controles de projeto**     | Ocultar/restaurar projetos sem deletar dados; abrir pasta; acompanhar timeline git e sessões relacionadas                                                       |
+| **UI premium**               | Design system próprio — DataPanel, DataTable, FigurePanel, CompactStat, ControlField, skeleton states e tooltips                                                |
+| **Temas**                    | Modo escuro e claro com contraste refinado, chart palette acessível e persistência via localStorage                                                             |
+
+#### Privacidade & Controle
+
+| Recurso                      | Descrição                                                                                                                                                       |
+| ---------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **Privacidade & segurança**  | Redação opt-in de inputs sensíveis; CORS restrito ao localhost; sem detalhes de erro expostos; chamadas git sem shell injection                                 |
+| **Local-first**              | SQLite via sql.js WASM — zero dados enviados externamente, zero telemetria, zero contas                                                                          |
+| **i18n**                     | Inglês e Português (PT-BR) com formatação localizada de datas, durações, moedas e labels de insights                                                            |
 
 ---
 
@@ -115,7 +158,7 @@ Frontend: **http://localhost:5173** — API Backend: **http://127.0.0.1:3030**
 | --------------- | ----------------- | -------- |
 | **Runtime**     | Node.js           | >= 20    |
 | **Gerenciador** | pnpm              | >= 9     |
-| **Linguagem**   | TypeScript        | 5.9      |
+| **Linguagem**   | TypeScript        | 5.x      |
 | **Backend**     | Fastify           | 5.x      |
 | **Database**    | SQLite via sql.js | WASM     |
 | **Frontend**    | React + Vite      | 18 / 6.x |
@@ -127,6 +170,8 @@ Frontend: **http://localhost:5173** — API Backend: **http://127.0.0.1:3030**
 ---
 
 ## Arquitetura
+
+Os adapters escrevem `RawSession`, o engine de ingestão normaliza/deduplica/precifica, e o frontend consulta via Fastify.
 
 ```
 sessionlens/
@@ -184,21 +229,24 @@ sessionlens/
 
 ---
 
-## Configuração
+## Roadmap
 
-### Variáveis de ambiente
+O Sessionlens está em **desenvolvimento ativo** (v0.9.x). O plano completo vive em `.agents/ROADMAP.md` (apenas para mantenedores) — o destaque do próximo ciclo de release é:
 
-Copie `.env.example` para `.env`:
+- **Refinamentos de precisão de custo** — mais dados `actual`, menos fallbacks `estimated`
+- **Mais adapters de CLI** — conduzido pela comunidade; veja [Contribuindo](CONTRIBUTING.md)
+- **Templates nativos de webhook** — Slack e Discord em cima do sistema de webhooks da v0.9.5
+- **Telemetria cloud read-only opcional** — opt-in, transparente, desligada por padrão
 
-| Variável                   | Descrição                         | Padrão                  |
-| -------------------------- | --------------------------------- | ----------------------- |
-| `SESSIONLENS_PORT`         | Porta do backend                  | `3030`                  |
-| `SESSIONLENS_FRONTEND_URL` | URL do frontend (usada pelo CORS) | `http://127.0.0.1:5173` |
-| `DATABASE_PATH`            | Caminho do arquivo SQLite         | `./data/sessionlens.db` |
+---
 
-### Auto-Ingestão
+## Contribuindo
 
-O Sessionlens observa automaticamente os diretórios de dados das CLIs e atualiza ao detectar novos arquivos. Desative em **Configurações → Auto-ingestão**.
+Contribuições de qualquer tamanho são bem-vindas — código, documentação, bug reports, novos adapters de CLI e traduções.
+
+- **Good first issues:** [label:good-first-issue](https://github.com/melloxyz/sessionlens/issues?q=is%3Aopen+is%3Aissue+label%3A%22good+first+issue%22)
+- **Guia completo do contribuidor:** [CONTRIBUTING.md](CONTRIBUTING.md)
+- **Código de conduta:** este projeto segue o espírito do [Contributor Covenant](https://www.contributor-covenant.org/) (informal — sem arquivo separado por enquanto).
 
 ---
 
@@ -210,8 +258,14 @@ O Sessionlens observa automaticamente os diretórios de dados das CLIs e atualiz
 
 <div align="center">
 
-[Reportar um bug](https://github.com/melloxyz/sessionlens/issues) · [Sugerir funcionalidade](https://github.com/melloxyz/sessionlens/issues) · [Contribuir](CONTRIBUTING.md)
+![Made with](https://img.shields.io/badge/made%20with-%E2%9D%A4-ff5e5e?style=for-the-badge)
 
-**Sessionlens** — observabilidade local-first para AI Coding CLIs.
+<br/>
+
+[github.com/melloxyz/sessionlens](https://github.com/melloxyz/sessionlens) · [CHANGELOG](CHANGELOG.md) · [CONTRIBUTING](CONTRIBUTING.md) · [English](README.md)
+
+<br/>
+
+**Sessionlens — observabilidade local-first para AI Coding CLIs.**
 
 </div>

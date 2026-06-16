@@ -1,6 +1,26 @@
 <div align="center">
 
+<br/>
+
+<picture>
+  <source media="(prefers-color-scheme: dark)" srcset="assets/logo/sessionlens-white-logo.png">
+  <source media="(prefers-color-scheme: light)" srcset="assets/logo/sessionlens-black-logo.png">
+  <img alt="Sessionlens" src="assets/logo/sessionlens-black-logo.png" height="64">
+</picture>
+
+<br/><br/>
+
 # Contributing to Sessionlens
+
+**Local-first observability for AI Coding CLIs.**
+
+<br/>
+
+![PRs Welcome](https://img.shields.io/badge/PRs-welcome-brightgreen.svg?style=for-the-badge)
+![GitHub](https://img.shields.io/badge/github-melloxyz%2Fsessionlens-181717?style=for-the-badge&logo=github&logoColor=white)
+![Contributors](https://img.shields.io/github/contributors/melloxyz/sessionlens?style=for-the-badge)
+
+<br/>
 
 Thank you for considering contributing to Sessionlens!
 
@@ -10,7 +30,8 @@ Thank you for considering contributing to Sessionlens!
 
 ## Table of Contents
 
-- [How to Contribute](#how-to-contribute)
+- [Ways to Contribute](#ways-to-contribute)
+- [Areas where help is welcome](#areas-where-help-is-welcome)
 - [Development Guide](#development-guide)
 - [Adding a New CLI Adapter](#adding-a-new-cli-adapter)
 - [Engineering Rules](#engineering-rules)
@@ -19,6 +40,32 @@ Thank you for considering contributing to Sessionlens!
 - [Pull Requests](#pull-requests)
 - [Issues](#issues)
 - [License](#license)
+
+---
+
+## Ways to Contribute
+
+| Type                | What it looks like                                     | Where to start                                              |
+| ------------------- | ------------------------------------------------------ | ----------------------------------------------------------- |
+| **Code**            | Bug fixes, refactors, new features                     | Issues labeled `help wanted`                                |
+| **Documentation**   | README, comments, examples                             | Issues labeled `documentation`                              |
+| **Bug reports**     | Repro steps + Node/OS versions                         | New issue → Bug report template                             |
+| **Feature requests**| Problem + use case, not just a wish                    | Discussions tab (recommended)                               |
+| **New CLI adapters**| See [§ Adding a New CLI Adapter](#adding-a-new-cli-adapter) | Open an issue first to align on CLI                      |
+| **Translations**    | Currently EN + PT-BR                                   | Open an issue to coordinate                                 |
+
+---
+
+## Areas where help is welcome
+
+<!-- Keep in sync with README.md → Roadmap -->
+
+The project is in active development. These are the areas where contributions are most valuable right now:
+
+- **Cost accuracy refinements** — more `actual` data, fewer `estimated` fallbacks
+- **More CLI adapters** — community-driven; see [§ Adding a New CLI Adapter](#adding-a-new-cli-adapter)
+- **First-class webhook templates** — Slack, Discord on top of the v0.9.5 webhook system
+- **Optional cloud-read-only telemetry** — opt-in, transparent, off by default
 
 ---
 
@@ -63,6 +110,22 @@ pnpm dev
 ---
 
 ## Adding a New CLI Adapter
+
+> **Files you'll touch** (only create what's needed):
+>
+> ```text
+> packages/
+>   backend/src/adapters/
+>     name.ts                  ← new
+>     index.ts                 ← register export
+>   backend/src/
+>     index.ts                 ← register adapter instance
+>   shared/src/
+>     types.ts                 ← add to CliProvider union
+>   backend/src/db/
+>     migrations/
+>       NNNN_<name>.sql        ← new (only if schema needs it)
+> ```
 
 ### 1. Create the adapter
 

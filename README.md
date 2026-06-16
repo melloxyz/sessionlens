@@ -1,65 +1,108 @@
 <div align="center">
 
+<br/>
+
 <picture>
   <source media="(prefers-color-scheme: dark)" srcset="assets/logo/sessionlens-white-logo.png">
   <source media="(prefers-color-scheme: light)" srcset="assets/logo/sessionlens-black-logo.png">
-  <img alt="Sessionlens" src="assets/logo/sessionlens-black-logo.png" height="56">
+  <img alt="Sessionlens" src="assets/logo/sessionlens-black-logo.png" height="72">
 </picture>
+
+<br/><br/>
 
 # Sessionlens
 
-**Local-first observability for AI Coding CLIs — multi-CLI, open-source, private.**
+### Local-first observability for AI Coding CLIs
 
-[![License: MIT](https://img.shields.io/badge/License-MIT-00c853.svg?style=flat-square)](LICENSE)
-[![v0.9.5](https://img.shields.io/badge/v0.9.5-00c853?style=flat-square)](https://github.com/melloxyz/sessionlens/releases)
-[![Node.js](https://img.shields.io/badge/node-%3E%3D20-339933?style=flat-square&logo=node.js&logoColor=white)](https://nodejs.org)
-[![pnpm](https://img.shields.io/badge/pnpm-%3E%3D9-f69220?style=flat-square&logo=pnpm&logoColor=white)](https://pnpm.io)
-[![TypeScript](https://img.shields.io/badge/TypeScript-5.9-3178c6?style=flat-square&logo=typescript&logoColor=white)](https://www.typescriptlang.org)
+**Track costs, analyze sessions, and compare efficiency across 9 AI CLIs — fully offline, fully private.**
+
+<br/>
+
+<!-- row 1: project / status badges -->
+[![License: MIT](https://img.shields.io/github/license/melloxyz/sessionlens?style=for-the-badge&color=00c853)](LICENSE)
+[![Latest Release](https://img.shields.io/github/v/release/melloxyz/sessionlens?style=for-the-badge&color=00c853&label=version&sort=semver)](https://github.com/melloxyz/sessionlens/releases)
+<!-- If ci.yml is renamed, update the badge URL below -->
+[![CI](https://img.shields.io/github/actions/workflow/status/melloxyz/sessionlens/ci.yml?style=for-the-badge&label=ci&branch=master)](https://github.com/melloxyz/sessionlens/actions/workflows/ci.yml)
+[![Stars](https://img.shields.io/github/stars/melloxyz/sessionlens?style=for-the-badge&color=ffd54f)](https://github.com/melloxyz/sessionlens)
+[![i18n](https://img.shields.io/badge/i18n-EN%20%7C%20PT--BR-1f6feb?style=for-the-badge)](README.pt-br.md)
+
+<br/>
+
+<!-- row 2: technology badges -->
+[![Node](https://img.shields.io/badge/node-%E2%89%A520-339933?style=for-the-badge&logo=node.js&logoColor=white)](https://nodejs.org)
+[![pnpm](https://img.shields.io/badge/pnpm-%E2%89%A59-f69220?style=for-the-badge&logo=pnpm&logoColor=white)](https://pnpm.io)
+[![TypeScript](https://img.shields.io/badge/typescript-5.x-3178c6?style=for-the-badge&logo=typescript&logoColor=white)](https://www.typescriptlang.org)
+[![React](https://img.shields.io/badge/react-18-149eca?style=for-the-badge&logo=react&logoColor=white)](https://react.dev)
+[![Fastify](https://img.shields.io/badge/fastify-5.x-000000?style=for-the-badge&logo=fastify&logoColor=white)](https://fastify.dev)
+
+<br/>
 
 <p>
   <strong>English</strong> · <a href="README.pt-br.md">Português (BR)</a>
 </p>
 
-_Track costs, analyze sessions, and compare efficiency across your AI CLIs — fully offline, fully local._
+[Features](#features) · [Quick Start](#quick-start) · [Stack](#tech-stack) · [Integrations](#supported-integrations) · [Changelog](CHANGELOG.md) · [Contributing](CONTRIBUTING.md)
 
-[Features](#features) · [Quick Start](#quick-start) · [Stack](#tech-stack) · [Architecture](#architecture) · [Integrations](#supported-integrations) · [Changelog](CHANGELOG.md) · [Contributing](CONTRIBUTING.md)
+</div>
 
-<br/>
+### See it in action
+
+<div align="center">
+  <img src="assets/screenshots/dashboard-screenshot.png" alt="Sessionlens Dashboard" width="880"/>
+</div>
+
+### All the views
 
 <table>
   <tr>
-    <td align="center"><strong>Dashboard</strong><br/><img src="assets/screenshots/dashboard-screenshot.png" alt="Dashboard" width="380"/></td>
-    <td align="center"><strong>Sessions</strong><br/><img src="assets/screenshots/sessions-screenshot.png" alt="Sessions" width="380"/></td>
+    <td align="center" width="50%" valign="top"><strong>Sessions</strong><br/><img src="assets/screenshots/sessions-screenshot.png" alt="Sessions" width="100%"/></td>
+    <td align="center" width="50%" valign="top"><strong>Analytics</strong><br/><img src="assets/screenshots/analytics-screenshot.png" alt="Analytics" width="100%"/></td>
   </tr>
   <tr>
-    <td align="center"><strong>Analytics</strong><br/><img src="assets/screenshots/analytics-screenshot.png" alt="Analytics" width="380"/></td>
-    <td align="center"><strong>Budgets</strong><br/><img src="assets/screenshots/budgets-screenshot.png" alt="Budgets" width="380"/></td>
+    <td align="center" width="50%" valign="top"><strong>Budgets</strong><br/><img src="assets/screenshots/budgets-screenshot.png" alt="Budgets" width="100%"/></td>
+    <td align="center" width="50%" valign="top"><em>(Dashboard shown above)</em></td>
   </tr>
 </table>
 
-</div>
+---
+
+## Why Sessionlens
+
+Most teams juggling multiple AI coding CLIs can't answer basic questions: _which CLI is cheapest? which is most reliable? where is the money going?_ Sessionlens answers them by reading the on-disk artifacts each CLI already produces — no scraping, no proxies, no cloud. **Your data never leaves your machine, every cost is tagged `actual` or `estimated`, and you can be productive in 60 seconds after `pnpm install`.**
 
 ---
 
 ## Features
+
+#### Tracking
 
 | Feature                | Description                                                                                                                                                     |
 | ---------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | **Multi-CLI**          | 9 supported CLIs: Codex, Claude Code, OpenCode, Gemini CLI, Kimi, Aider, Qwen, Antigravity, and CommandCode                                                     |
 | **Cost tracking**      | Real CLI cost, token-based estimation, and OpenRouter sync for up-to-date pricing. Confirmed vs. estimated spend shown separately                               |
 | **Smart sessions**     | Tokens (input/output/cache/reasoning), tool calls, duration, project context, per-model usage breakdown                                                         |
+| **Auto-ingestion**     | Filesystem watcher with debounce; incremental checkpoints skip unchanged files automatically                                                                    |
+
+#### Analytics & Insights
+
+| Feature                | Description                                                                                                                                                     |
+| ---------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | **Analytics**          | Dashboard with contextual filters, spend trends, breakdowns by model/provider/project, and dedicated insight/anomaly pages                                      |
 | **Data reliability**   | Per-field quality, adapter drift counters, captured tools, touched files, and per-CLI coverage in Settings and Session Detail                                   |
 | **Budgets**            | Global, per-project, CLI, provider, or model limits with local alert history                                                                                    |
-| **Privacy & security** | Opt-in redaction of sensitive tool inputs; CORS restricted to localhost; no error details exposed to clients; git calls use `execFileSync` (no shell injection) |
-| **Local-first**        | SQLite via sql.js WASM — zero data sent externally, zero telemetry, zero accounts                                                                               |
-| **Auto-ingestion**     | Filesystem watcher with debounce; incremental checkpoints skip unchanged files automatically                                                                    |
+| **Full-text search**   | Search across session IDs, project paths, and full message content with result snippets                                                                         |
+| **CSV export**         | Export filtered sessions and analytics breakdowns to CSV directly from the UI                                                                                   |
+| **Project controls**   | Hide/restore projects without deleting data; open folder; follow git timeline and related sessions                                                              |
 | **Premium UI**         | Sessionlens design system — DataPanel, DataTable, FigurePanel, CompactStat, ControlField, skeleton states, and tooltips                                         |
 | **Themes**             | Dark and light mode with refined contrast, accessible chart palette, and localStorage persistence                                                               |
+
+#### Privacy & Control
+
+| Feature                | Description                                                                                                                                                     |
+| ---------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **Privacy & security** | Opt-in redaction of sensitive tool inputs; CORS restricted to localhost; no error details exposed to clients; git calls use `execFileSync` (no shell injection) |
+| **Local-first**        | SQLite via sql.js WASM — zero data sent externally, zero telemetry, zero accounts                                                                               |
 | **i18n**               | English and Português (PT-BR) with localized dates, durations, currencies, and insight labels                                                                   |
-| **CSV export**         | Export filtered sessions and analytics breakdowns to CSV directly from the UI                                                                                   |
-| **Full-text search**   | Search across session IDs, project paths, and full message content with result snippets                                                                         |
-| **Project controls**   | Hide/restore projects without deleting data; open folder; follow git timeline and related sessions                                                              |
 
 ---
 
@@ -115,7 +158,7 @@ Frontend: **http://localhost:5173** — Backend API: **http://127.0.0.1:3030**
 | ------------------- | ----------------- | -------- |
 | **Runtime**         | Node.js           | >= 20    |
 | **Package manager** | pnpm              | >= 9     |
-| **Language**        | TypeScript        | 5.9      |
+| **Language**        | TypeScript        | 5.x      |
 | **Backend**         | Fastify           | 5.x      |
 | **Database**        | SQLite via sql.js | WASM     |
 | **Frontend**        | React + Vite      | 18 / 6.x |
@@ -127,6 +170,8 @@ Frontend: **http://localhost:5173** — Backend API: **http://127.0.0.1:3030**
 ---
 
 ## Architecture
+
+Adapters write `RawSession`, the ingestion engine normalizes/dedups/costs, and the frontend queries through Fastify.
 
 ```
 sessionlens/
@@ -184,21 +229,24 @@ sessionlens/
 
 ---
 
-## Configuration
+## Roadmap
 
-### Environment variables
+Sessionlens is in **active development** (v0.9.x). The full plan lives in `.agents/ROADMAP.md` (maintainer-only) — the headline for the next release cycle is:
 
-Copy `.env.example` to `.env`:
+- **Cost accuracy refinements** — more `actual` data, fewer `estimated` fallbacks
+- **More CLI adapters** — community-driven; see [Contributing](CONTRIBUTING.md)
+- **First-class webhook templates** — Slack, Discord on top of the v0.9.5 webhook system
+- **Optional cloud-read-only telemetry** — opt-in, transparent, off by default
 
-| Variable                   | Description                 | Default                 |
-| -------------------------- | --------------------------- | ----------------------- |
-| `SESSIONLENS_PORT`         | Backend port                | `3030`                  |
-| `SESSIONLENS_FRONTEND_URL` | Frontend URL (used by CORS) | `http://127.0.0.1:5173` |
-| `DATABASE_PATH`            | SQLite file path            | `./data/sessionlens.db` |
+---
 
-### Auto-ingestion
+## Contributing
 
-Sessionlens watches CLI data directories and updates automatically on new files. Disable in **Settings → Auto-ingestion**.
+Contributions of any size are welcome — code, documentation, bug reports, new CLI adapters, and translations.
+
+- **Good first issues:** [label:good-first-issue](https://github.com/melloxyz/sessionlens/issues?q=is%3Aopen+is%3Aissue+label%3A%22good+first+issue%22)
+- **Full contributor guide:** [CONTRIBUTING.md](CONTRIBUTING.md)
+- **Code of conduct:** this project follows the [Contributor Covenant](https://www.contributor-covenant.org/) spirit (informal — no separate file yet).
 
 ---
 
@@ -210,8 +258,14 @@ Sessionlens watches CLI data directories and updates automatically on new files.
 
 <div align="center">
 
-[Report a bug](https://github.com/melloxyz/sessionlens/issues) · [Request a feature](https://github.com/melloxyz/sessionlens/issues) · [Contribute](CONTRIBUTING.md)
+![Made with](https://img.shields.io/badge/made%20with-%E2%9D%A4-ff5e5e?style=for-the-badge)
 
-**Sessionlens** — local-first observability for AI Coding CLIs.
+<br/>
+
+[github.com/melloxyz/sessionlens](https://github.com/melloxyz/sessionlens) · [CHANGELOG](CHANGELOG.md) · [CONTRIBUTING](CONTRIBUTING.md) · [Português (BR)](README.pt-br.md)
+
+<br/>
+
+**Sessionlens — local-first observability for AI Coding CLIs.**
 
 </div>
